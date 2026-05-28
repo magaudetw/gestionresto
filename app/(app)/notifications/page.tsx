@@ -54,7 +54,8 @@ export default function NotificationsPage() {
       if (!session) { router.push('/login'); return }
       const user = session.user
 
-      const { data: p } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+      const { data: p, error: profileErr } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+      if (profileErr) { console.error('profiles:', profileErr.message); setLoading(false); return }
       if (!p) { router.push('/login'); return }
       setProfile(p)
 

@@ -107,7 +107,8 @@ export default function PourbioiresPage() {
       const user = session.user
       setUserId(user.id)
 
-      const { data: p } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+      const { data: p, error: profileErr } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+      if (profileErr) { console.error('profiles:', profileErr.message); setLoading(false); return }
       if (!p) { router.push('/login'); return }
       setProfile(p)
 

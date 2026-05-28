@@ -91,7 +91,8 @@ export default function EquipePage() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) { router.push('/login'); return }
       const user = session.user
-      const { data: p } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+      const { data: p, error: profileErr } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+      if (profileErr) { console.error('profiles:', profileErr.message); setLoading(false); return }
       if (!p) { router.push('/login'); return }
       const isManager = p.roles?.includes('gerant') || p.roles?.includes('admin')
       if (!isManager) { router.push('/dashboard'); return }
