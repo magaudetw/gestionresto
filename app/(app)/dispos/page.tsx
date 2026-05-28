@@ -2,8 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import Header from '@/components/Header'
-import Navigation from '@/components/Navigation'
+import AppShell from '@/components/AppShell'
 import { getTheme } from '@/lib/themes'
 import type { Jour, DisposBase, CouvertureMinimale } from '@/types'
 
@@ -137,6 +136,7 @@ export default function DisposPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
       const { data: p } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+      if (!p) { router.push('/'); return }
       setProfile(p)
       setLoading(false)
     }
@@ -358,10 +358,8 @@ export default function DisposPage() {
   ]
 
   return (
-    <div style={{ background: t.fond, minHeight: '100vh', color: t.texte, fontFamily: font, display: 'flex', flexDirection: 'column', maxWidth: 480, margin: '0 auto' }}>
-      <Header nom={profile?.nom || ''} restaurant="Le Carré" lang={lang} />
-
-      <main style={{ flex: 1, padding: '16px', paddingBottom: 96 }}>
+    <AppShell profile={profile} restaurant="Le Carré">
+      <main style={{ padding: '16px', paddingBottom: 96 }}>
 
         {/* Title + statut */}
         <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -701,7 +699,6 @@ export default function DisposPage() {
         </div>
       )}
 
-      <Navigation role={role} lang={lang} />
-    </div>
+    </AppShell>
   )
 }

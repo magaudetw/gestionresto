@@ -2,8 +2,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import Header from '@/components/Header'
-import Navigation from '@/components/Navigation'
+import AppShell from '@/components/AppShell'
 import { getTheme } from '@/lib/themes'
 import * as XLSX from 'xlsx'
 
@@ -195,7 +194,8 @@ export default function ImportPage() {
       if (!user) { router.push('/'); return }
 
       const { data: p } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-      const isManager = p?.roles?.includes('gerant') || p?.roles?.includes('admin')
+      if (!p) { router.push('/'); return }
+      const isManager = p.roles?.includes('gerant') || p.roles?.includes('admin')
       if (!isManager) { router.push('/dashboard'); return }
       setProfile(p)
 
@@ -466,10 +466,8 @@ export default function ImportPage() {
   )
 
   return (
-    <div style={{ background: t.fond, minHeight: '100vh', color: t.texte, fontFamily: font, display: 'flex', flexDirection: 'column', maxWidth: 480, margin: '0 auto' }}>
-      <Header nom={profile?.nom || ''} restaurant="Le Carré" lang={lang} />
-
-      <main style={{ flex: 1, padding: '16px', paddingBottom: 100 }}>
+    <AppShell profile={profile} restaurant="Le Carré">
+      <main style={{ padding: '16px', paddingBottom: 100 }}>
 
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 4 }}>
           <h1 style={{ fontSize: 24, fontWeight: 300, margin: 0 }}>{L('Import Maître-D', 'Import Maître-D')}</h1>
@@ -832,7 +830,6 @@ export default function ImportPage() {
         )}
       </main>
 
-      <Navigation role={role} lang={lang} />
-    </div>
+    </AppShell>
   )
 }

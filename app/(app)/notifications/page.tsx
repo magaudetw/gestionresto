@@ -2,8 +2,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import Header from '@/components/Header'
-import Navigation from '@/components/Navigation'
+import AppShell from '@/components/AppShell'
 import { getTheme } from '@/lib/themes'
 import type { Notification } from '@/types'
 
@@ -55,6 +54,7 @@ export default function NotificationsPage() {
       if (!user) { router.push('/'); return }
 
       const { data: p } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+      if (!p) { router.push('/'); return }
       setProfile(p)
 
       const { data: n } = await supabase
@@ -97,10 +97,8 @@ export default function NotificationsPage() {
   const unreadCount = notifs.filter(n => !n.lu).length
 
   return (
-    <div style={{ background: t.fond, minHeight: '100vh', color: t.texte, fontFamily: font, display: 'flex', flexDirection: 'column', maxWidth: 480, margin: '0 auto' }}>
-      <Header nom={profile?.nom || ''} restaurant="Le Carré" lang={lang} />
-
-      <main style={{ flex: 1, padding: '16px', paddingBottom: 88 }}>
+    <AppShell profile={profile} restaurant="Le Carré">
+      <main style={{ padding: '16px', paddingBottom: 88 }}>
 
         {/* Header row */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
@@ -201,7 +199,6 @@ export default function NotificationsPage() {
         )}
       </main>
 
-      <Navigation role={role} lang={lang} />
-    </div>
+    </AppShell>
   )
 }

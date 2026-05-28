@@ -2,8 +2,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import Header from '@/components/Header'
-import Navigation from '@/components/Navigation'
+import AppShell from '@/components/AppShell'
 import { getTheme } from '@/lib/themes'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -108,6 +107,7 @@ export default function PourbioiresPage() {
       setUserId(user.id)
 
       const { data: p } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+      if (!p) { router.push('/'); return }
       setProfile(p)
 
       const rid = p?.restaurant_ids?.[0] || null
@@ -381,10 +381,8 @@ export default function PourbioiresPage() {
   )
 
   return (
-    <div style={{ background: t.fond, minHeight: '100vh', color: t.texte, fontFamily: font, display: 'flex', flexDirection: 'column', maxWidth: 480, margin: '0 auto' }}>
-      <Header nom={profile?.nom || ''} restaurant="Le Carré" lang={lang} />
-
-      <main style={{ flex: 1, padding: '16px', paddingBottom: 100 }}>
+    <AppShell profile={profile} restaurant="Le Carré">
+      <main style={{ padding: '16px', paddingBottom: 100 }}>
 
         <h1 style={{ fontSize: 24, fontWeight: 300, marginBottom: 20 }}>
           {L('Pourboires', 'Tips & Pay')}
@@ -923,7 +921,6 @@ export default function PourbioiresPage() {
         )}
       </main>
 
-      <Navigation role={role} lang={lang} />
-    </div>
+    </AppShell>
   )
 }

@@ -2,8 +2,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import Header from '@/components/Header'
-import Navigation from '@/components/Navigation'
+import AppShell from '@/components/AppShell'
 import { getTheme, THEME_NAMES, FONTS } from '@/lib/themes'
 import type { ThemeName } from '@/lib/themes'
 import type { ShiftType, Jour } from '@/types'
@@ -84,6 +83,12 @@ export default function ReglagesPage() {
   const [savingCote, setSavingCote] = useState(false)
   const [confirmDeleteCote, setConfirmDeleteCote] = useState<string | null>(null)
 
+  // Admin — gestion des rôles
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [allEmployees, setAllEmployees] = useState<any[]>([])
+  const [roleModal, setRoleModal] = useState<{ id: string; nom: string; roles: string[]; isSelf: boolean } | null>(null)
+  const [savingRoles, setSavingRoles] = useState(false)
+
   const router = useRouter()
 
   useEffect(() => {
@@ -92,13 +97,16 @@ export default function ReglagesPage() {
       if (!user) { router.push('/'); return }
 
       const { data: p } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+      if (!p) { router.push('/'); return }
       setProfile(p)
       if (p?.theme)       setSelectedTheme(p.theme as ThemeName)
       if (p?.lang)        setSelectedLang(p.lang as 'fr' | 'en')
       if (p?.font_family) setSelectedFont(p.font_family)
 
       const gerant = p?.roles?.includes('gerant') || p?.roles?.includes('admin')
+      const admin = p?.roles?.includes('admin') ?? false
       setIsGerant(gerant)
+      setIsAdmin(admin)
       const rid = p?.restaurant_ids?.[0] || null
       setRestaurantId(rid)
 
@@ -118,6 +126,13 @@ export default function ReglagesPage() {
         const { data: cotesD } = await supabase
           .from('cotes').select('*').eq('restaurant_id', rid).order('nom')
         setCotesReg(cotesD || [])
+
+        if (admin) {
+          const { data: emps } = await supabase
+            .from('profiles').select('id,nom,roles,actif')
+            .contains('restaurant_ids', [rid]).order('nom')
+          setAllEmployees(emps || [])
+        }
       }
 
       setLoading(false)
@@ -233,6 +248,23 @@ export default function ReglagesPage() {
     setConfirmDeleteCote(null)
   }
 
+  async function loadAllEmployees() {
+    if (!restaurantId) return
+    const { data } = await supabase
+      .from('profiles').select('id,nom,roles,actif')
+      .contains('restaurant_ids', [restaurantId]).order('nom')
+    setAllEmployees(data || [])
+  }
+
+  async function handleSaveRoles() {
+    if (!roleModal || roleModal.roles.length === 0) return
+    setSavingRoles(true)
+    await supabase.from('profiles').update({ roles: roleModal.roles }).eq('id', roleModal.id)
+    await loadAllEmployees()
+    setRoleModal(null)
+    setSavingRoles(false)
+  }
+
   async function handleSaveCouverture() {
     if (!restaurantId) return
     setSavingCouverture(true)
@@ -304,6 +336,14 @@ export default function ReglagesPage() {
     barRequis:         lang === 'fr' ? '🍸 Bar'                   : '🍸 Bar',
     sauvegarderCouv:   lang === 'fr' ? 'Sauvegarder la couverture' : 'Save coverage',
     savedCouv:         lang === 'fr' ? 'Couverture sauvegardée ✓' : 'Coverage saved ✓',
+    // Admin — rôles
+    gestionRoles:      lang === 'fr' ? 'GESTION DES RÔLES'        : 'ROLE MANAGEMENT',
+    adminSeulement:    lang === 'fr' ? 'Admin seulement'          : 'Admin only',
+    rolesEmp:          lang === 'fr' ? 'Rôles de'                 : 'Roles for',
+    rolesLabel:        lang === 'fr' ? 'Rôles'                    : 'Roles',
+    aucunRole:         lang === 'fr' ? 'Au moins un rôle requis'  : 'At least one role required',
+    selfWarning:       lang === 'fr' ? 'Vous ne pouvez pas modifier votre propre profil ici.' : 'You cannot edit your own profile here.',
+    inactif:           lang === 'fr' ? 'inactif'                  : 'inactive',
     // Gérant — cotes
     cotesSect:         lang === 'fr' ? 'COTES DE POURBOIRES'      : 'TIP DEDUCTIONS',
     ajouterCote:       lang === 'fr' ? '+ Ajouter'                : '+ Add',
@@ -338,10 +378,8 @@ export default function ReglagesPage() {
   } as const
 
   return (
-    <div style={{ background: t.fond, minHeight: '100vh', color: t.texte, fontFamily: font, display: 'flex', flexDirection: 'column', maxWidth: 480, margin: '0 auto' }}>
-      <Header nom={profile?.nom || ''} restaurant="Le Carré" lang={lang} />
-
-      <main style={{ flex: 1, padding: '16px', paddingBottom: 100 }}>
+    <AppShell profile={profile} restaurant="Le Carré">
+      <main style={{ padding: '16px', paddingBottom: 100 }}>
         <h1 style={{ fontSize: 24, fontWeight: 300, marginBottom: 24 }}>{T.reglages}</h1>
 
         {/* ── COMPTE ── */}
@@ -704,6 +742,79 @@ export default function ReglagesPage() {
                 )}
               </div>
             </div>
+          {/* ── ADMIN — GESTION DES RÔLES ── */}
+          {isAdmin && (
+            <div style={{ marginBottom: 28 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                <div style={{ fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: t.texteSecondaire }}>
+                  {T.gestionRoles}
+                </div>
+                <span style={{
+                  fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase',
+                  padding: '2px 7px', borderRadius: 4,
+                  background: 'rgba(224,112,112,0.12)', border: '1px solid rgba(224,112,112,0.3)',
+                  color: '#E07070',
+                }}>
+                  {T.adminSeulement}
+                </span>
+              </div>
+
+              <div style={{ background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 14, overflow: 'hidden' }}>
+                {allEmployees.length === 0 ? (
+                  <div style={{ padding: '16px', textAlign: 'center', color: t.texteFaible, fontSize: 12 }}>
+                    {lang === 'fr' ? 'Aucun employé' : 'No employees'}
+                  </div>
+                ) : (
+                  allEmployees.map((emp: any, i: number) => {
+                    const isSelf = emp.id === profile?.id
+                    return (
+                      <button
+                        key={emp.id}
+                        onClick={() => setRoleModal({ id: emp.id, nom: emp.nom, roles: [...(emp.roles || [])], isSelf })}
+                        style={{
+                          width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontFamily: font,
+                          padding: '11px 16px',
+                          borderBottom: i < allEmployees.length - 1 ? `1px solid ${t.border}` : 'none',
+                          display: 'flex', alignItems: 'center', gap: 10,
+                          opacity: emp.actif ? 1 : 0.45,
+                        }}
+                      >
+                        <div style={{ flex: 1, textAlign: 'left', minWidth: 0 }}>
+                          <div style={{ fontSize: 13, color: t.texte, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            {emp.nom}
+                            {!emp.actif && (
+                              <span style={{ fontSize: 9, color: t.texteFaible, border: `1px solid ${t.border}`, borderRadius: 4, padding: '1px 5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                                {T.inactif}
+                              </span>
+                            )}
+                            {isSelf && (
+                              <span style={{ fontSize: 9, color: t.accent, border: `1px solid ${t.borderAccent}`, borderRadius: 4, padding: '1px 5px', letterSpacing: '0.06em' }}>
+                                {lang === 'fr' ? 'vous' : 'you'}
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
+                            {(emp.roles || []).map((r: string) => (
+                              <span key={r} style={{
+                                fontSize: 9, padding: '1px 6px', borderRadius: 4,
+                                background: `${ROLE_COLORS[r] || t.accent}18`,
+                                border: `1px solid ${ROLE_COLORS[r] || t.accent}44`,
+                                color: ROLE_COLORS[r] || t.accent,
+                                letterSpacing: '0.04em',
+                              }}>
+                                {ROLE_LABELS[r]?.[lang] || r}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <span style={{ color: t.texteFaible, fontSize: 16, flexShrink: 0 }}>›</span>
+                      </button>
+                    )
+                  })
+                )}
+              </div>
+            </div>
+          )}
           </>
         )}
       </main>
@@ -941,7 +1052,133 @@ export default function ReglagesPage() {
         </div>
       )}
 
-      <Navigation role={role} lang={lang} />
-    </div>
+      {/* ── ROLE MODAL ── */}
+      {roleModal && (
+        <div
+          onClick={() => setRoleModal(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 100, display: 'flex', alignItems: 'flex-end' }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: 480, margin: '0 auto',
+              background: t.surface1, borderRadius: '20px 20px 0 0',
+              padding: '20px 18px 32px', maxHeight: '85vh', overflowY: 'auto',
+            }}
+          >
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: t.border, margin: '0 auto 20px' }} />
+
+            <h2 style={{ fontSize: 18, fontWeight: 300, margin: '0 0 4px', color: t.texte }}>
+              {T.rolesEmp}
+            </h2>
+            <div style={{ fontSize: 15, color: t.accent, marginBottom: 20 }}>{roleModal.nom}</div>
+
+            {roleModal.isSelf ? (
+              <div style={{
+                background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.3)',
+                borderRadius: 10, padding: '12px 14px', marginBottom: 20,
+                fontSize: 12, color: '#C9A84C',
+              }}>
+                {T.selfWarning}
+              </div>
+            ) : (
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
+                  {(['admin', 'gerant', 'bar', 'serveur', 'busboy'] as const).map(r => {
+                    const isActive = roleModal.roles.includes(r)
+                    const color = ROLE_COLORS[r] || t.accent
+                    return (
+                      <button
+                        key={r}
+                        onClick={() => {
+                          setRoleModal(prev => {
+                            if (!prev) return prev
+                            const next = isActive
+                              ? prev.roles.filter(x => x !== r)
+                              : [...prev.roles, r]
+                            return { ...prev, roles: next }
+                          })
+                        }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 12,
+                          padding: '12px 14px', borderRadius: 10,
+                          background: isActive ? `${color}14` : t.surface2,
+                          border: `1px solid ${isActive ? color + '55' : t.border}`,
+                          cursor: 'pointer', fontFamily: font, textAlign: 'left',
+                          transition: 'all 0.15s',
+                        }}
+                      >
+                        <div style={{
+                          width: 20, height: 20, borderRadius: 6,
+                          background: isActive ? color : 'transparent',
+                          border: `2px solid ${isActive ? color : t.border}`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          flexShrink: 0, transition: 'all 0.15s',
+                        }}>
+                          {isActive && (
+                            <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                              <path d="M1 4L3.5 6.5L9 1" stroke={t.isDark ? '#080808' : '#fff'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 13, color: isActive ? color : t.texte, fontWeight: isActive ? 500 : 400 }}>
+                            {ROLE_LABELS[r]?.[lang] || r}
+                          </div>
+                          {r === 'busboy' && (
+                            <div style={{ fontSize: 10, color: t.texteFaible, marginTop: 1 }}>
+                              {lang === 'fr' ? 'Coeff. pourboires × 0.5' : 'Tip coefficient × 0.5'}
+                            </div>
+                          )}
+                          {r === 'admin' && (
+                            <div style={{ fontSize: 10, color: t.texteFaible, marginTop: 1 }}>
+                              {lang === 'fr' ? 'Accès complet + gestion des rôles' : 'Full access + role management'}
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {roleModal.roles.length === 0 && (
+                  <div style={{ fontSize: 11, color: '#E07070', marginBottom: 14, textAlign: 'center' }}>
+                    {T.aucunRole}
+                  </div>
+                )}
+              </>
+            )}
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => setRoleModal(null)}
+                style={{
+                  flex: 1, padding: '12px', background: t.surface2, border: `1px solid ${t.border}`,
+                  borderRadius: 10, color: t.texteSecondaire, cursor: 'pointer', fontSize: 13, fontFamily: font,
+                }}
+              >
+                {T.annuler}
+              </button>
+              {!roleModal.isSelf && (
+                <button
+                  onClick={handleSaveRoles}
+                  disabled={savingRoles || roleModal.roles.length === 0}
+                  style={{
+                    flex: 2, padding: '12px', background: t.accent, border: 'none',
+                    borderRadius: 10, color: t.isDark ? '#080808' : '#fff',
+                    cursor: savingRoles || roleModal.roles.length === 0 ? 'not-allowed' : 'pointer',
+                    opacity: roleModal.roles.length === 0 ? 0.4 : 1,
+                    fontSize: 13, fontFamily: font, fontWeight: 600,
+                  }}
+                >
+                  {savingRoles ? '...' : T.enregistrer}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+    </AppShell>
   )
 }

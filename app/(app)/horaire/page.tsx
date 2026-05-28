@@ -2,8 +2,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import Header from '@/components/Header'
-import Navigation from '@/components/Navigation'
+import AppShell from '@/components/AppShell'
 import { getTheme } from '@/lib/themes'
 import type { Jour } from '@/types'
 
@@ -119,6 +118,7 @@ export default function HorairePage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
       const { data: p } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+      if (!p) { router.push('/'); return }
       setProfile(p)
       setUserId(user.id)
       setLoading(false)
@@ -602,10 +602,8 @@ export default function HorairePage() {
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
-    <div style={{ background: t.fond, minHeight: '100vh', color: t.texte, fontFamily: font, display: 'flex', flexDirection: 'column', maxWidth: 480, margin: '0 auto' }}>
-      <Header nom={profile?.nom || ''} restaurant="Le Carré" lang={lang} />
-
-      <main style={{ flex: 1, paddingBottom: 96 }}>
+    <AppShell profile={profile} restaurant="Le Carré">
+      <main style={{ paddingBottom: 96 }}>
 
         {/* Tab bar */}
         <div style={{ display: 'flex', borderBottom: `1px solid ${t.border}`, padding: '0 16px' }}>
@@ -1211,7 +1209,6 @@ export default function HorairePage() {
         </div>
       )}
 
-      <Navigation role={role} lang={lang} />
-    </div>
+    </AppShell>
   )
 }

@@ -4,22 +4,22 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 const NAV_GERANT = [
-  { href: '/dashboard',     icon: '🏠', label: { fr: 'Accueil',    en: 'Home'      }},
-  { href: '/horaire',       icon: '📅', label: { fr: 'Horaire',    en: 'Schedule'  }},
-  { href: '/finances',      icon: '📊', label: { fr: 'Finances',   en: 'Finances'  }},
-  { href: '/equipe',        icon: '👥', label: { fr: 'Équipe',     en: 'Team'      }},
-  { href: '/import',        icon: '📥', label: { fr: 'Import',     en: 'Import'    }},
-  { href: '/notifications', icon: '🔔', label: { fr: 'Alertes',    en: 'Alerts'    }},
-  { href: '/reglages',      icon: '⚙️',  label: { fr: 'Réglages',  en: 'Settings'  }},
+  { href: '/dashboard',     icon: '⬡', label: { fr: 'Accueil',   en: 'Home'     }},
+  { href: '/horaire',       icon: '◫', label: { fr: 'Horaire',   en: 'Schedule' }},
+  { href: '/finances',      icon: '◈', label: { fr: 'Finances',  en: 'Finances' }},
+  { href: '/equipe',        icon: '◎', label: { fr: 'Équipe',    en: 'Team'     }},
+  { href: '/import',        icon: '⬒', label: { fr: 'Import',    en: 'Import'   }},
+  { href: '/notifications', icon: '◉', label: { fr: 'Alertes',   en: 'Alerts'   }},
+  { href: '/reglages',      icon: '⚙',  label: { fr: 'Réglages', en: 'Settings' }},
 ]
 
 const NAV_EMPLOYE = [
-  { href: '/dashboard',     icon: '🏠', label: { fr: 'Accueil',   en: 'Home'     }},
-  { href: '/horaire',       icon: '📅', label: { fr: 'Horaire',   en: 'Schedule' }},
-  { href: '/dispos',        icon: '📋', label: { fr: 'Dispos',    en: 'Avail.'   }},
-  { href: '/pourboires',    icon: '💰', label: { fr: 'Paie',      en: 'Pay'      }},
-  { href: '/notifications', icon: '🔔', label: { fr: 'Alertes',   en: 'Alerts'   }},
-  { href: '/reglages',      icon: '⚙️',  label: { fr: 'Réglages', en: 'Settings' }},
+  { href: '/dashboard',     icon: '⬡', label: { fr: 'Accueil',   en: 'Home'     }},
+  { href: '/horaire',       icon: '◫', label: { fr: 'Horaire',   en: 'Schedule' }},
+  { href: '/dispos',        icon: '◻', label: { fr: 'Dispos',    en: 'Avail.'   }},
+  { href: '/pourboires',    icon: '◈', label: { fr: 'Paie',      en: 'Pay'      }},
+  { href: '/notifications', icon: '◉', label: { fr: 'Alertes',   en: 'Alerts'   }},
+  { href: '/reglages',      icon: '⚙',  label: { fr: 'Réglages', en: 'Settings' }},
 ]
 
 export default function Navigation({ role, lang }: { role: string; lang: string }) {
@@ -33,17 +33,16 @@ export default function Navigation({ role, lang }: { role: string; lang: string 
     if (role !== 'gerant' && role !== 'admin') return
     supabase.from('echanges')
       .select('id', { count: 'exact', head: true })
-      .eq('statut', 'accepte')
+      .eq('statut', 'en_attente_gerant')
       .then(({ count }) => setExchangeBadge(count || 0))
   }, [role])
 
   return (
-    <nav style={{
+    <nav className="glass safe-bottom" style={{
       position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
-      width: '100%', maxWidth: 480, background: '#111111',
-      borderTop: '1px solid rgba(255,255,255,0.08)',
+      width: '100%', maxWidth: 480,
+      borderTop: '1px solid rgba(255,255,255,0.07)',
       display: 'flex', alignItems: 'stretch', zIndex: 50,
-      paddingBottom: 'env(safe-area-inset-bottom, 0px)'
     }}>
       {nav.map(item => {
         const active = pathname === item.href
@@ -53,10 +52,14 @@ export default function Navigation({ role, lang }: { role: string; lang: string 
             style={{
               flex: 1, background: 'none', border: 'none', cursor: 'pointer',
               display: 'flex', flexDirection: 'column', alignItems: 'center',
-              justifyContent: 'center', gap: 3, padding: '10px 4px',
-              position: 'relative'
+              justifyContent: 'center', gap: 3, padding: '10px 2px',
+              position: 'relative', transition: 'opacity var(--transition)',
             }}>
-            <span style={{ fontSize: 20, lineHeight: 1, opacity: active ? 1 : 0.4, position: 'relative' }}>
+            <span style={{
+              fontSize: 17, lineHeight: 1, position: 'relative',
+              color: active ? '#C9A84C' : 'rgba(240,235,227,0.35)',
+              transition: 'color var(--transition)',
+            }}>
               {item.icon}
               {badge > 0 && (
                 <span style={{
@@ -71,16 +74,18 @@ export default function Navigation({ role, lang }: { role: string; lang: string 
               )}
             </span>
             <span style={{
-              fontSize: 9, letterSpacing: '0.06em', textTransform: 'uppercase',
-              color: active ? '#C9A84C' : 'rgba(240,235,227,0.2)'
+              fontSize: 9, letterSpacing: '0.08em', textTransform: 'uppercase',
+              fontFamily: 'var(--font-body)',
+              color: active ? '#C9A84C' : 'rgba(240,235,227,0.2)',
+              transition: 'color var(--transition)',
             }}>
               {item.label[l]}
             </span>
             {active && (
               <div style={{
-                position: 'absolute', bottom: 0, left: '50%',
-                transform: 'translateX(-50%)', width: 20, height: 2,
-                background: '#C9A84C', borderRadius: 1
+                position: 'absolute', top: 0, left: '50%',
+                transform: 'translateX(-50%)', width: 24, height: 2,
+                background: '#C9A84C', borderRadius: '0 0 2px 2px',
               }} />
             )}
           </button>

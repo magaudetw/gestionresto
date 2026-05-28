@@ -2,8 +2,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import Header from '@/components/Header'
-import Navigation from '@/components/Navigation'
+import AppShell from '@/components/AppShell'
 import { getTheme } from '@/lib/themes'
 
 const MOIS_FR = ['jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc']
@@ -43,6 +42,7 @@ export default function DashboardPage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
       const { data: p } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+      if (!p) { router.push('/'); return }
       setProfile(p)
 
       const isManager = p?.roles?.includes('gerant') || p?.roles?.includes('admin')
@@ -148,27 +148,30 @@ export default function DashboardPage() {
   }
 
   return (
-    <div style={{ background: t.fond, minHeight: '100vh', color: t.texte, fontFamily: font, display: 'flex', flexDirection: 'column', maxWidth: 480, margin: '0 auto' }}>
-      <Header nom={profile?.nom || ''} restaurant="Le Carré" lang={lang} />
-
-      <main style={{ flex: 1, padding: '20px 16px', paddingBottom: 88 }}>
+    <AppShell profile={profile} restaurant="Le Carré">
+      <main className="animate-fade-up px-4 pt-5 pb-[88px] md:px-10 md:pt-10 md:pb-10">
 
         {/* Welcome */}
-        <div style={{ marginBottom: 24 }}>
-          <p style={{ fontSize: 13, color: t.texteSecondaire, marginBottom: 4 }}>
-            {lang === 'fr' ? 'Bon retour 👋' : 'Welcome back 👋'}
+        <div className="mb-6 md:mb-8">
+          <p style={{ fontSize: 12, color: t.texteSecondaire, marginBottom: 6, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+            {lang === 'fr' ? 'Bon retour' : 'Welcome back'}
           </p>
-          <h1 style={{ fontSize: 28, fontWeight: 300, marginBottom: 2 }}>{prenom}</h1>
+          <h1 className="font-title" style={{ fontSize: 36, fontWeight: 300, marginBottom: 3, color: t.texte, letterSpacing: '0.01em' }}>{prenom}</h1>
           <div style={{ fontSize: 12, color: t.texteFaible }}>{todayLabel}</div>
         </div>
 
         {/* ─── MANAGER VIEW ─── */}
         {isManager && (
           <>
+            {/* Desktop 2-col wrapper */}
+            <div className="md:grid md:grid-cols-[1fr_280px] md:gap-6">
+            {/* Left col on desktop */}
+            <div>
+
             {/* Today's schedule */}
-            <div style={{ background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 14, padding: '14px 16px', marginBottom: 12 }}>
+            <div className="glass-light card-shadow stagger-1 animate-fade-up" style={{ borderRadius: 14, padding: '16px 18px', marginBottom: 12, border: `1px solid ${t.border}` }}>
               <div style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: t.accent, marginBottom: 10 }}>
-                📅 {lang === 'fr' ? "Aujourd'hui" : 'Today'}
+                {lang === 'fr' ? "Aujourd'hui" : 'Today'}
               </div>
               {todayShifts.length === 0 ? (
                 <div style={{ fontSize: 13, color: t.texteFaible }}>{lang === 'fr' ? 'Aucun shift prévu' : 'No shifts scheduled'}</div>
@@ -190,8 +193,8 @@ export default function DashboardPage() {
               )}
             </div>
 
-            {/* KPI grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+            {/* KPI grid — 2 cols mobile, 4 cols desktop */}
+            <div className="stagger-2 animate-fade-up grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-3">
               {/* Pending exchanges */}
               <button onClick={() => router.push('/horaire')} style={{
                 background: pendingEchanges > 0 ? 'rgba(224,160,80,0.1)' : t.surface1,
@@ -240,6 +243,40 @@ export default function DashboardPage() {
                 </div>
               </button>
             </div>
+
+            </div> {/* end left col */}
+
+            {/* Right col: unread notifications quick link */}
+            <div className="hidden md:flex flex-col gap-3">
+              <button onClick={() => router.push('/notifications')} style={{
+                background: unreadNotifs > 0 ? `${t.accent}12` : t.surface1,
+                border: `1px solid ${unreadNotifs > 0 ? t.borderAccent : t.border}`,
+                borderRadius: 14, padding: '18px 20px', cursor: 'pointer', textAlign: 'left', fontFamily: font,
+                display: 'flex', flexDirection: 'column', gap: 10,
+              }}>
+                <div style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: unreadNotifs > 0 ? t.accent : t.texteSecondaire }}>
+                  {lang === 'fr' ? 'Alertes' : 'Alerts'}
+                </div>
+                <div style={{ fontSize: 32, fontWeight: 300, color: unreadNotifs > 0 ? t.accent : t.texteSecondaire }}>
+                  {unreadNotifs}
+                </div>
+                <div style={{ fontSize: 11, color: unreadNotifs > 0 ? t.texteSecondaire : t.texteFaible }}>
+                  {unreadNotifs > 0 ? (lang === 'fr' ? 'non lues' : 'unread') : (lang === 'fr' ? 'Tout lu' : 'All read')}
+                </div>
+              </button>
+              <button onClick={() => router.push('/equipe')} style={{
+                background: t.surface1, border: `1px solid ${t.border}`,
+                borderRadius: 14, padding: '18px 20px', cursor: 'pointer', textAlign: 'left', fontFamily: font,
+                display: 'flex', flexDirection: 'column', gap: 10,
+              }}>
+                <div style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: t.texteSecondaire }}>
+                  {lang === 'fr' ? 'Effectif actif' : 'Active staff'}
+                </div>
+                <div style={{ fontSize: 32, fontWeight: 300, color: '#72BA80' }}>{activeCount}</div>
+              </button>
+            </div>
+
+            </div> {/* end desktop 2-col wrapper */}
           </>
         )}
 
@@ -247,7 +284,7 @@ export default function DashboardPage() {
         {!isManager && (
           <>
             {/* Next shift */}
-            <div style={{
+            <div className="animate-fade-up" style={{
               background: nextShift
                 ? `linear-gradient(135deg, ${t.accent}22, ${t.accentClair}0A)`
                 : t.surface1,
@@ -334,7 +371,6 @@ export default function DashboardPage() {
         )}
       </main>
 
-      <Navigation role={role} lang={lang} />
-    </div>
+    </AppShell>
   )
 }

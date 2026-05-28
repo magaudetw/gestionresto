@@ -1,10 +1,19 @@
 import type { Metadata, Viewport } from 'next'
-import { Geist } from "next/font/google"
+import { Cormorant_Garamond, DM_Sans } from 'next/font/google'
 import "./globals.css"
 
-const geist = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+const cormorant = Cormorant_Garamond({
+  variable: '--font-cormorant',
+  subsets: ['latin'],
+  weight: ['300', '400', '600'],
+  display: 'swap',
+})
+
+const dmSans = DM_Sans({
+  variable: '--font-dm-sans',
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600'],
+  display: 'swap',
 })
 
 export const metadata: Metadata = {
@@ -32,7 +41,7 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="fr" className={geist.variable}>
+    <html lang="fr" className={`${cormorant.variable} ${dmSans.variable}`}>
       <body className="min-h-full">{children}</body>
     </html>
   )

@@ -2,8 +2,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import Header from '@/components/Header'
-import Navigation from '@/components/Navigation'
+import AppShell from '@/components/AppShell'
 import { getTheme } from '@/lib/themes'
 import type { Role, Jour, Service, DisposBase } from '@/types'
 
@@ -92,7 +91,8 @@ export default function EquipePage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.push('/'); return }
       const { data: p } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-      const isManager = p?.roles?.includes('gerant') || p?.roles?.includes('admin')
+      if (!p) { router.push('/'); return }
+      const isManager = p.roles?.includes('gerant') || p.roles?.includes('admin')
       if (!isManager) { router.push('/dashboard'); return }
       setProfile(p)
       await loadEmployes(p)
@@ -233,10 +233,8 @@ export default function EquipePage() {
   }
 
   return (
-    <div style={{ background: t.fond, minHeight: '100vh', color: t.texte, fontFamily: font, display: 'flex', flexDirection: 'column', maxWidth: 480, margin: '0 auto' }}>
-      <Header nom={profile?.nom || ''} restaurant="Le Carré" lang={lang} />
-
-      <main style={{ flex: 1, padding: '16px', paddingBottom: 88 }}>
+    <AppShell profile={profile} restaurant="Le Carré">
+      <main style={{ padding: '16px', paddingBottom: 88 }}>
 
         {/* Title + add button */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
@@ -670,7 +668,6 @@ export default function EquipePage() {
         </div>
       )}
 
-      <Navigation role={role} lang={lang} />
-    </div>
+    </AppShell>
   )
 }
