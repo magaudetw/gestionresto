@@ -1,10 +1,10 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
 import { getTheme } from '@/lib/themes'
 import type { Jour, DisposBase, CouvertureMinimale } from '@/types'
+import { useAuth } from '@/lib/auth-context'
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -101,8 +101,7 @@ function dispoShort(svcs: Svcs): string {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function DisposPage() {
-  const [profile, setProfile] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const { profile, userId, restaurantId, isManager, loading } = useAuth()
   const [weekOffset, setWeekOffset] = useState(1)
 
   // Employee state
@@ -124,38 +123,19 @@ export default function DisposPage() {
   const [sendingReminder, setSendingReminder] = useState(false)
   const [reminderSent, setReminderSent]       = useState(false)
 
-  const router = useRouter()
-
   const monday    = getMondayByOffset(weekOffset)
   const mondayISO = isoDate(monday)
   const days      = getWeekDays(monday)
 
-  // ── Init ──────────────────────────────────────────────────────────────────
-  useEffect(() => {
-    async function init() {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { router.push('/login'); return }
-      const user = session.user
-      const { data: p, error: profileErr } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-      if (profileErr) { console.error('profiles:', profileErr.message); setLoading(false); return }
-      if (!p) { router.push('/login'); return }
-      setProfile(p)
-      setLoading(false)
-    }
-    init()
-  }, [router])
-
   // ── Load data when week changes ───────────────────────────────────────────
   const loadData = useCallback(async () => {
-    if (!profile) return
-    const isManager = profile.roles?.includes('gerant') || profile.roles?.includes('admin')
-    const restaurantId = profile.restaurant_ids?.[0]
+    if (!userId || !restaurantId) return
 
     if (isManager) {
       const [empsRes, disposRes, covRes] = await Promise.all([
         supabase.from('profiles')
           .select('id, nom, roles, dispos_base')
-          .contains('restaurant_ids', restaurantId ? [restaurantId] : [])
+          .contains('restaurant_ids', [restaurantId])
           .eq('actif', true).order('nom'),
         supabase.from('dispos_hebdo')
           .select('*')
@@ -170,7 +150,7 @@ export default function DisposPage() {
     } else {
       const { data } = await supabase.from('dispos_hebdo')
         .select('*')
-        .eq('user_id', profile.id)
+        .eq('user_id', userId)
         .eq('restaurant_id', restaurantId)
         .eq('semaine_du', mondayISO)
         .maybeSingle()
@@ -181,11 +161,11 @@ export default function DisposPage() {
         setStatut(data.statut)
       } else {
         setDispoId(null)
-        setDispos(defaultFromBase(profile.dispos_base))
+        setDispos(defaultFromBase(profile?.dispos_base))
         setStatut('brouillon')
       }
     }
-  }, [profile, mondayISO])
+  }, [userId, restaurantId, isManager, mondayISO, profile?.dispos_base])
 
   useEffect(() => { loadData() }, [loadData])
 
@@ -203,11 +183,10 @@ export default function DisposPage() {
 
   // ── Employee: save ─────────────────────────────────────────────────────────
   async function handleSave(submit: boolean) {
-    if (!profile) return
+    if (!userId || !restaurantId) return
     setSaving(true)
-    const restaurantId = profile.restaurant_ids?.[0]
     const newStatut = submit ? 'soumis' : 'brouillon'
-    const payload = { user_id: profile.id, restaurant_id: restaurantId, semaine_du: mondayISO, dispos, statut: newStatut }
+    const payload = { user_id: userId, restaurant_id: restaurantId, semaine_du: mondayISO, dispos, statut: newStatut }
 
     if (dispoId) {
       await supabase.from('dispos_hebdo').update(payload).eq('id', dispoId)
@@ -218,16 +197,16 @@ export default function DisposPage() {
     setStatut(newStatut)
 
     if (submit) {
-      const lang = profile.lang || 'fr'
+      const lang = profile?.lang || 'fr'
       const weekLabel = `${monday.getDate()}/${monday.getMonth() + 1}`
       const { data: managers } = await supabase.from('profiles')
-        .select('id').contains('restaurant_ids', restaurantId ? [restaurantId] : [])
+        .select('id').contains('restaurant_ids', [restaurantId])
         .or('roles.cs.{gerant},roles.cs.{admin}')
       const notifs = (managers || []).map((m: any) => ({
         user_id: m.id, type: 'system', lu: false,
         message: lang === 'fr'
-          ? `${profile.nom} a soumis ses disponibilités (sem. du ${weekLabel}).`
-          : `${profile.nom} submitted availability for week of ${weekLabel}.`,
+          ? `${profile?.nom} a soumis ses disponibilités (sem. du ${weekLabel}).`
+          : `${profile?.nom} submitted availability for week of ${weekLabel}.`,
       }))
       if (notifs.length > 0) await supabase.from('notifications').insert(notifs)
     } else {
@@ -245,9 +224,8 @@ export default function DisposPage() {
 
   // ── Manager: override ─────────────────────────────────────────────────────
   async function handleOverrideSave() {
-    if (!overrideModal || !profile) return
+    if (!overrideModal || !restaurantId) return
     setSavingOverride(true)
-    const restaurantId = profile.restaurant_ids?.[0]
     const existing = allDispos.find(d => d.user_id === overrideModal.empId)
     const updatedDispos = {
       ...(existing?.dispos || { ...EMPTY_DISPOS }),
@@ -267,13 +245,13 @@ export default function DisposPage() {
       })
     }
 
-    const lang = profile.lang || 'fr'
+    const lang = profile?.lang || 'fr'
     const weekLabel = `${monday.getDate()}/${monday.getMonth() + 1}`
     await supabase.from('notifications').insert({
       user_id: overrideModal.empId, type: 'system', lu: false,
       message: lang === 'fr'
-        ? `${profile.nom} a modifié vos disponibilités pour la sem. du ${weekLabel}.`
-        : `${profile.nom} modified your availability for week of ${weekLabel}.`,
+        ? `${profile?.nom} a modifié vos disponibilités pour la sem. du ${weekLabel}.`
+        : `${profile?.nom} modified your availability for week of ${weekLabel}.`,
     })
 
     await loadData()
@@ -283,16 +261,15 @@ export default function DisposPage() {
 
   // ── Manager: send reminder to non-submitted employees ─────────────────────
   async function handleSendReminder() {
-    if (!profile) return
+    if (!restaurantId) return
     setSendingReminder(true)
-    const restaurantId = profile.restaurant_ids?.[0]
     const submittedIds = new Set(allDispos.filter(d => d.statut === 'soumis').map((d: any) => d.user_id))
     const pending = allEmployees.filter(e =>
       !submittedIds.has(e.id) &&
       !e.roles?.includes('gerant') &&
       !e.roles?.includes('admin')
     )
-    const lang = profile.lang || 'fr'
+    const lang = profile?.lang || 'fr'
     const weekLabel = `${monday.getDate()}/${monday.getMonth() + 1}`
     const notifs = pending.map((e: any) => ({
       user_id: e.id, type: 'system', lu: false,
@@ -315,9 +292,7 @@ export default function DisposPage() {
 
   const t       = getTheme(profile?.theme)
   const lang    = (profile?.lang || 'fr') as 'fr' | 'en'
-  const role    = profile?.roles?.[0] || 'employe'
   const font    = profile?.font_family || 'Georgia, serif'
-  const isManager = role === 'gerant' || role === 'admin'
   const MOIS    = lang === 'fr' ? MOIS_FR : MOIS_EN
 
   const weekLabel = `${monday.getDate()} ${MOIS[monday.getMonth()]} – ${days[5].getDate()} ${MOIS[days[5].getMonth()]} ${days[5].getFullYear()}`

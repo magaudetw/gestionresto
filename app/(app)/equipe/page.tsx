@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
 import { getTheme } from '@/lib/themes'
+import { useAuth } from '@/lib/auth-context'
 import type { Role, Jour, Service, DisposBase } from '@/types'
 
 const ROLE_LABELS: Record<string, { fr: string; en: string }> = {
@@ -73,9 +74,8 @@ function fmtImportDate(iso: string, lang: 'fr'|'en'): string {
 }
 
 export default function EquipePage() {
-  const [profile, setProfile] = useState<any>(null)
+  const { profile, restaurantId, isManager, loading } = useAuth()
   const [employes, setEmployes] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<string>('tous')
   const [modal, setModal] = useState<ModalData | null>(null)
   const [saving, setSaving] = useState(false)
@@ -87,37 +87,38 @@ export default function EquipePage() {
   const router = useRouter()
 
   useEffect(() => {
-    async function load() {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { router.push('/login'); return }
-      const user = session.user
-      const { data: p, error: profileErr } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-      if (profileErr) { console.error('profiles:', profileErr.message); setLoading(false); return }
-      if (!p) { router.push('/login'); return }
-      const isManager = p.roles?.includes('gerant') || p.roles?.includes('admin')
-      if (!isManager) { router.push('/dashboard'); return }
-      setProfile(p)
-      await loadEmployes(p)
-      await loadImportLogs(p)
-      setLoading(false)
-    }
-    load()
-  }, [router])
+    if (!loading && !isManager) router.push('/dashboard')
+  }, [loading, isManager, router])
 
-  async function loadEmployes(p: any) {
-    const restaurantId = p?.restaurant_ids?.[0]
+  useEffect(() => {
+    if (!profile) return
+    async function loadData() {
+      let q = supabase.from('profiles').select('*').order('nom')
+      if (restaurantId) q = q.contains('restaurant_ids', [restaurantId])
+      const { data } = await q
+      setEmployes(data || [])
+      if (restaurantId) {
+        const { data: logs } = await supabase
+          .from('import_logs').select('*').eq('restaurant_id', restaurantId)
+          .order('created_at', { ascending: false }).limit(10)
+        setImportLogs(logs || [])
+      }
+    }
+    loadData()
+  }, [profile, restaurantId])
+
+  async function loadEmployes() {
     let q = supabase.from('profiles').select('*').order('nom')
     if (restaurantId) q = q.contains('restaurant_ids', [restaurantId])
     const { data } = await q
     setEmployes(data || [])
   }
 
-  async function loadImportLogs(p: any) {
-    const rid = p?.restaurant_ids?.[0]
-    if (!rid) return
+  async function loadImportLogs() {
+    if (!restaurantId) return
     const { data } = await supabase
       .from('import_logs').select('*')
-      .eq('restaurant_id', rid)
+      .eq('restaurant_id', restaurantId)
       .order('created_at', { ascending: false })
       .limit(10)
     setImportLogs(data || [])
@@ -183,7 +184,7 @@ export default function EquipePage() {
       if (error) { setSaveError(error.message); setSaving(false); return }
     }
 
-    await loadEmployes(profile)
+    await loadEmployes()
     setModal(null)
     setSaving(false)
   }
@@ -196,7 +197,6 @@ export default function EquipePage() {
 
   const t = getTheme(profile?.theme)
   const lang = (profile?.lang || 'fr') as 'fr' | 'en'
-  const role = profile?.roles?.[0] || 'gerant'
   const font = profile?.font_family || 'Georgia, serif'
 
   const allRoles = ['tous', 'gerant', 'bar', 'serveur', 'busboy']

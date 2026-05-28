@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
 import { getTheme } from '@/lib/themes'
+import { useAuth } from '@/lib/auth-context'
 import * as XLSX from 'xlsx'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -158,9 +159,7 @@ function StepDots({ step, t, font }: { step: Step; t: any; font: string }) {
 // ── Main component ────────────────────────────────────────────────────────────
 
 export default function ImportPage() {
-  const [profile, setProfile]       = useState<any>(null)
-  const [loading, setLoading]       = useState(true)
-  const [restaurantId, setRestaurantId] = useState<string | null>(null)
+  const { profile, restaurantId, isManager, loading } = useAuth()
   const [employees, setEmployees]   = useState<any[]>([])
   const router = useRouter()
 
@@ -189,44 +188,27 @@ export default function ImportPage() {
   // ── Init ───────────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    async function init() {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { router.push('/login'); return }
-      const user = session.user
+    if (!loading && !isManager) router.push('/dashboard')
+  }, [loading, isManager, router])
 
-      const { data: p, error: profileErr } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-      if (profileErr) { console.error('profiles:', profileErr.message); setLoading(false); return }
-      if (!p) { router.push('/login'); return }
-      const isManager = p.roles?.includes('gerant') || p.roles?.includes('admin')
-      if (!isManager) { router.push('/dashboard'); return }
-      setProfile(p)
-
-      const rid = p?.restaurant_ids?.[0] || null
-      setRestaurantId(rid)
-
-      // Load employees
-      if (rid) {
-        const { data: emps } = await supabase
-          .from('profiles').select('id, nom, roles')
-          .contains('restaurant_ids', [rid]).eq('actif', true).order('nom')
-        setEmployees(emps || [])
+  useEffect(() => {
+    if (!restaurantId) return
+    async function loadConfig() {
+      const [empsRes, cfgRes] = await Promise.all([
+        supabase.from('profiles').select('id, nom, roles')
+          .contains('restaurant_ids', [restaurantId]).eq('actif', true).order('nom'),
+        supabase.from('import_config').select('*').eq('restaurant_id', restaurantId).maybeSingle(),
+      ])
+      setEmployees(empsRes.data || [])
+      const cfg = cfgRes.data
+      if (cfg) {
+        setConfigId(cfg.id)
+        setMapping({ nom: cfg.col_nom || '', date: cfg.col_date || '', heures: cfg.col_heures || '', service: cfg.col_shift || '' })
+        setAliases(cfg.alias_employes || {})
       }
-
-      // Load import config from Supabase
-      if (rid) {
-        const { data: cfg } = await supabase
-          .from('import_config').select('*').eq('restaurant_id', rid).maybeSingle()
-        if (cfg) {
-          setConfigId(cfg.id)
-          setMapping({ nom: cfg.col_nom || '', date: cfg.col_date || '', heures: cfg.col_heures || '', service: cfg.col_shift || '' })
-          setAliases(cfg.alias_employes || {})
-        }
-      }
-
-      setLoading(false)
     }
-    init()
-  }, [router])
+    loadConfig()
+  }, [restaurantId])
 
   // ── File processing ────────────────────────────────────────────────────────
 
@@ -429,7 +411,6 @@ export default function ImportPage() {
   const t    = getTheme(profile?.theme)
   const lang = (profile?.lang || 'fr') as 'fr' | 'en'
   const font = profile?.font_family || 'Georgia, serif'
-  const role = profile?.roles?.[0] || 'gerant'
 
   const L = (fr: string, en: string) => lang === 'fr' ? fr : en
 

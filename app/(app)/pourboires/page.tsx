@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
 import { getTheme } from '@/lib/themes'
+import { useAuth } from '@/lib/auth-context'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -74,10 +75,7 @@ interface CoteState {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function PourbioiresPage() {
-  const [profile, setProfile]       = useState<any>(null)
-  const [loading, setLoading]       = useState(true)
-  const [userId, setUserId]         = useState('')
-  const [restaurantId, setRestaurantId] = useState<string | null>(null)
+  const { profile, userId: ctxUserId, restaurantId, isManager, loading } = useAuth()
   const router = useRouter()
 
   // Manager state
@@ -98,36 +96,18 @@ export default function PourbioiresPage() {
   const [weekSummary, setWeekSummary] = useState({ salaire: 0, pourboires: 0, totalH: 0, isEstimate: false })
   const [expanded, setExpanded]       = useState<string | null>(null)
 
-  // ── Init ──────────────────────────────────────────────────────────────────
+  // ── Load cotes when profile is ready ──────────────────────────────────────
 
   useEffect(() => {
-    async function init() {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { router.push('/login'); return }
-      const user = session.user
-      setUserId(user.id)
-
-      const { data: p, error: profileErr } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-      if (profileErr) { console.error('profiles:', profileErr.message); setLoading(false); return }
-      if (!p) { router.push('/login'); return }
-      setProfile(p)
-
-      const rid = p?.restaurant_ids?.[0] || null
-      setRestaurantId(rid)
-
-      const isManager = p?.roles?.includes('gerant') || p?.roles?.includes('admin')
-      if (isManager && rid) {
-        const { data: cd } = await supabase
-          .from('cotes').select('*')
-          .eq('restaurant_id', rid).eq('actif', true).order('nom')
+    if (!isManager || !restaurantId) return
+    supabase.from('cotes').select('*')
+      .eq('restaurant_id', restaurantId).eq('actif', true).order('nom')
+      .then(({ data: cd }) => {
         setCotes((cd || []).map((c: any) => ({
           id: c.id, nom: c.nom, pourcentage: c.pourcentage, enabled: true,
         })))
-      }
-      setLoading(false)
-    }
-    init()
-  }, [router])
+      })
+  }, [isManager, restaurantId])
 
   // ── Load service data (manager) ───────────────────────────────────────────
 
@@ -205,9 +185,7 @@ export default function PourbioiresPage() {
   // ── Load week data (employee) ─────────────────────────────────────────────
 
   const loadWeekData = useCallback(async () => {
-    if (!userId || !profile) return
-    const isManager = profile?.roles?.includes('gerant') || profile?.roles?.includes('admin')
-    if (isManager) return
+    if (!ctxUserId || !profile || isManager) return
 
     const { start, end } = getWeekBounds(weekOffset)
     const taux = profile?.taux_horaire || 0
@@ -215,7 +193,7 @@ export default function PourbioiresPage() {
     const { data: hd } = await supabase
       .from('heures_employes')
       .select('*, pool_shifts(*)')
-      .eq('user_id', userId)
+      .eq('user_id', ctxUserId)
       .gte('date', start).lte('date', end)
       .order('date')
 
@@ -246,12 +224,11 @@ export default function PourbioiresPage() {
     const isEstimate = weekOffset === 0 && (items.length === 0 || hasUnvalidated)
     setWeekItems(items)
     setWeekSummary({ salaire, pourboires: totalTips, totalH, isEstimate })
-  }, [userId, profile, weekOffset])
+  }, [ctxUserId, profile, isManager, weekOffset])
 
   useEffect(() => {
-    const isManager = profile?.roles?.includes('gerant') || profile?.roles?.includes('admin')
-    if (!isManager && userId) loadWeekData()
-  }, [profile, userId, loadWeekData])
+    if (!isManager && ctxUserId) loadWeekData()
+  }, [profile, ctxUserId, isManager, loadWeekData])
 
   // ── Validate service ──────────────────────────────────────────────────────
 
@@ -336,8 +313,6 @@ export default function PourbioiresPage() {
   const t = getTheme(profile?.theme)
   const lang = (profile?.lang || 'fr') as 'fr' | 'en'
   const font = profile?.font_family || 'Georgia, serif'
-  const role = profile?.roles?.[0] || 'employe'
-  const isManager = role === 'gerant' || role === 'admin'
   const tauxHoraire = profile?.taux_horaire || 0
 
   // ── Manager computed values ───────────────────────────────────────────────

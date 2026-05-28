@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
 import { getTheme } from '@/lib/themes'
+import { useAuth } from '@/lib/auth-context'
 import type { Jour } from '@/types'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -75,9 +76,7 @@ interface CellModal {
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function HorairePage() {
-  const [profile, setProfile]   = useState<any>(null)
-  const [userId, setUserId]     = useState<string | null>(null)
-  const [loading, setLoading]   = useState(true)
+  const { profile, userId, restaurantId: ctxRestaurantId, isManager, loading } = useAuth()
   const [weekOffset, setWeekOffset] = useState(0)
   const [activeTab, setActiveTab]   = useState<'horaire' | 'echanges'>('horaire')
 
@@ -112,26 +111,9 @@ export default function HorairePage() {
   const [saving, setSaving] = useState(false)
   const router = useRouter()
 
-  // ─── Init ─────────────────────────────────────────────────────────────────
-  useEffect(() => {
-    async function init() {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { router.push('/login'); return }
-      const user = session.user
-      const { data: p, error: profileErr } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-      if (profileErr) { console.error('profiles:', profileErr.message); setLoading(false); return }
-      if (!p) { router.push('/login'); return }
-      setProfile(p)
-      setUserId(user.id)
-      setLoading(false)
-    }
-    init()
-  }, [router])
-
   // ─── Load exchanges (not week-filtered) ──────────────────────────────────
   const loadEchanges = useCallback(async () => {
     if (!profile || !userId) return
-    const isManager = profile?.roles?.includes('gerant') || profile?.roles?.includes('admin')
     const SEL = '*, demandeur:demandeur_id(id,nom,roles), recepteur:recepteur_id(id,nom,roles), shift_demandeur:shift_demandeur_id(*,shift_types(*)), shift_recepteur:shift_recepteur_id(*,shift_types(*))'
 
     if (isManager) {
@@ -152,14 +134,13 @@ export default function HorairePage() {
         .order('created_at', { ascending: false })
       setEchanges(data || [])
     }
-  }, [profile, userId])
+  }, [profile, userId, isManager])
 
   // ─── Load week data ───────────────────────────────────────────────────────
   const loadData = useCallback(async () => {
     if (!profile || !userId) return
     const { monday, saturday } = getWeekRange(weekOffset)
-    const isManager = profile?.roles?.includes('gerant') || profile?.roles?.includes('admin')
-    const restaurantId = profile?.restaurant_ids?.[0]
+    const restaurantId = ctxRestaurantId
     const mondayISO = isoDate(monday)
     const saturdayISO = isoDate(saturday)
 
@@ -203,7 +184,7 @@ export default function HorairePage() {
       emps.forEach((e: any) => { map[e.id] = e })
       setEmployeeMap(map)
     }
-  }, [profile, userId, weekOffset])
+  }, [profile, userId, ctxRestaurantId, isManager, weekOffset])
 
   useEffect(() => { loadData() }, [loadData])
   useEffect(() => { loadEchanges() }, [loadEchanges])
@@ -222,7 +203,7 @@ export default function HorairePage() {
     if (!cellModal || !cellStId) return
     setSaving(true)
     await supabase.from('horaire_shifts').insert({
-      restaurant_id: profile?.restaurant_ids?.[0],
+      restaurant_id: ctxRestaurantId,
       user_id: cellModal.empId,
       shift_type_id: cellStId,
       date: cellModal.date,
@@ -253,7 +234,7 @@ export default function HorairePage() {
   async function publishSchedule() {
     setSaving(true)
     const { monday, saturday } = getWeekRange(weekOffset)
-    const restaurantId = profile?.restaurant_ids?.[0]
+    const restaurantId = ctxRestaurantId
     const lang = profile?.lang || 'fr'
     await supabase.from('horaire_shifts')
       .update({ statut: 'publie' })
@@ -410,8 +391,6 @@ export default function HorairePage() {
 
   const t = getTheme(profile?.theme)
   const lang = (profile?.lang || 'fr') as 'fr' | 'en'
-  const role = profile?.roles?.[0] || 'employe'
-  const isManager = role === 'gerant' || role === 'admin'
   const font = profile?.font_family || 'Georgia, serif'
   const MOIS = lang === 'fr' ? MOIS_FR : MOIS_EN
 

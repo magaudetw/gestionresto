@@ -1,9 +1,9 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
 import { getTheme } from '@/lib/themes'
+import { useAuth } from '@/lib/auth-context'
 import type { Notification } from '@/types'
 
 const TYPE_ICONS: Record<string, string> = {
@@ -42,35 +42,16 @@ function timeAgo(dateStr: string, lang: 'fr' | 'en') {
 }
 
 export default function NotificationsPage() {
-  const [profile, setProfile] = useState<any>(null)
+  const { profile, userId, loading } = useAuth()
   const [notifs, setNotifs] = useState<Notification[]>([])
-  const [loading, setLoading] = useState(true)
   const [marking, setMarking] = useState<string | null>(null)
-  const router = useRouter()
 
   useEffect(() => {
-    async function load() {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { router.push('/login'); return }
-      const user = session.user
-
-      const { data: p, error: profileErr } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-      if (profileErr) { console.error('profiles:', profileErr.message); setLoading(false); return }
-      if (!p) { router.push('/login'); return }
-      setProfile(p)
-
-      const { data: n } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(50)
-
-      setNotifs(n || [])
-      setLoading(false)
-    }
-    load()
-  }, [router])
+    if (!userId) return
+    supabase.from('notifications').select('*')
+      .eq('user_id', userId).order('created_at', { ascending: false }).limit(50)
+      .then(({ data: n }) => setNotifs(n || []))
+  }, [userId])
 
   async function markAsRead(id: string) {
     setMarking(id)
@@ -94,7 +75,6 @@ export default function NotificationsPage() {
 
   const t = getTheme(profile?.theme)
   const lang = (profile?.lang || 'fr') as 'fr' | 'en'
-  const role = profile?.roles?.[0] || 'employe'
   const font = profile?.font_family || 'Georgia, serif'
   const unreadCount = notifs.filter(n => !n.lu).length
 

@@ -1,9 +1,10 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
 import { getTheme } from '@/lib/themes'
+import { useAuth } from '@/lib/auth-context'
 
 const MOIS_FR = ['jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc']
 const MOIS_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
@@ -25,7 +26,7 @@ function getWeekBounds() {
 }
 
 export default function DashboardPage() {
-  const [profile, setProfile] = useState<any>(null)
+  const { profile, userId, restaurantId, isManager, loading } = useAuth()
   const [todayShifts, setTodayShifts] = useState<any[]>([])
   const [nextShift, setNextShift] = useState<any>(null)
   const [pendingEchanges, setPendingEchanges] = useState(0)
@@ -34,98 +35,66 @@ export default function DashboardPage() {
   const [lastImport, setLastImport] = useState<string | null>(null)
   const [unreadNotifs, setUnreadNotifs] = useState(0)
   const [estimatedPay, setEstimatedPay] = useState<{ salaire: number; total: number } | null>(null)
-  const [loading, setLoading] = useState(true)
   const router = useRouter()
 
-  useEffect(() => {
-    async function load() {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { router.push('/login'); return }
-      const user = session.user
-      const { data: p, error: profileErr } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-      if (profileErr) { console.error('profiles:', profileErr.message); setLoading(false); return }
-      if (!p) { router.push('/login'); return }
-      setProfile(p)
+  const loadData = useCallback(async () => {
+    if (!profile || !userId) return
+    const today = isoDate(new Date())
+    const { monday, saturday } = getWeekBounds()
 
-      const isManager = p?.roles?.includes('gerant') || p?.roles?.includes('admin')
-      const restaurantId = p?.restaurant_ids?.[0]
-      const today = isoDate(new Date())
-      const { monday, saturday } = getWeekBounds()
+    const { count: notifCount } = await supabase.from('notifications')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', userId).eq('lu', false)
+    setUnreadNotifs(notifCount || 0)
 
-      // Unread notifications (all users)
-      const { count: notifCount } = await supabase.from('notifications')
+    if (isManager && restaurantId) {
+      const { data: ts } = await supabase.from('horaire_shifts')
+        .select('*, shift_types(*), profiles(nom,roles)')
+        .eq('restaurant_id', restaurantId).eq('date', today).eq('statut', 'publie')
+      setTodayShifts(ts || [])
+
+      const { count: exchCount } = await supabase.from('echanges')
+        .select('*', { count: 'exact', head: true }).eq('statut', 'en_attente_gerant')
+      setPendingEchanges(exchCount || 0)
+
+      const { data: weekShifts } = await supabase.from('horaire_shifts')
+        .select('shift_types(debut,fin)').eq('restaurant_id', restaurantId).eq('statut', 'publie')
+        .gte('date', isoDate(monday)).lte('date', isoDate(saturday))
+      const totalH = (weekShifts || []).reduce((sum, s: any) => {
+        const st = s.shift_types
+        if (!st) return sum
+        const [h1, m1] = st.debut.split(':').map(Number)
+        const [h2, m2] = st.fin.split(':').map(Number)
+        return sum + ((h2 * 60 + m2) - (h1 * 60 + m1)) / 60
+      }, 0)
+      setWeekHeures(Math.round(totalH * 10) / 10)
+
+      const { count: empCount } = await supabase.from('profiles')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id).eq('lu', false)
-      setUnreadNotifs(notifCount || 0)
+        .contains('restaurant_ids', [restaurantId]).eq('actif', true)
+      setActiveCount(empCount || 0)
 
-      if (isManager) {
-        // Today's shifts
-        const { data: ts } = await supabase.from('horaire_shifts')
-          .select('*, shift_types(*), profiles(nom,roles)')
-          .eq('restaurant_id', restaurantId)
-          .eq('date', today)
-          .eq('statut', 'publie')
-        setTodayShifts(ts || [])
+      const { data: lastH } = await supabase.from('heures_employes')
+        .select('created_at').eq('source', 'import').order('created_at', { ascending: false }).limit(1)
+      setLastImport(lastH?.[0]?.created_at || null)
+    } else {
+      const { data: upcomingShifts } = await supabase.from('horaire_shifts')
+        .select('*, shift_types(*)')
+        .eq('user_id', userId).eq('statut', 'publie').gte('date', today)
+        .order('date', { ascending: true }).limit(1)
+      setNextShift(upcomingShifts?.[0] || null)
 
-        // Pending exchanges
-        const { count: exchCount } = await supabase.from('echanges')
-          .select('*', { count: 'exact', head: true })
-          .eq('statut', 'en_attente_gerant')
-        setPendingEchanges(exchCount || 0)
-
-        // Week: total scheduled hours
-        const { data: weekShifts } = await supabase.from('horaire_shifts')
-          .select('shift_types(debut,fin)')
-          .eq('restaurant_id', restaurantId)
-          .eq('statut', 'publie')
-          .gte('date', isoDate(monday))
-          .lte('date', isoDate(saturday))
-        const totalH = (weekShifts || []).reduce((sum, s: any) => {
-          const st = s.shift_types
-          if (!st) return sum
-          const [h1, m1] = st.debut.split(':').map(Number)
-          const [h2, m2] = st.fin.split(':').map(Number)
-          return sum + ((h2 * 60 + m2) - (h1 * 60 + m1)) / 60
-        }, 0)
-        setWeekHeures(Math.round(totalH * 10) / 10)
-
-        // Active employees
-        const { count: empCount } = await supabase.from('profiles')
-          .select('*', { count: 'exact', head: true })
-          .contains('restaurant_ids', restaurantId ? [restaurantId] : []).eq('actif', true)
-        setActiveCount(empCount || 0)
-
-        // Last import
-        const { data: lastH } = await supabase.from('heures_employes')
-          .select('created_at').eq('source', 'import').order('created_at', { ascending: false }).limit(1)
-        setLastImport(lastH?.[0]?.created_at || null)
-      } else {
-        // Employee: next shift
-        const { data: upcomingShifts } = await supabase.from('horaire_shifts')
-          .select('*, shift_types(*)')
-          .eq('user_id', user.id)
-          .eq('statut', 'publie')
-          .gte('date', today)
-          .order('date', { ascending: true })
-          .limit(1)
-        setNextShift(upcomingShifts?.[0] || null)
-
-        // Estimated pay this week
-        const { data: weekH } = await supabase.from('heures_employes')
-          .select('heures')
-          .eq('user_id', user.id)
-          .gte('date', isoDate(monday))
-          .lte('date', isoDate(saturday))
-        const totalWeekH = (weekH || []).reduce((s, h) => s + (h.heures || 0), 0)
-        const taux = p?.taux_horaire || 0
-        const salaire = Math.round(totalWeekH * 4) / 4 * taux
-        setEstimatedPay({ salaire, total: salaire })
-      }
-
-      setLoading(false)
+      const { data: weekH } = await supabase.from('heures_employes')
+        .select('heures').eq('user_id', userId)
+        .gte('date', isoDate(monday)).lte('date', isoDate(saturday))
+      const totalWeekH = (weekH || []).reduce((s, h) => s + (h.heures || 0), 0)
+      const taux = profile?.taux_horaire || 0
+      const salaire = Math.round(totalWeekH * 4) / 4 * taux
+      setEstimatedPay({ salaire, total: salaire })
     }
-    load()
-  }, [router])
+  }, [profile, userId, restaurantId, isManager])
+
+  useEffect(() => { loadData() }, [loadData])
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: '#080808', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -135,9 +104,7 @@ export default function DashboardPage() {
 
   const t = getTheme(profile?.theme)
   const lang = (profile?.lang || 'fr') as 'fr' | 'en'
-  const role = profile?.roles?.[0] || 'employe'
   const font = profile?.font_family || 'Georgia, serif'
-  const isManager = role === 'gerant' || role === 'admin'
   const prenom = profile?.nom?.split(' ')[0] || ''
   const MOIS = lang === 'fr' ? MOIS_FR : MOIS_EN
   const JOURS_FULL = lang === 'fr' ? JOURS_FULL_FR : JOURS_FULL_EN

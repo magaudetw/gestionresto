@@ -1,11 +1,11 @@
 'use client'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
 import { getTheme, THEME_NAMES, FONTS } from '@/lib/themes'
 import type { ThemeName } from '@/lib/themes'
 import type { ShiftType, Jour } from '@/types'
+import { useAuth } from '@/lib/auth-context'
 
 const ROLE_LABELS: Record<string, { fr: string; en: string }> = {
   admin:   { fr: 'Admin',            en: 'Admin' },
@@ -53,18 +53,13 @@ function loadGoogleFont(font: typeof FONTS[number]) {
 }
 
 export default function ReglagesPage() {
-  const [profile, setProfile] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
+  const { profile, restaurantId, isGerant, isAdmin, loading, userId, refreshProfile } = useAuth()
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
 
   const [selectedTheme, setSelectedTheme] = useState<ThemeName>('Or noir')
   const [selectedLang, setSelectedLang] = useState<'fr' | 'en'>('fr')
   const [selectedFont, setSelectedFont] = useState<string>(FONTS[0].value)
-
-  // Gérant features
-  const [isGerant, setIsGerant] = useState(false)
-  const [restaurantId, setRestaurantId] = useState<string | null>(null)
 
   // Shift types
   const [shiftTypes, setShiftTypes] = useState<ShiftType[]>([])
@@ -84,63 +79,47 @@ export default function ReglagesPage() {
   const [confirmDeleteCote, setConfirmDeleteCote] = useState<string | null>(null)
 
   // Admin — gestion des rôles
-  const [isAdmin, setIsAdmin] = useState(false)
   const [allEmployees, setAllEmployees] = useState<any[]>([])
   const [roleModal, setRoleModal] = useState<{ id: string; nom: string; roles: string[]; isSelf: boolean } | null>(null)
   const [savingRoles, setSavingRoles] = useState(false)
 
-  const router = useRouter()
-
+  // Sync form state from profile
   useEffect(() => {
-    async function load() {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { router.push('/login'); return }
-      const user = session.user
+    if (!profile) return
+    if (profile.theme)       setSelectedTheme(profile.theme as ThemeName)
+    if (profile.lang)        setSelectedLang(profile.lang as 'fr' | 'en')
+    if (profile.font_family) setSelectedFont(profile.font_family)
+  }, [profile])
 
-      const { data: p, error: profileErr } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-      if (profileErr) { console.error('profiles:', profileErr.message); setLoading(false); return }
-      if (!p) { router.push('/login'); return }
-      setProfile(p)
-      if (p?.theme)       setSelectedTheme(p.theme as ThemeName)
-      if (p?.lang)        setSelectedLang(p.lang as 'fr' | 'en')
-      if (p?.font_family) setSelectedFont(p.font_family)
+  // Load manager data when profile is ready
+  useEffect(() => {
+    if (!isGerant || !restaurantId) return
+    async function loadManagerData() {
+      const { data: shifts } = await supabase
+        .from('shift_types').select('*').eq('restaurant_id', restaurantId).order('debut')
+      setShiftTypes(shifts || [])
 
-      const gerant = p?.roles?.includes('gerant') || p?.roles?.includes('admin')
-      const admin = p?.roles?.includes('admin') ?? false
-      setIsGerant(gerant)
-      setIsAdmin(admin)
-      const rid = p?.restaurant_ids?.[0] || null
-      setRestaurantId(rid)
-
-      if (gerant && rid) {
-        const { data: shifts } = await supabase
-          .from('shift_types').select('*').eq('restaurant_id', rid).order('debut')
-        setShiftTypes(shifts || [])
-
-        const { data: cov } = await supabase
-          .from('couverture_minimale').select('*').eq('restaurant_id', rid)
-        const covMap: Record<string, CovEntry> = {}
-        for (const c of (cov || [])) {
-          covMap[`${c.jour}_${c.service}`] = { nb_personnes: c.nb_personnes, bar_requis: c.bar_requis, id: c.id }
-        }
-        setCouverture(covMap)
-
-        const { data: cotesD } = await supabase
-          .from('cotes').select('*').eq('restaurant_id', rid).order('nom')
-        setCotesReg(cotesD || [])
-
-        if (admin) {
-          const { data: emps } = await supabase
-            .from('profiles').select('id,nom,roles,actif')
-            .contains('restaurant_ids', [rid]).order('nom')
-          setAllEmployees(emps || [])
-        }
+      const { data: cov } = await supabase
+        .from('couverture_minimale').select('*').eq('restaurant_id', restaurantId)
+      const covMap: Record<string, CovEntry> = {}
+      for (const c of (cov || [])) {
+        covMap[`${c.jour}_${c.service}`] = { nb_personnes: c.nb_personnes, bar_requis: c.bar_requis, id: c.id }
       }
+      setCouverture(covMap)
 
-      setLoading(false)
+      const { data: cotesD } = await supabase
+        .from('cotes').select('*').eq('restaurant_id', restaurantId).order('nom')
+      setCotesReg(cotesD || [])
+
+      if (isAdmin) {
+        const { data: emps } = await supabase
+          .from('profiles').select('id,nom,roles,actif')
+          .contains('restaurant_ids', [restaurantId]).order('nom')
+        setAllEmployees(emps || [])
+      }
     }
-    load()
-  }, [router])
+    loadManagerData()
+  }, [isGerant, isAdmin, restaurantId])
 
   useEffect(() => {
     const fontDef = FONTS.find(f => f.value === selectedFont)
@@ -299,7 +278,6 @@ export default function ReglagesPage() {
 
   const t = getTheme(selectedTheme)
   const lang = selectedLang
-  const role = profile?.roles?.[0] || 'employe'
   const font = selectedFont
 
   const T = {

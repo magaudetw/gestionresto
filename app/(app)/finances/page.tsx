@@ -4,6 +4,7 @@ import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
 import { getTheme } from '@/lib/themes'
+import { useAuth } from '@/lib/auth-context'
 import type { Virement } from '@/types'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -128,10 +129,8 @@ function TrendChart({ data, t, font }: { data: WeekTrend[]; t: any; font: string
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function FinancesPage() {
-  const [profile, setProfile]         = useState<any>(null)
-  const [loading, setLoading]         = useState(true)
+  const { profile, restaurantId: ctxRid, isManager, loading } = useAuth()
   const [weekOffset, setWeekOffset]   = useState(0)
-  const [restaurantId, setRestaurantId] = useState('')
   const [weekPoolShifts, setWeekPoolShifts] = useState<any[]>([])
   const [empSummaries, setEmpSummaries] = useState<EmpSummary[]>([])
   const [virements, setVirements]     = useState<Virement[]>([])
@@ -142,21 +141,8 @@ export default function FinancesPage() {
   const router = useRouter()
 
   useEffect(() => {
-    async function init() {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) { router.push('/login'); return }
-      const user = session.user
-      const { data: p, error: profileErr } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-      if (profileErr) { console.error('profiles:', profileErr.message); setLoading(false); return }
-      if (!p) { router.push('/login'); return }
-      const isManager = p.roles?.includes('gerant') || p.roles?.includes('admin')
-      if (!isManager) { router.push('/dashboard'); return }
-      setProfile(p)
-      setRestaurantId(p?.restaurant_ids?.[0] || '')
-      setLoading(false)
-    }
-    init()
-  }, [router])
+    if (!loading && !isManager) router.push('/dashboard')
+  }, [loading, isManager, router])
 
   const loadWeekData = useCallback(async (rid: string, offset: number) => {
     const { start, end, semaineDu } = getWeekBounds(offset)
@@ -291,12 +277,12 @@ export default function FinancesPage() {
   }, [])
 
   useEffect(() => {
-    if (!restaurantId || !profile) return
+    if (!ctxRid || !profile) return
     const lang = (profile.lang || 'fr') as 'fr' | 'en'
-    loadWeekData(restaurantId, weekOffset)
-    loadTrendData(restaurantId, weekOffset, lang)
-    loadCotesData(restaurantId, weekOffset, lang)
-  }, [restaurantId, weekOffset, profile, loadWeekData, loadTrendData, loadCotesData])
+    loadWeekData(ctxRid, weekOffset)
+    loadTrendData(ctxRid, weekOffset, lang)
+    loadCotesData(ctxRid, weekOffset, lang)
+  }, [ctxRid, weekOffset, profile, loadWeekData, loadTrendData, loadCotesData])
 
   async function toggleVirement(v: Virement) {
     setSavingVirement(v.id)
