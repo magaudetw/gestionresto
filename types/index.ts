@@ -2,6 +2,18 @@ export type Role = 'admin' | 'gerant' | 'bar' | 'serveur' | 'busboy'
 
 export type Lang = 'fr' | 'en'
 
+export type Jour = 'lun' | 'mar' | 'mer' | 'jeu' | 'ven' | 'sam'
+
+export type Service = 'midi' | 'soir' | 'les_deux'
+
+export interface DisposBase {
+  jours: Jour[]
+  services: Service[]
+  contraintes: string
+}
+
+export type EchangeStatut = 'en_attente' | 'accepte' | 'refuse' | 'approuve' | 'rejete'
+
 export interface Restaurant {
   id: string
   nom: string
@@ -18,7 +30,9 @@ export interface User {
   restaurant_ids: string[]
   lang: Lang
   theme: string
+  font_family?: string
   actif: boolean
+  dispos_base?: DisposBase
 }
 
 export interface ShiftType {
@@ -45,8 +59,10 @@ export interface Echange {
   recepteur_id: string
   shift_demandeur_id: string
   shift_recepteur_id: string
-  statut: 'pending' | 'accepte' | 'refuse' | 'approuve'
+  statut: EchangeStatut
+  commentaire?: string
   created_at: string
+  updated_at: string
 }
 
 export interface PoolShift {
@@ -55,15 +71,21 @@ export interface PoolShift {
   date: string
   service: string
   pool_total: number
-  statut: 'ouvert' | 'ferme'
+  pool_carte?: number
+  pool_especes?: number
+  nb_employes?: number
+  statut: 'ouvert' | 'ferme' | 'valide'
 }
 
 export interface HeuresEmploye {
   id: string
   user_id: string
+  pool_shift_id?: string
   date: string
   heures: number
-  source: 'import' | 'manuel'
+  source: 'import' | 'manuel' | 'maitre_d'
+  import_batch_id?: string
+  montant_employe?: number
 }
 
 export interface Notification {
@@ -73,4 +95,72 @@ export interface Notification {
   message: string
   lu: boolean
   created_at: string
+}
+
+export interface DispoHebdo {
+  id: string
+  user_id: string
+  restaurant_id: string
+  semaine_du: string
+  dispos: Partial<Record<Jour, ('midi' | 'soir')[] | null>>
+  statut: 'brouillon' | 'soumis'
+  created_at: string
+  updated_at: string
+}
+
+export interface CouvertureMinimale {
+  id: string
+  restaurant_id: string
+  jour: Jour
+  service: 'midi' | 'soir'
+  nb_personnes: number
+  bar_requis: boolean
+}
+
+export interface Cote {
+  id: string
+  restaurant_id: string
+  nom: string
+  pourcentage: number
+  actif: boolean
+}
+
+export interface ImportMapping {
+  nom: string
+  date: string
+  heures: string
+  service?: string
+}
+
+export interface ImportConfig {
+  id: string
+  restaurant_id: string
+  col_nom: string
+  col_date: string
+  col_heures: string
+  col_shift: string
+  alias_employes: Record<string, string>
+  updated_at: string
+}
+
+export interface ImportLog {
+  id: string
+  restaurant_id: string
+  fichier_nom: string
+  nb_lignes: number
+  nb_employes: number
+  batch_id: string
+  created_at: string
+}
+
+export interface Virement {
+  id: string
+  restaurant_id: string
+  user_id: string
+  semaine_du: string
+  montant_salaire: number
+  montant_pourboires: number
+  montant_total: number
+  statut: 'en_attente' | 'effectue'
+  effectue_le: string | null
 }
