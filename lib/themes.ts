@@ -39,6 +39,17 @@ export function getTheme(name?: string | null): Theme {
   return THEMES[(name as ThemeName)] ?? THEMES['Or noir']
 }
 
+export function applyThemeToDocument(themeName?: string | null, fontFamily?: string | null) {
+  if (typeof document === 'undefined') return
+  const t = getTheme(themeName)
+  const name = (themeName ?? 'Or noir') as ThemeName
+  document.documentElement.setAttribute('data-theme', name)
+  document.documentElement.setAttribute('data-font', fontFamily ?? '')
+  document.documentElement.style.background = t.fond
+  document.documentElement.style.color      = t.texte
+  if (fontFamily) document.documentElement.style.fontFamily = fontFamily
+}
+
 export const FONTS = [
   { label: 'Georgia',           value: 'Georgia, serif' },
   { label: 'Playfair Display',  value: "'Playfair Display', Georgia, serif",       google: 'Playfair+Display:ital,wght@0,300;0,400;1,300' },

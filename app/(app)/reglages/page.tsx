@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import AppShell from '@/components/AppShell'
-import { getTheme, THEME_NAMES, FONTS } from '@/lib/themes'
+import { getTheme, THEME_NAMES, FONTS, applyThemeToDocument } from '@/lib/themes'
 import type { ThemeName } from '@/lib/themes'
 import type { ShiftType, Jour } from '@/types'
 import { useAuth } from '@/lib/auth-context'
@@ -54,8 +54,9 @@ function loadGoogleFont(font: typeof FONTS[number]) {
 
 export default function ReglagesPage() {
   const { profile, restaurantId, isGerant, isAdmin, loading, userId, refreshProfile } = useAuth()
-  const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
+  const [saving, setSaving]       = useState(false)
+  const [saved, setSaved]         = useState(false)
+  const [saveError, setSaveError] = useState(false)
 
   const [selectedTheme, setSelectedTheme] = useState<ThemeName>('Or noir')
   const [selectedLang, setSelectedLang] = useState<'fr' | 'en'>('fr')
@@ -127,19 +128,28 @@ export default function ReglagesPage() {
   }, [selectedFont])
 
   async function handleSave() {
+    if (!userId) return
     setSaving(true)
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+    setSaveError(false)
 
-    await supabase.from('profiles').update({
+    const { error } = await supabase.from('profiles').update({
       theme: selectedTheme,
       lang: selectedLang,
       font_family: selectedFont,
-    }).eq('id', user.id)
+    }).eq('id', userId)
 
+    setSaving(false)
+    if (error) {
+      console.error('handleSave:', error.message)
+      setSaveError(true)
+      setTimeout(() => setSaveError(false), 3000)
+      return
+    }
+
+    applyThemeToDocument(selectedTheme, selectedFont)
+    await refreshProfile()
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
-    setSaving(false)
   }
 
   async function loadShiftTypes() {
@@ -291,8 +301,9 @@ export default function ReglagesPage() {
     nom:         lang === 'fr' ? 'Nom'           : 'Name',
     role:        lang === 'fr' ? 'Rôle'          : 'Role',
     taux:        lang === 'fr' ? 'Taux horaire'  : 'Hourly rate',
-    sauvegarder: lang === 'fr' ? 'Sauvegarder'  : 'Save',
-    sauvegarde:  lang === 'fr' ? 'Sauvegardé ✓' : 'Saved ✓',
+    sauvegarder:       lang === 'fr' ? 'Sauvegarder'              : 'Save',
+    sauvegarde:        lang === 'fr' ? 'Sauvegardé ✓'            : 'Saved ✓',
+    erreurSauvegarde:  lang === 'fr' ? 'Erreur lors de la sauvegarde' : 'Save failed',
     motDePasse:  lang === 'fr' ? 'Changer le mot de passe' : 'Change password',
     annuler:     lang === 'fr' ? 'Annuler'       : 'Cancel',
     enregistrer: lang === 'fr' ? 'Enregistrer'   : 'Save',
@@ -518,14 +529,14 @@ export default function ReglagesPage() {
           disabled={saving}
           style={{
             width: '100%', padding: '14px',
-            background: saved ? '#72BA80' : t.accent,
+            background: saveError ? '#E07070' : saved ? '#72BA80' : t.accent,
             border: 'none', borderRadius: 12, cursor: saving ? 'wait' : 'pointer',
             color: t.isDark ? '#080808' : '#fff',
             fontSize: 14, letterSpacing: '0.08em', fontFamily: font, fontWeight: 600,
             transition: 'background 0.3s', marginBottom: 36,
           }}
         >
-          {saved ? T.sauvegarde : saving ? '...' : T.sauvegarder}
+          {saveError ? T.erreurSauvegarde : saved ? T.sauvegarde : saving ? '...' : T.sauvegarder}
         </button>
 
         {/* ── GÉRANT SECTIONS ── */}

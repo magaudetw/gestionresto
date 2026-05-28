@@ -1,6 +1,7 @@
 'use client'
 import { createContext, useCallback, useContext, useEffect, useState } from 'react'
 import { supabase } from './supabase'
+import { applyThemeToDocument } from './themes'
 
 interface AuthCtx {
   profile: any | null
@@ -32,6 +33,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) console.error('AuthContext profile:', error.message)
     setProfile(p ?? null)
     setLoading(false)
+    if (p) applyThemeToDocument(p.theme, p.font_family)
   }, [])
 
   const refreshProfile = useCallback(async () => {
