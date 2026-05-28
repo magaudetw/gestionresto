@@ -93,11 +93,12 @@ export default function ReglagesPage() {
 
   useEffect(() => {
     async function load() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/'); return }
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { router.push('/login'); return }
+      const user = session.user
 
       const { data: p } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-      if (!p) { router.push('/'); return }
+      if (!p) { router.push('/login'); return }
       setProfile(p)
       if (p?.theme)       setSelectedTheme(p.theme as ThemeName)
       if (p?.lang)        setSelectedLang(p.lang as 'fr' | 'en')

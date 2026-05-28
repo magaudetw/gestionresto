@@ -2,6 +2,8 @@ import { createServerClient } from '@supabase/ssr'
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+const PUBLIC_PATHS = ['/login', '/']
+
 export async function middleware(request: NextRequest) {
   let response = NextResponse.next({ request })
 
@@ -26,9 +28,21 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Refreshes the session if expired — must be called before any route check.
-  // The access token is written back into the response cookies automatically.
-  await supabase.auth.getUser()
+  // Refresh session if expired — must come before route checks.
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const pathname = request.nextUrl.pathname
+  const isPublic = PUBLIC_PATHS.includes(pathname)
+
+  // Redirect authenticated users away from login back to dashboard
+  if (user && pathname === '/login') {
+    return NextResponse.redirect(new URL('/dashboard', request.url))
+  }
+
+  // Redirect unauthenticated users trying to access protected routes
+  if (!user && !isPublic) {
+    return NextResponse.redirect(new URL('/login', request.url))
+  }
 
   return response
 }

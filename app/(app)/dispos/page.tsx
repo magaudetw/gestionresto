@@ -133,10 +133,11 @@ export default function DisposPage() {
   // ── Init ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/'); return }
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { router.push('/login'); return }
+      const user = session.user
       const { data: p } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-      if (!p) { router.push('/'); return }
+      if (!p) { router.push('/login'); return }
       setProfile(p)
       setLoading(false)
     }
