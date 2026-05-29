@@ -7,7 +7,8 @@ import { getTheme } from '@/lib/themes'
 import { useAuth } from '@/lib/auth-context'
 import type { Role, Jour, Service, DisposBase } from '@/types'
 
-const ROLE_LABELS: Record<string, { fr: string; en: string }> = {
+// Fallbacks used until role_types loads from DB
+const DEFAULT_ROLE_LABELS: Record<string, { fr: string; en: string }> = {
   admin:   { fr: 'Admin',            en: 'Admin' },
   gerant:  { fr: 'Gérant',           en: 'Manager' },
   bar:     { fr: 'Barman/Barmaid',   en: 'Bartender' },
@@ -15,19 +16,19 @@ const ROLE_LABELS: Record<string, { fr: string; en: string }> = {
   busboy:  { fr: 'Busboy',           en: 'Busboy' },
 }
 
-const ROLE_ICONS: Record<string, string> = {
+const DEFAULT_ROLE_ICONS: Record<string, string> = {
   admin: '🔧', gerant: '👔', bar: '🍸', serveur: '🍽️', busboy: '✨',
 }
 
-const ROLE_COLORS: Record<string, string> = {
+const DEFAULT_ROLE_COLORS: Record<string, string> = {
   admin: '#E07070', gerant: '#C9A84C', bar: '#7EB8F7', serveur: '#82E0AA', busboy: '#C39BD3',
 }
 
-const COEFF: Record<string, number> = {
+const DEFAULT_COEFF: Record<string, number> = {
   admin: 1.0, gerant: 1.0, bar: 1.0, serveur: 1.0, busboy: 0.5,
 }
 
-const SELECTABLE_ROLES: Role[] = ['gerant', 'bar', 'serveur', 'busboy']
+const DEFAULT_SELECTABLE: Role[] = ['gerant', 'bar', 'serveur', 'busboy']
 
 const JOURS: Jour[] = ['lun', 'mar', 'mer', 'jeu', 'ven', 'sam']
 const JOUR_LABELS: Record<Jour, { fr: string; en: string }> = {
@@ -74,6 +75,7 @@ export default function EquipePage() {
   const { profile, restaurantId, isManager, loading } = useAuth()
   const [employes, setEmployes] = useState<any[]>([])
   const [restaurants, setRestaurants] = useState<{id: string; nom: string}[]>([])
+  const [roleTypesList, setRoleTypesList] = useState<any[]>([])
   const [filter, setFilter] = useState<string>('tous')
   const [modal, setModal] = useState<ModalData | null>(null)
   const [saving, setSaving] = useState(false)
@@ -92,6 +94,8 @@ export default function EquipePage() {
   useEffect(() => {
     supabase.from('restaurants').select('id,nom').eq('actif', true).order('nom')
       .then(({ data }) => setRestaurants(data || []))
+    supabase.from('role_types').select('*').eq('actif', true).order('nom')
+      .then(({ data }) => { if (data?.length) setRoleTypesList(data) })
   }, [])
 
   useEffect(() => {
@@ -214,7 +218,24 @@ export default function EquipePage() {
   const lang = (profile?.lang || 'fr') as 'fr' | 'en'
   const font = profile?.font_family || 'Georgia, serif'
 
-  const allRoles = ['tous', 'gerant', 'bar', 'serveur', 'busboy']
+  // Derived from DB; fall back to defaults while loading
+  const ROLE_LABELS: Record<string, { fr: string; en: string }> = roleTypesList.length
+    ? Object.fromEntries(roleTypesList.map(r => [r.slug, { fr: r.nom, en: r.nom }]))
+    : DEFAULT_ROLE_LABELS
+  const ROLE_ICONS: Record<string, string> = roleTypesList.length
+    ? Object.fromEntries(roleTypesList.map(r => [r.slug, r.icone]))
+    : DEFAULT_ROLE_ICONS
+  const ROLE_COLORS: Record<string, string> = roleTypesList.length
+    ? Object.fromEntries(roleTypesList.map(r => [r.slug, r.couleur]))
+    : DEFAULT_ROLE_COLORS
+  const COEFF: Record<string, number> = roleTypesList.length
+    ? Object.fromEntries(roleTypesList.map(r => [r.slug, Number(r.coefficient_pourboire)]))
+    : DEFAULT_COEFF
+  const SELECTABLE_ROLES: Role[] = roleTypesList.length
+    ? roleTypesList.filter(r => r.slug !== 'admin').map(r => r.slug as Role)
+    : DEFAULT_SELECTABLE
+
+  const allRoles = ['tous', ...SELECTABLE_ROLES]
   const filteredEmployes = filter === 'tous'
     ? employes
     : employes.filter(e => e.roles?.includes(filter))

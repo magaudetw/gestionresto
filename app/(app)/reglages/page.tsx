@@ -24,6 +24,11 @@ const SHIFT_COLORS = [
   '#C9A84C', '#E07070', '#72BA80', '#E0A850',
 ]
 
+const ROLE_TYPE_COLORS = [
+  '#E07070', '#C9A84C', '#7EB8F7', '#82E0AA',
+  '#C39BD3', '#72BA80', '#E0A850', '#F4A261',
+]
+
 const JOURS_ORDRE: Jour[] = ['lun', 'mar', 'mer', 'jeu', 'ven', 'sam']
 const JOUR_LABELS: Record<Jour, { fr: string; en: string }> = {
   lun: { fr: 'Lun', en: 'Mon' }, mar: { fr: 'Mar', en: 'Tue' },
@@ -37,6 +42,16 @@ interface ShiftModalData {
   debut: string
   fin: string
   couleur: string
+}
+
+interface RoleTypeModalData {
+  id?: string
+  nom: string
+  slug: string
+  coefficient_pourboire: string
+  couleur: string
+  icone: string
+  actif: boolean
 }
 
 type CovEntry = { nb_personnes: number; bar_requis: boolean; id?: string }
@@ -80,10 +95,11 @@ export default function ReglagesPage() {
   const [savingCote, setSavingCote] = useState(false)
   const [confirmDeleteCote, setConfirmDeleteCote] = useState<string | null>(null)
 
-  // Admin — gestion des rôles
-  const [allEmployees, setAllEmployees] = useState<any[]>([])
-  const [roleModal, setRoleModal] = useState<{ id: string; nom: string; roles: string[]; isSelf: boolean } | null>(null)
-  const [savingRoles, setSavingRoles] = useState(false)
+  // Role types management
+  const [roleTypes, setRoleTypes] = useState<any[]>([])
+  const [roleTypeModal, setRoleTypeModal] = useState<RoleTypeModalData | null>(null)
+  const [savingRoleType, setSavingRoleType] = useState(false)
+  const [confirmArchiveRoleType, setConfirmArchiveRoleType] = useState<string | null>(null)
 
   // Sync form state from profile
   useEffect(() => {
@@ -115,10 +131,9 @@ export default function ReglagesPage() {
       setCotesReg(cotesD || [])
 
       if (isAdmin) {
-        const { data: emps } = await supabase
-          .from('profiles').select('id,nom,roles,actif')
-          .contains('restaurant_ids', [restaurantId]).order('nom')
-        setAllEmployees(emps || [])
+        const { data: rtData } = await supabase
+          .from('role_types').select('*').order('nom')
+        setRoleTypes(rtData || [])
       }
     }
     loadManagerData()
@@ -169,17 +184,27 @@ export default function ReglagesPage() {
   async function handleSaveShift() {
     if (!shiftModal || !restaurantId || !shiftModal.nom.trim()) return
     setSavingShift(true)
-    const payload = {
-      nom: shiftModal.nom.trim(),
-      debut: shiftModal.debut,
-      fin: shiftModal.fin,
-      couleur: shiftModal.couleur,
-      restaurant_id: restaurantId,
-    }
-    if (shiftModal.id) {
-      await supabase.from('shift_types').update(payload).eq('id', shiftModal.id)
-    } else {
-      await supabase.from('shift_types').insert(payload)
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch('/api/manage-shifts-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token ?? ''}` },
+      body: JSON.stringify({
+        action: 'upsert',
+        payload: {
+          id: shiftModal.id,
+          restaurant_id: restaurantId,
+          nom: shiftModal.nom.trim(),
+          debut: shiftModal.debut,
+          fin: shiftModal.fin,
+          couleur: shiftModal.couleur,
+        },
+      }),
+    })
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}))
+      console.error('[shifts-config] save error:', json.error)
+      setSavingShift(false)
+      return
     }
     await loadShiftTypes()
     setShiftModal(null)
@@ -189,10 +214,17 @@ export default function ReglagesPage() {
 
   async function handleDeleteShift() {
     if (!confirmDeleteShift) return
-    await supabase.from('shift_types').delete().eq('id', confirmDeleteShift)
-    await loadShiftTypes()
-    setShiftModal(null)
-    setConfirmDeleteShift(null)
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch('/api/manage-shifts-config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token ?? ''}` },
+      body: JSON.stringify({ action: 'delete', payload: { id: confirmDeleteShift } }),
+    })
+    if (res.ok) {
+      await loadShiftTypes()
+      setShiftModal(null)
+      setConfirmDeleteShift(null)
+    }
   }
 
   function adjustCouverture(jour: Jour, service: 'midi' | 'soir', delta: number) {
@@ -220,17 +252,26 @@ export default function ReglagesPage() {
   async function handleSaveCote() {
     if (!coteModal || !restaurantId || !coteModal.nom.trim()) return
     setSavingCote(true)
-    const pct = parseFloat(coteModal.pourcentage) || 0
-    const payload = {
-      restaurant_id: restaurantId,
-      nom: coteModal.nom.trim(),
-      pourcentage: pct,
-      actif: coteModal.actif,
-    }
-    if (coteModal.id) {
-      await supabase.from('cotes').update(payload).eq('id', coteModal.id)
-    } else {
-      await supabase.from('cotes').insert(payload)
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch('/api/manage-cotes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token ?? ''}` },
+      body: JSON.stringify({
+        action: 'upsert',
+        payload: {
+          id: coteModal.id,
+          restaurant_id: restaurantId,
+          nom: coteModal.nom.trim(),
+          pourcentage: parseFloat(coteModal.pourcentage) || 0,
+          actif: coteModal.actif,
+        },
+      }),
+    })
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}))
+      console.error('[cotes] save error:', json.error)
+      setSavingCote(false)
+      return
     }
     await loadCotesReg()
     setCoteModal(null)
@@ -240,27 +281,70 @@ export default function ReglagesPage() {
 
   async function handleArchiveCote() {
     if (!confirmDeleteCote) return
-    await supabase.from('cotes').update({ actif: false }).eq('id', confirmDeleteCote)
-    await loadCotesReg()
-    setCoteModal(null)
-    setConfirmDeleteCote(null)
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch('/api/manage-cotes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token ?? ''}` },
+      body: JSON.stringify({ action: 'archive', payload: { id: confirmDeleteCote } }),
+    })
+    if (res.ok) {
+      await loadCotesReg()
+      setCoteModal(null)
+      setConfirmDeleteCote(null)
+    }
   }
 
-  async function loadAllEmployees() {
-    if (!restaurantId) return
-    const { data } = await supabase
-      .from('profiles').select('id,nom,roles,actif')
-      .contains('restaurant_ids', [restaurantId]).order('nom')
-    setAllEmployees(data || [])
+  async function loadRoleTypes() {
+    const { data } = await supabase.from('role_types').select('*').order('nom')
+    setRoleTypes(data || [])
   }
 
-  async function handleSaveRoles() {
-    if (!roleModal || roleModal.roles.length === 0) return
-    setSavingRoles(true)
-    await supabase.from('profiles').update({ roles: roleModal.roles }).eq('id', roleModal.id)
-    await loadAllEmployees()
-    setRoleModal(null)
-    setSavingRoles(false)
+  async function handleSaveRoleType() {
+    if (!roleTypeModal || !roleTypeModal.nom.trim() || !roleTypeModal.slug.trim()) return
+    setSavingRoleType(true)
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch('/api/manage-role-types', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token ?? ''}` },
+      body: JSON.stringify({
+        action: 'upsert',
+        payload: {
+          id: roleTypeModal.id,
+          restaurant_id: restaurantId || null,
+          nom: roleTypeModal.nom.trim(),
+          slug: roleTypeModal.slug.trim(),
+          coefficient_pourboire: parseFloat(roleTypeModal.coefficient_pourboire) || 1.0,
+          couleur: roleTypeModal.couleur,
+          icone: roleTypeModal.icone,
+        },
+      }),
+    })
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}))
+      console.error('[role-types] save error:', json.error)
+      setSavingRoleType(false)
+      return
+    }
+    await loadRoleTypes()
+    setRoleTypeModal(null)
+    setSavingRoleType(false)
+  }
+
+  async function handleArchiveRoleType() {
+    if (!confirmArchiveRoleType) return
+    const rt = roleTypes.find((r: any) => r.id === confirmArchiveRoleType)
+    if (!rt) return
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch('/api/manage-role-types', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token ?? ''}` },
+      body: JSON.stringify({ action: 'archive', payload: { id: rt.id, slug: rt.slug } }),
+    })
+    if (res.ok) {
+      await loadRoleTypes()
+      setRoleTypeModal(null)
+      setConfirmArchiveRoleType(null)
+    }
   }
 
   async function handleSaveCouverture() {
@@ -290,7 +374,6 @@ export default function ReglagesPage() {
       setSavingCouverture(false)
       return
     }
-    // Refresh from DB to confirm
     const { data } = await supabase.from('couverture_minimale').select('*').eq('restaurant_id', restaurantId)
     const covMap: Record<string, CovEntry> = {}
     for (const c of (data || [])) {
@@ -349,14 +432,6 @@ export default function ReglagesPage() {
     barRequis:         lang === 'fr' ? '🍸 Bar'                   : '🍸 Bar',
     sauvegarderCouv:   lang === 'fr' ? 'Sauvegarder la couverture' : 'Save coverage',
     savedCouv:         lang === 'fr' ? 'Couverture sauvegardée ✓' : 'Coverage saved ✓',
-    // Admin — rôles
-    gestionRoles:      lang === 'fr' ? 'GESTION DES RÔLES'        : 'ROLE MANAGEMENT',
-    adminSeulement:    lang === 'fr' ? 'Admin seulement'          : 'Admin only',
-    rolesEmp:          lang === 'fr' ? 'Rôles de'                 : 'Roles for',
-    rolesLabel:        lang === 'fr' ? 'Rôles'                    : 'Roles',
-    aucunRole:         lang === 'fr' ? 'Au moins un rôle requis'  : 'At least one role required',
-    selfWarning:       lang === 'fr' ? 'Vous ne pouvez pas modifier votre propre profil ici.' : 'You cannot edit your own profile here.',
-    inactif:           lang === 'fr' ? 'inactif'                  : 'inactive',
     // Gérant — cotes
     cotesSect:         lang === 'fr' ? 'COTES DE POURBOIRES'      : 'TIP DEDUCTIONS',
     ajouterCote:       lang === 'fr' ? '+ Ajouter'                : '+ Add',
@@ -369,6 +444,18 @@ export default function ReglagesPage() {
     confirmerArchive:  lang === 'fr' ? 'Archiver cette cote ?' : 'Archive this deduction?',
     aucuneCote:        lang === 'fr' ? 'Aucune cote configurée'   : 'No deductions configured',
     cotePlaceholder:   lang === 'fr' ? 'Ex: Cuisine, Plongeur...' : 'E.g.: Kitchen, Busser...',
+    // Admin — types de rôles
+    gestionRoles:         lang === 'fr' ? 'TYPES DE RÔLES'             : 'ROLE TYPES',
+    adminSeulement:       lang === 'fr' ? 'Admin seulement'            : 'Admin only',
+    inactif:              lang === 'fr' ? 'inactif'                    : 'inactive',
+    nouveauRole:          lang === 'fr' ? 'Nouveau type de rôle'       : 'New role type',
+    modifierRole:         lang === 'fr' ? 'Modifier le type de rôle'   : 'Edit role type',
+    nomRole:              lang === 'fr' ? 'Nom du rôle'                : 'Role name',
+    slugRole:             lang === 'fr' ? 'Identifiant (slug)'         : 'Identifier (slug)',
+    coeffLabel:           lang === 'fr' ? 'Coefficient pourboires'     : 'Tip coefficient',
+    iconeLabel:           lang === 'fr' ? 'Icône'                      : 'Icon',
+    aucunTypeRole:        lang === 'fr' ? 'Aucun type de rôle'         : 'No role types',
+    confirmerArchiveRole: lang === 'fr' ? 'Archiver ce type de rôle ?' : 'Archive this role type?',
   }
 
   const THEME_SWATCHES: Record<ThemeName, string> = {
@@ -765,6 +852,7 @@ export default function ReglagesPage() {
                 {savedCouverture ? T.savedCouv : savingCouverture ? '...' : T.sauvegarderCouv}
               </button>
             </div>
+
             {/* ── COTES ── */}
             <div style={{ marginBottom: 28 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
@@ -822,79 +910,83 @@ export default function ReglagesPage() {
                 )}
               </div>
             </div>
-          {/* ── ADMIN — GESTION DES RÔLES ── */}
-          {isAdmin && (
-            <div style={{ marginBottom: 28 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                <div style={{ fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: t.texteSecondaire }}>
-                  {T.gestionRoles}
-                </div>
-                <span style={{
-                  fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase',
-                  padding: '2px 7px', borderRadius: 4,
-                  background: 'rgba(224,112,112,0.12)', border: '1px solid rgba(224,112,112,0.3)',
-                  color: '#E07070',
-                }}>
-                  {T.adminSeulement}
-                </span>
-              </div>
 
-              <div style={{ background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 14, overflow: 'hidden' }}>
-                {allEmployees.length === 0 ? (
-                  <div style={{ padding: '16px', textAlign: 'center', color: t.texteFaible, fontSize: 12 }}>
-                    {lang === 'fr' ? 'Aucun employé' : 'No employees'}
+            {/* ── ADMIN — TYPES DE RÔLES ── */}
+            {isAdmin && (
+              <div style={{ marginBottom: 28 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: t.texteSecondaire }}>
+                      {T.gestionRoles}
+                    </div>
+                    <span style={{
+                      fontSize: 9, letterSpacing: '0.1em', textTransform: 'uppercase',
+                      padding: '2px 7px', borderRadius: 4,
+                      background: 'rgba(224,112,112,0.12)', border: '1px solid rgba(224,112,112,0.3)',
+                      color: '#E07070',
+                    }}>
+                      {T.adminSeulement}
+                    </span>
                   </div>
-                ) : (
-                  allEmployees.map((emp: any, i: number) => {
-                    const isSelf = emp.id === profile?.id
-                    return (
+                  <button
+                    onClick={() => setRoleTypeModal({ nom: '', slug: '', coefficient_pourboire: '1.0', couleur: '#7EB8F7', icone: '👤', actif: true })}
+                    style={{
+                      background: t.accent, border: 'none', borderRadius: 8, padding: '4px 12px',
+                      cursor: 'pointer', color: t.isDark ? '#080808' : '#fff', fontSize: 11, fontFamily: font,
+                    }}
+                  >
+                    {T.ajouterType}
+                  </button>
+                </div>
+
+                <div style={{ background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 14, overflow: 'hidden' }}>
+                  {roleTypes.length === 0 ? (
+                    <div style={{ padding: '16px', textAlign: 'center', color: t.texteFaible, fontSize: 12 }}>
+                      {T.aucunTypeRole}
+                    </div>
+                  ) : (
+                    roleTypes.map((rt: any, i: number) => (
                       <button
-                        key={emp.id}
-                        onClick={() => setRoleModal({ id: emp.id, nom: emp.nom, roles: [...(emp.roles || [])], isSelf })}
+                        key={rt.id}
+                        onClick={() => setRoleTypeModal({
+                          id: rt.id, nom: rt.nom, slug: rt.slug,
+                          coefficient_pourboire: String(rt.coefficient_pourboire),
+                          couleur: rt.couleur, icone: rt.icone, actif: rt.actif,
+                        })}
                         style={{
                           width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontFamily: font,
-                          padding: '11px 16px',
-                          borderBottom: i < allEmployees.length - 1 ? `1px solid ${t.border}` : 'none',
-                          display: 'flex', alignItems: 'center', gap: 10,
-                          opacity: emp.actif ? 1 : 0.45,
+                          padding: '12px 16px',
+                          borderBottom: i < roleTypes.length - 1 ? `1px solid ${t.border}` : 'none',
+                          display: 'flex', alignItems: 'center', gap: 12,
+                          opacity: rt.actif ? 1 : 0.5,
                         }}
                       >
-                        <div style={{ flex: 1, textAlign: 'left', minWidth: 0 }}>
-                          <div style={{ fontSize: 13, color: t.texte, display: 'flex', alignItems: 'center', gap: 6 }}>
-                            {emp.nom}
-                            {!emp.actif && (
+                        <span style={{ fontSize: 18, flexShrink: 0 }}>{rt.icone}</span>
+                        <div style={{ flex: 1, textAlign: 'left' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontSize: 13, color: t.texte }}>{rt.nom}</span>
+                            {!rt.actif && (
                               <span style={{ fontSize: 9, color: t.texteFaible, border: `1px solid ${t.border}`, borderRadius: 4, padding: '1px 5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                                 {T.inactif}
                               </span>
                             )}
-                            {isSelf && (
-                              <span style={{ fontSize: 9, color: t.accent, border: `1px solid ${t.borderAccent}`, borderRadius: 4, padding: '1px 5px', letterSpacing: '0.06em' }}>
-                                {lang === 'fr' ? 'vous' : 'you'}
-                              </span>
-                            )}
                           </div>
-                          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 4 }}>
-                            {(emp.roles || []).map((r: string) => (
-                              <span key={r} style={{
-                                fontSize: 9, padding: '1px 6px', borderRadius: 4,
-                                background: `${ROLE_COLORS[r] || t.accent}18`,
-                                border: `1px solid ${ROLE_COLORS[r] || t.accent}44`,
-                                color: ROLE_COLORS[r] || t.accent,
-                                letterSpacing: '0.04em',
-                              }}>
-                                {ROLE_LABELS[r]?.[lang] || r}
-                              </span>
-                            ))}
+                          <div style={{ fontSize: 10, color: t.texteSecondaire, marginTop: 2 }}>
+                            {lang === 'fr' ? 'Coeff.' : 'Coeff.'} {rt.coefficient_pourboire}
+                            {' · '}
+                            <span style={{ color: t.texteFaible, fontFamily: "'Courier New', monospace" }}>{rt.slug}</span>
                           </div>
                         </div>
-                        <span style={{ color: t.texteFaible, fontSize: 16, flexShrink: 0 }}>›</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                          <div style={{ width: 12, height: 12, borderRadius: '50%', background: rt.couleur, flexShrink: 0 }} />
+                          <span style={{ color: t.texteFaible, fontSize: 16 }}>›</span>
+                        </div>
                       </button>
-                    )
-                  })
-                )}
+                    ))
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
           </>
         )}
       </main>
@@ -1132,10 +1224,10 @@ export default function ReglagesPage() {
         </div>
       )}
 
-      {/* ── ROLE MODAL ── */}
-      {roleModal && (
+      {/* ── ROLE TYPE MODAL ── */}
+      {roleTypeModal && (
         <div
-          onClick={() => setRoleModal(null)}
+          onClick={() => { setRoleTypeModal(null); setConfirmArchiveRoleType(null) }}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 100, display: 'flex', alignItems: 'flex-end' }}
         >
           <div
@@ -1143,117 +1235,122 @@ export default function ReglagesPage() {
             style={{
               width: '100%', maxWidth: 480, margin: '0 auto',
               background: t.surface1, borderRadius: '20px 20px 0 0',
-              padding: '20px 18px 32px', maxHeight: '85vh', overflowY: 'auto',
+              padding: '20px 18px 32px', maxHeight: '90vh', overflowY: 'auto',
             }}
           >
             <div style={{ width: 36, height: 4, borderRadius: 2, background: t.border, margin: '0 auto 20px' }} />
 
-            <h2 style={{ fontSize: 18, fontWeight: 300, margin: '0 0 4px', color: t.texte }}>
-              {T.rolesEmp}
+            <h2 style={{ fontSize: 18, fontWeight: 300, margin: '0 0 20px', color: t.texte }}>
+              {roleTypeModal.id ? T.modifierRole : T.nouveauRole}
             </h2>
-            <div style={{ fontSize: 15, color: t.accent, marginBottom: 20 }}>{roleModal.nom}</div>
 
-            {roleModal.isSelf ? (
-              <div style={{
-                background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.3)',
-                borderRadius: 10, padding: '12px 14px', marginBottom: 20,
-                fontSize: 12, color: '#C9A84C',
-              }}>
-                {T.selfWarning}
+            {/* Icône + Couleur */}
+            <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr', gap: 14, marginBottom: 14, alignItems: 'start' }}>
+              <div>
+                <div style={{ fontSize: 11, color: t.texteSecondaire, marginBottom: 6, letterSpacing: '0.08em' }}>{T.iconeLabel}</div>
+                <input
+                  value={roleTypeModal.icone}
+                  onChange={e => setRoleTypeModal(m => m ? { ...m, icone: e.target.value } : m)}
+                  placeholder="👤"
+                  style={{ width: '100%', background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 8, color: t.texte, padding: '10px 8px', fontSize: 22, textAlign: 'center', outline: 'none', boxSizing: 'border-box' }}
+                />
               </div>
-            ) : (
-              <>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
-                  {(['admin', 'gerant', 'bar', 'serveur', 'busboy'] as const).map(r => {
-                    const isActive = roleModal.roles.includes(r)
-                    const color = ROLE_COLORS[r] || t.accent
-                    return (
-                      <button
-                        key={r}
-                        onClick={() => {
-                          setRoleModal(prev => {
-                            if (!prev) return prev
-                            const next = isActive
-                              ? prev.roles.filter(x => x !== r)
-                              : [...prev.roles, r]
-                            return { ...prev, roles: next }
-                          })
-                        }}
-                        style={{
-                          display: 'flex', alignItems: 'center', gap: 12,
-                          padding: '12px 14px', borderRadius: 10,
-                          background: isActive ? `${color}14` : t.surface2,
-                          border: `1px solid ${isActive ? color + '55' : t.border}`,
-                          cursor: 'pointer', fontFamily: font, textAlign: 'left',
-                          transition: 'all 0.15s',
-                        }}
-                      >
-                        <div style={{
-                          width: 20, height: 20, borderRadius: 6,
-                          background: isActive ? color : 'transparent',
-                          border: `2px solid ${isActive ? color : t.border}`,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          flexShrink: 0, transition: 'all 0.15s',
-                        }}>
-                          {isActive && (
-                            <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                              <path d="M1 4L3.5 6.5L9 1" stroke={t.isDark ? '#080808' : '#fff'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                          )}
-                        </div>
-                        <div>
-                          <div style={{ fontSize: 13, color: isActive ? color : t.texte, fontWeight: isActive ? 500 : 400 }}>
-                            {ROLE_LABELS[r]?.[lang] || r}
-                          </div>
-                          {r === 'busboy' && (
-                            <div style={{ fontSize: 10, color: t.texteFaible, marginTop: 1 }}>
-                              {lang === 'fr' ? 'Coeff. pourboires × 0.5' : 'Tip coefficient × 0.5'}
-                            </div>
-                          )}
-                          {r === 'admin' && (
-                            <div style={{ fontSize: 10, color: t.texteFaible, marginTop: 1 }}>
-                              {lang === 'fr' ? 'Accès complet + gestion des rôles' : 'Full access + role management'}
-                            </div>
-                          )}
-                        </div>
-                      </button>
-                    )
-                  })}
+              <div>
+                <div style={{ fontSize: 11, color: t.texteSecondaire, marginBottom: 8, letterSpacing: '0.08em' }}>{T.couleur}</div>
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {ROLE_TYPE_COLORS.map(col => (
+                    <button
+                      key={col}
+                      onClick={() => setRoleTypeModal(m => m ? { ...m, couleur: col } : m)}
+                      style={{
+                        width: 28, height: 28, borderRadius: '50%', background: col, border: 'none', cursor: 'pointer',
+                        outline: roleTypeModal.couleur === col ? `3px solid ${col}` : '2px solid transparent',
+                        outlineOffset: 2, transition: 'outline 0.15s',
+                      }}
+                    />
+                  ))}
                 </div>
+              </div>
+            </div>
 
-                {roleModal.roles.length === 0 && (
-                  <div style={{ fontSize: 11, color: '#E07070', marginBottom: 14, textAlign: 'center' }}>
-                    {T.aucunRole}
-                  </div>
-                )}
-              </>
+            {/* Nom */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: t.texteSecondaire, marginBottom: 6, letterSpacing: '0.08em' }}>{T.nomRole} *</div>
+              <input
+                value={roleTypeModal.nom}
+                onChange={e => setRoleTypeModal(m => m ? { ...m, nom: e.target.value } : m)}
+                placeholder={lang === 'fr' ? 'Ex: Serveur, Barman...' : 'E.g.: Server, Bartender...'}
+                style={{ width: '100%', background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 8, color: t.texte, padding: '10px 12px', fontSize: 14, fontFamily: font, outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            {/* Slug */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: t.texteSecondaire, marginBottom: 6, letterSpacing: '0.08em' }}>{T.slugRole} *</div>
+              <input
+                value={roleTypeModal.slug}
+                onChange={e => setRoleTypeModal(m => m ? { ...m, slug: e.target.value.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') } : m)}
+                placeholder="serveur"
+                style={{ width: '100%', background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 8, color: t.texte, padding: '10px 12px', fontSize: 13, fontFamily: "'Courier New', monospace", outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            {/* Coefficient */}
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, color: t.texteSecondaire, marginBottom: 6, letterSpacing: '0.08em' }}>{T.coeffLabel}</div>
+              <input
+                type="number" min="0" max="2" step="0.1"
+                value={roleTypeModal.coefficient_pourboire}
+                onChange={e => setRoleTypeModal(m => m ? { ...m, coefficient_pourboire: e.target.value } : m)}
+                placeholder="1.0"
+                style={{ width: '100%', background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 8, color: t.texte, padding: '10px 12px', fontSize: 16, fontFamily: "'Courier New', monospace", outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            {/* Confirm archive */}
+            {confirmArchiveRoleType && (
+              <div style={{ background: 'rgba(224,160,80,0.1)', border: '1px solid rgba(224,160,80,0.3)', borderRadius: 10, padding: '12px 14px', marginBottom: 14 }}>
+                <div style={{ fontSize: 12, color: '#E0A850', marginBottom: 10 }}>{T.confirmerArchiveRole}</div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => setConfirmArchiveRoleType(null)} style={{ flex: 1, padding: '8px', background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 8, color: t.texteSecondaire, cursor: 'pointer', fontSize: 12, fontFamily: font }}>
+                    {T.annuler}
+                  </button>
+                  <button onClick={handleArchiveRoleType} style={{ flex: 1, padding: '8px', background: 'rgba(224,160,80,0.15)', border: '1px solid rgba(224,160,80,0.4)', borderRadius: 8, color: '#E0A850', cursor: 'pointer', fontSize: 12, fontFamily: font }}>
+                    {T.archiverCote}
+                  </button>
+                </div>
+              </div>
             )}
 
             <div style={{ display: 'flex', gap: 8 }}>
+              {roleTypeModal.id && roleTypeModal.actif && !confirmArchiveRoleType
+                && roleTypeModal.slug !== 'admin' && roleTypeModal.slug !== 'gerant' && (
+                <button
+                  onClick={() => setConfirmArchiveRoleType(roleTypeModal.id!)}
+                  style={{ padding: '12px 14px', background: 'transparent', border: '1px solid rgba(224,160,80,0.3)', borderRadius: 10, color: '#E0A850', cursor: 'pointer', fontSize: 12, fontFamily: font, flexShrink: 0 }}
+                >
+                  {T.archiverCote}
+                </button>
+              )}
               <button
-                onClick={() => setRoleModal(null)}
-                style={{
-                  flex: 1, padding: '12px', background: t.surface2, border: `1px solid ${t.border}`,
-                  borderRadius: 10, color: t.texteSecondaire, cursor: 'pointer', fontSize: 13, fontFamily: font,
-                }}
+                onClick={() => { setRoleTypeModal(null); setConfirmArchiveRoleType(null) }}
+                style={{ flex: 1, padding: '12px', background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 10, color: t.texteSecondaire, cursor: 'pointer', fontSize: 13, fontFamily: font }}
               >
                 {T.annuler}
               </button>
-              {!roleModal.isSelf && (
-                <button
-                  onClick={handleSaveRoles}
-                  disabled={savingRoles || roleModal.roles.length === 0}
-                  style={{
-                    flex: 2, padding: '12px', background: t.accent, border: 'none',
-                    borderRadius: 10, color: t.isDark ? '#080808' : '#fff',
-                    cursor: savingRoles || roleModal.roles.length === 0 ? 'not-allowed' : 'pointer',
-                    opacity: roleModal.roles.length === 0 ? 0.4 : 1,
-                    fontSize: 13, fontFamily: font, fontWeight: 600,
-                  }}
-                >
-                  {savingRoles ? '...' : T.enregistrer}
-                </button>
-              )}
+              <button
+                onClick={handleSaveRoleType}
+                disabled={savingRoleType || !roleTypeModal.nom.trim() || !roleTypeModal.slug.trim()}
+                style={{
+                  flex: 2, padding: '12px', background: t.accent, border: 'none', borderRadius: 10,
+                  color: t.isDark ? '#080808' : '#fff',
+                  cursor: savingRoleType || !roleTypeModal.nom.trim() || !roleTypeModal.slug.trim() ? 'not-allowed' : 'pointer',
+                  opacity: !roleTypeModal.nom.trim() || !roleTypeModal.slug.trim() ? 0.4 : 1,
+                  fontSize: 13, fontFamily: font, fontWeight: 600,
+                }}
+              >
+                {savingRoleType ? '...' : T.enregistrer}
+              </button>
             </div>
           </div>
         </div>
