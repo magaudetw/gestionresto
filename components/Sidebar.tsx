@@ -4,6 +4,12 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Theme } from '@/lib/themes'
 
+// Sidebar is always on a dark background (sidebarBg), so text is always light
+const SB_TEXT        = 'rgba(255,255,255,0.88)'
+const SB_TEXT_MUTED  = 'rgba(255,255,255,0.45)'
+const SB_TEXT_FAINT  = 'rgba(255,255,255,0.22)'
+const SB_BORDER      = 'rgba(255,255,255,0.08)'
+
 const NAV_GERANT = [
   { href: '/dashboard',     icon: '⬡', label: { fr: 'Tableau de bord', en: 'Dashboard'   }},
   { href: '/horaire',       icon: '◫', label: { fr: 'Horaire',         en: 'Schedule'    }},
@@ -37,15 +43,18 @@ export default function Sidebar({ profile, theme: t }: SidebarProps) {
   const nav       = isManager ? NAV_GERANT : NAV_EMPLOYE
   const [exchangeBadge, setExchangeBadge] = useState(0)
 
-  // Lazy init — reads localStorage synchronously to avoid margin flash
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false
     const val = localStorage.getItem('sidebar-collapsed') === 'true'
+    // Apply stored theme colors immediately to avoid flash
+    const fond  = localStorage.getItem('gr-theme-fond')
+    const texte = localStorage.getItem('gr-theme-texte')
+    if (fond)  document.documentElement.style.background = fond
+    if (texte) document.documentElement.style.color      = texte
     document.documentElement.dataset.sidebar = val ? 'collapsed' : 'open'
     return val
   })
 
-  // Keep html data-attr in sync whenever collapsed state changes
   useEffect(() => {
     document.documentElement.dataset.sidebar = collapsed ? 'collapsed' : 'open'
     localStorage.setItem('sidebar-collapsed', String(collapsed))
@@ -69,10 +78,9 @@ export default function Sidebar({ profile, theme: t }: SidebarProps) {
   return (
     <aside style={{
       position: 'fixed', top: 0, left: 0, width: 'var(--sidebar-w)', height: '100vh',
-      background: 'rgba(8,8,8,0.96)',
-      borderRight: `1px solid ${t.border}`,
+      background: t.sidebarBg,
+      borderRight: `1px solid ${SB_BORDER}`,
       display: 'flex', flexDirection: 'column', zIndex: 50,
-      backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)',
       transition: 'width 0.28s ease',
       overflow: 'hidden',
     }}>
@@ -80,7 +88,7 @@ export default function Sidebar({ profile, theme: t }: SidebarProps) {
       {/* Brand */}
       <div style={{
         padding: collapsed ? '18px 0' : '20px 18px 16px',
-        borderBottom: `1px solid ${t.border}`,
+        borderBottom: `1px solid ${SB_BORDER}`,
         display: 'flex', alignItems: 'center',
         justifyContent: collapsed ? 'center' : 'flex-start', gap: 10,
         minHeight: 74, flexShrink: 0,
@@ -89,14 +97,14 @@ export default function Sidebar({ profile, theme: t }: SidebarProps) {
           width: 34, height: 34, borderRadius: 9, flexShrink: 0,
           background: 'linear-gradient(135deg, #C9A84C, #E8C96A)',
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17,
-          boxShadow: 'var(--shadow-accent)',
+          boxShadow: '0 0 24px rgba(201,168,76,0.20)',
         }}>🍽️</div>
         {!collapsed && (
           <div style={{ minWidth: 0, overflow: 'hidden' }}>
-            <div className="font-title" style={{ fontSize: 15, color: t.texte, whiteSpace: 'nowrap' }}>
+            <div className="font-title" style={{ fontSize: 15, color: SB_TEXT, whiteSpace: 'nowrap' }}>
               {restaurant || 'GestionResto'}
             </div>
-            <div style={{ fontSize: 10, color: t.texteFaible, letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 1, whiteSpace: 'nowrap' }}>
+            <div style={{ fontSize: 10, color: SB_TEXT_MUTED, letterSpacing: '0.08em', textTransform: 'uppercase', marginTop: 1, whiteSpace: 'nowrap' }}>
               {isManager ? (lang === 'fr' ? 'Gestion' : 'Management') : (lang === 'fr' ? 'Personnel' : 'Staff')}
             </div>
           </div>
@@ -124,14 +132,14 @@ export default function Sidebar({ profile, theme: t }: SidebarProps) {
                 gap: collapsed ? 0 : 10,
                 padding: collapsed ? '10px 8px' : '9px 12px',
                 borderRadius: 'var(--radius-sm)',
-                background: active ? `${t.accent}18` : 'transparent',
+                background: active ? `${t.accent}28` : 'transparent',
                 border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left',
                 position: 'relative', transition: 'background var(--transition)',
               }}
             >
               <span style={{
                 fontSize: 16, lineHeight: 1, flexShrink: 0, position: 'relative',
-                color: active ? t.accent : t.texteFaible,
+                color: active ? t.accentClair : SB_TEXT_MUTED,
                 transition: 'color var(--transition)',
               }}>
                 {item.icon}
@@ -150,7 +158,7 @@ export default function Sidebar({ profile, theme: t }: SidebarProps) {
               {!collapsed && (
                 <span style={{
                   fontSize: 13, fontFamily: 'var(--font-body)',
-                  color: active ? t.texte : t.texteSecondaire,
+                  color: active ? SB_TEXT : SB_TEXT_MUTED,
                   fontWeight: active ? 500 : 400,
                   transition: 'color var(--transition)',
                   whiteSpace: 'nowrap',
@@ -172,28 +180,27 @@ export default function Sidebar({ profile, theme: t }: SidebarProps) {
         style={{
           padding: collapsed ? '8px' : '8px 18px',
           background: 'transparent', border: 'none',
-          borderTop: `1px solid ${t.border}22`,
-          cursor: 'pointer', color: t.texteFaible, fontSize: 15, lineHeight: 1,
+          borderTop: `1px solid ${SB_BORDER}22`,
+          cursor: 'pointer', color: SB_TEXT_FAINT, fontSize: 15, lineHeight: 1,
           display: 'flex', alignItems: 'center',
           justifyContent: collapsed ? 'center' : 'flex-end',
           flexShrink: 0,
-          transition: 'color var(--transition)',
         }}
       >
         {collapsed ? '›' : '‹'}
       </button>
 
       {/* User section */}
-      <div style={{ padding: collapsed ? '10px 8px 16px' : '12px 18px 18px', borderTop: `1px solid ${t.border}` }}>
+      <div style={{ padding: collapsed ? '10px 8px 16px' : '12px 18px 18px', borderTop: `1px solid ${SB_BORDER}` }}>
         {collapsed ? (
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
             <div
               title={profile?.nom || ''}
               style={{
                 width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-                background: `${t.accent}22`, border: `1px solid ${t.borderAccent}`,
+                background: `${t.accent}30`, border: `1px solid ${t.accent}55`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 13, color: t.accent, fontWeight: 600,
+                fontSize: 13, color: t.accentClair, fontWeight: 600,
               }}
             >
               {(profile?.nom || '?')[0].toUpperCase()}
@@ -201,31 +208,31 @@ export default function Sidebar({ profile, theme: t }: SidebarProps) {
             <button
               onClick={handleLogout}
               title={lang === 'fr' ? 'Déconnexion' : 'Sign out'}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: t.texteFaible, fontSize: 14, lineHeight: 1 }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px', color: SB_TEXT_FAINT, fontSize: 14, lineHeight: 1 }}
             >⇥</button>
           </div>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{
               width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-              background: `${t.accent}22`, border: `1px solid ${t.borderAccent}`,
+              background: `${t.accent}30`, border: `1px solid ${t.accent}55`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 13, color: t.accent, fontWeight: 600,
+              fontSize: 13, color: t.accentClair, fontWeight: 600,
             }}>
               {(profile?.nom || '?')[0].toUpperCase()}
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, color: t.texte, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div style={{ fontSize: 12, color: SB_TEXT, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {profile?.nom || ''}
               </div>
-              <div style={{ fontSize: 10, color: t.texteFaible, marginTop: 1, letterSpacing: '0.04em' }}>
+              <div style={{ fontSize: 10, color: SB_TEXT_MUTED, marginTop: 1, letterSpacing: '0.04em' }}>
                 {roles[0] || ''}
               </div>
             </div>
             <button
               onClick={handleLogout}
               title={lang === 'fr' ? 'Déconnexion' : 'Sign out'}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: t.texteFaible, fontSize: 16, lineHeight: 1, transition: 'color var(--transition)' }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px', color: SB_TEXT_FAINT, fontSize: 16, lineHeight: 1 }}
             >⇥</button>
           </div>
         )}

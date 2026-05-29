@@ -97,8 +97,8 @@ export default function DashboardPage() {
   useEffect(() => { loadData() }, [loadData])
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#080808', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ color: '#C9A84C', fontSize: 12, letterSpacing: '0.2em' }}>CHARGEMENT...</div>
+    <div style={{ minHeight: '100vh', background: '#F8F9FA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ color: '#9CA3AF', fontSize: 12, letterSpacing: '0.2em' }}>CHARGEMENT…</div>
     </div>
   )
 
@@ -116,230 +116,277 @@ export default function DashboardPage() {
     return `${d.getDate()} ${MOIS[d.getMonth()]} ${d.getFullYear()}`
   }
 
+  // Shared card style
+  const card = (extra?: object) => ({
+    background: t.surface1,
+    border: `1px solid ${t.border}`,
+    borderRadius: 14,
+    boxShadow: t.isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.06)',
+    ...extra,
+  })
+
   return (
     <AppShell profile={profile} restaurant="Le Carré">
-      <main className="animate-fade-up px-4 pt-5 pb-[88px] md:px-10 md:pt-10 md:pb-10">
+      <main className="page-content" style={{ paddingBottom: 88 }}>
 
-        {/* Welcome */}
-        <div className="mb-6 md:mb-8">
-          <p style={{ fontSize: 12, color: t.texteSecondaire, marginBottom: 6, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-            {lang === 'fr' ? 'Bon retour' : 'Welcome back'}
-          </p>
-          <h1 className="font-title" style={{ fontSize: 36, fontWeight: 300, marginBottom: 3, color: t.texte, letterSpacing: '0.01em' }}>{prenom}</h1>
-          <div style={{ fontSize: 12, color: t.texteFaible }}>{todayLabel}</div>
-        </div>
+        {/* Content max-width wrapper */}
+        <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 24px 0' }}>
 
-        {/* ─── MANAGER VIEW ─── */}
-        {isManager && (
-          <>
-            {/* Desktop 2-col wrapper */}
-            <div className="md:grid md:grid-cols-[1fr_280px] md:gap-6">
-            {/* Left col on desktop */}
-            <div>
+          {/* Welcome header */}
+          <div style={{ marginBottom: 32 }}>
+            <p style={{ fontSize: 12, color: t.texteSecondaire, marginBottom: 6, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+              {lang === 'fr' ? 'Bon retour' : 'Welcome back'}
+            </p>
+            <h1 className="font-title" style={{ fontSize: 38, fontWeight: 300, marginBottom: 4, color: t.texte, letterSpacing: '0.01em' }}>
+              {prenom}
+            </h1>
+            <div style={{ fontSize: 13, color: t.texteFaible }}>{todayLabel}</div>
+          </div>
 
-            {/* Today's schedule */}
-            <div className="glass-light card-shadow stagger-1 animate-fade-up" style={{ borderRadius: 14, padding: '16px 18px', marginBottom: 12, border: `1px solid ${t.border}` }}>
-              <div style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: t.accent, marginBottom: 10 }}>
-                {lang === 'fr' ? "Aujourd'hui" : 'Today'}
-              </div>
-              {todayShifts.length === 0 ? (
-                <div style={{ fontSize: 13, color: t.texteFaible }}>{lang === 'fr' ? 'Aucun shift prévu' : 'No shifts scheduled'}</div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {todayShifts.map((s: any) => {
-                    const st = s.shift_types
-                    const couleur = st?.couleur || t.accent
-                    return (
-                      <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <div style={{ width: 3, height: 24, borderRadius: 2, background: couleur, flexShrink: 0 }} />
-                        <span style={{ fontSize: 13, color: t.texte }}>{(s as any).profiles?.nom || '—'}</span>
-                        <span style={{ fontSize: 11, color: t.texteSecondaire }}>· {st?.nom}</span>
-                        <span style={{ fontSize: 11, color: t.texteFaible, marginLeft: 'auto' }}>{st?.debut}–{st?.fin}</span>
+          {/* ─── MANAGER VIEW ─── */}
+          {isManager && (
+            <div className="md:grid md:grid-cols-[1fr_260px] md:gap-6">
+
+              {/* Left column */}
+              <div>
+                {/* Today's schedule card */}
+                <div style={{ ...card(), padding: '20px 22px', marginBottom: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+                    <span style={{ fontSize: 18 }}>📅</span>
+                    <span style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: t.accent, fontWeight: 600 }}>
+                      {lang === 'fr' ? "Aujourd'hui" : 'Today'}
+                    </span>
+                  </div>
+                  {todayShifts.length === 0 ? (
+                    <div style={{ fontSize: 13, color: t.texteFaible, fontStyle: 'italic' }}>
+                      {lang === 'fr' ? 'Aucun shift prévu' : 'No shifts scheduled'}
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {todayShifts.map((s: any) => {
+                        const st = s.shift_types
+                        const couleur = st?.couleur || t.accent
+                        return (
+                          <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', background: t.surface2, borderRadius: 8 }}>
+                            <div style={{ width: 3, height: 28, borderRadius: 2, background: couleur, flexShrink: 0 }} />
+                            <span style={{ fontSize: 13, color: t.texte, fontWeight: 500, flex: 1 }}>{(s as any).profiles?.nom || '—'}</span>
+                            <span style={{ fontSize: 11, color: t.texteSecondaire }}>{st?.nom}</span>
+                            <span style={{ fontSize: 11, color: t.texteFaible, fontFamily: "'Courier New', monospace" }}>{st?.debut}–{st?.fin}</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* KPI grid */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 16 }} className="md:grid-cols-4">
+
+                  {/* Échanges */}
+                  <button onClick={() => router.push('/horaire')} style={{
+                    ...card(),
+                    padding: '18px 20px', cursor: 'pointer', textAlign: 'left', fontFamily: font,
+                    borderTop: `3px solid ${pendingEchanges > 0 ? '#F59E0B' : t.border}`,
+                    transition: 'box-shadow 0.15s',
+                  }}>
+                    <div style={{ fontSize: 22, marginBottom: 8 }}>🔄</div>
+                    <div style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 4 }}>
+                      {lang === 'fr' ? 'Échanges' : 'Swaps'}
+                    </div>
+                    <div style={{ fontSize: 28, fontWeight: 300, color: pendingEchanges > 0 ? '#F59E0B' : t.texte, lineHeight: 1 }}>
+                      {pendingEchanges}
+                    </div>
+                    {pendingEchanges > 0 && (
+                      <div style={{ fontSize: 10, color: '#F59E0B', marginTop: 4 }}>
+                        {lang === 'fr' ? 'en attente' : 'pending'}
                       </div>
-                    )
-                  })}
-                </div>
-              )}
-            </div>
+                    )}
+                  </button>
 
-            {/* KPI grid — 2 cols mobile, 4 cols desktop */}
-            <div className="stagger-2 animate-fade-up grid grid-cols-2 md:grid-cols-4 gap-2.5 mb-3">
-              {/* Pending exchanges */}
-              <button onClick={() => router.push('/horaire')} style={{
-                background: pendingEchanges > 0 ? 'rgba(224,160,80,0.1)' : t.surface1,
-                border: `1px solid ${pendingEchanges > 0 ? 'rgba(224,160,80,0.35)' : t.border}`,
-                borderRadius: 12, padding: '14px 16px', cursor: 'pointer', textAlign: 'left', fontFamily: font,
-              }}>
-                <div style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 6 }}>
-                  {lang === 'fr' ? 'Échanges' : 'Swaps'}
-                </div>
-                <div style={{ fontSize: 24, fontWeight: 300, color: pendingEchanges > 0 ? '#E0A850' : t.texteSecondaire }}>
-                  {pendingEchanges}
-                </div>
-                {pendingEchanges > 0 && (
-                  <div style={{ fontSize: 10, color: '#E0A850', marginTop: 2 }}>
-                    {lang === 'fr' ? 'en attente' : 'pending'}
+                  {/* Employés actifs */}
+                  <button onClick={() => router.push('/equipe')} style={{
+                    ...card(),
+                    padding: '18px 20px', cursor: 'pointer', textAlign: 'left', fontFamily: font,
+                    borderTop: `3px solid #10B981`,
+                  }}>
+                    <div style={{ fontSize: 22, marginBottom: 8 }}>👥</div>
+                    <div style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 4 }}>
+                      {lang === 'fr' ? 'Employés actifs' : 'Active staff'}
+                    </div>
+                    <div style={{ fontSize: 28, fontWeight: 300, color: '#10B981', lineHeight: 1 }}>{activeCount}</div>
+                  </button>
+
+                  {/* Heures semaine */}
+                  <div style={{
+                    ...card(),
+                    padding: '18px 20px',
+                    borderTop: `3px solid #3B82F6`,
+                  }}>
+                    <div style={{ fontSize: 22, marginBottom: 8 }}>⏱️</div>
+                    <div style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 4 }}>
+                      {lang === 'fr' ? 'Heures semaine' : 'Week hours'}
+                    </div>
+                    <div style={{ fontSize: 28, fontWeight: 300, color: '#3B82F6', lineHeight: 1 }}>{weekHeures}<span style={{ fontSize: 14 }}>h</span></div>
                   </div>
-                )}
-              </button>
 
-              {/* Active employees */}
-              <div style={{ background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 12, padding: '14px 16px' }}>
-                <div style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 6 }}>
-                  {lang === 'fr' ? 'Employés actifs' : 'Active staff'}
+                  {/* Dernier import */}
+                  <button onClick={() => router.push('/import')} style={{
+                    ...card(),
+                    padding: '18px 20px', cursor: 'pointer', textAlign: 'left', fontFamily: font,
+                    borderTop: `3px solid ${t.border}`,
+                  }}>
+                    <div style={{ fontSize: 22, marginBottom: 8 }}>📂</div>
+                    <div style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 4 }}>
+                      {lang === 'fr' ? 'Dernier import' : 'Last import'}
+                    </div>
+                    <div style={{ fontSize: 13, fontWeight: 400, color: lastImport ? t.texte : t.texteFaible, lineHeight: 1.4 }}>
+                      {lastImport ? formatTime(lastImport) : (lang === 'fr' ? 'Jamais' : 'Never')}
+                    </div>
+                  </button>
                 </div>
-                <div style={{ fontSize: 24, fontWeight: 300, color: '#72BA80' }}>{activeCount}</div>
               </div>
 
-              {/* Week hours */}
-              <div style={{ background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 12, padding: '14px 16px' }}>
-                <div style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 6 }}>
-                  {lang === 'fr' ? 'Heures semaine' : 'Week hours'}
-                </div>
-                <div style={{ fontSize: 24, fontWeight: 300, color: '#7EB8F7' }}>{weekHeures}h</div>
-              </div>
-
-              {/* Last import */}
-              <button onClick={() => router.push('/import')} style={{
-                background: t.surface1, border: `1px solid ${t.border}`,
-                borderRadius: 12, padding: '14px 16px', cursor: 'pointer', textAlign: 'left', fontFamily: font,
-              }}>
-                <div style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 6 }}>
-                  {lang === 'fr' ? 'Dernier import' : 'Last import'}
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 300, color: lastImport ? t.texte : t.texteFaible }}>
-                  {lastImport ? formatTime(lastImport) : (lang === 'fr' ? 'Jamais' : 'Never')}
-                </div>
-              </button>
-            </div>
-
-            </div> {/* end left col */}
-
-            {/* Right col: unread notifications quick link */}
-            <div className="hidden md:flex flex-col gap-3">
-              <button onClick={() => router.push('/notifications')} style={{
-                background: unreadNotifs > 0 ? `${t.accent}12` : t.surface1,
-                border: `1px solid ${unreadNotifs > 0 ? t.borderAccent : t.border}`,
-                borderRadius: 14, padding: '18px 20px', cursor: 'pointer', textAlign: 'left', fontFamily: font,
-                display: 'flex', flexDirection: 'column', gap: 10,
-              }}>
-                <div style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: unreadNotifs > 0 ? t.accent : t.texteSecondaire }}>
-                  {lang === 'fr' ? 'Alertes' : 'Alerts'}
-                </div>
-                <div style={{ fontSize: 32, fontWeight: 300, color: unreadNotifs > 0 ? t.accent : t.texteSecondaire }}>
-                  {unreadNotifs}
-                </div>
-                <div style={{ fontSize: 11, color: unreadNotifs > 0 ? t.texteSecondaire : t.texteFaible }}>
-                  {unreadNotifs > 0 ? (lang === 'fr' ? 'non lues' : 'unread') : (lang === 'fr' ? 'Tout lu' : 'All read')}
-                </div>
-              </button>
-              <button onClick={() => router.push('/equipe')} style={{
-                background: t.surface1, border: `1px solid ${t.border}`,
-                borderRadius: 14, padding: '18px 20px', cursor: 'pointer', textAlign: 'left', fontFamily: font,
-                display: 'flex', flexDirection: 'column', gap: 10,
-              }}>
-                <div style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: t.texteSecondaire }}>
-                  {lang === 'fr' ? 'Effectif actif' : 'Active staff'}
-                </div>
-                <div style={{ fontSize: 32, fontWeight: 300, color: '#72BA80' }}>{activeCount}</div>
-              </button>
-            </div>
-
-            </div> {/* end desktop 2-col wrapper */}
-          </>
-        )}
-
-        {/* ─── EMPLOYEE VIEW ─── */}
-        {!isManager && (
-          <>
-            {/* Next shift */}
-            <div className="animate-fade-up" style={{
-              background: nextShift
-                ? `linear-gradient(135deg, ${t.accent}22, ${t.accentClair}0A)`
-                : t.surface1,
-              border: `1px solid ${nextShift ? t.borderAccent : t.border}`,
-              borderRadius: 14, padding: '16px 18px', marginBottom: 12,
-            }}>
-              <div style={{ fontSize: 11, color: t.accent, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>
-                {lang === 'fr' ? 'Mon prochain shift' : 'My next shift'}
-              </div>
-              {nextShift ? (
-                <>
-                  <div style={{ fontSize: 16, color: t.texte, marginBottom: 6 }}>
-                    {(() => {
-                      const d = new Date(nextShift.date + 'T00:00:00')
-                      return `${JOURS_FULL[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]}`
-                    })()}
+              {/* Right column — desktop only */}
+              <div className="hidden md:flex flex-col gap-4">
+                <button onClick={() => router.push('/notifications')} style={{
+                  ...card(),
+                  padding: '22px 24px', cursor: 'pointer', textAlign: 'left', fontFamily: font,
+                  display: 'flex', flexDirection: 'column', gap: 10,
+                  borderTop: `3px solid ${unreadNotifs > 0 ? t.accent : t.border}`,
+                }}>
+                  <div style={{ fontSize: 24 }}>🔔</div>
+                  <div style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: unreadNotifs > 0 ? t.accent : t.texteSecondaire }}>
+                    {lang === 'fr' ? 'Alertes' : 'Alerts'}
                   </div>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <div style={{ fontSize: 34, fontWeight: 300, color: unreadNotifs > 0 ? t.accent : t.texte, lineHeight: 1 }}>
+                    {unreadNotifs}
+                  </div>
+                  <div style={{ fontSize: 11, color: t.texteSecondaire }}>
+                    {unreadNotifs > 0 ? (lang === 'fr' ? 'non lues' : 'unread') : (lang === 'fr' ? 'Tout lu' : 'All read')}
+                  </div>
+                </button>
+
+                <button onClick={() => router.push('/horaire')} style={{
+                  ...card(),
+                  padding: '22px 24px', cursor: 'pointer', textAlign: 'left', fontFamily: font,
+                  display: 'flex', flexDirection: 'column', gap: 10,
+                  borderTop: `3px solid #10B981`,
+                }}>
+                  <div style={{ fontSize: 24 }}>📋</div>
+                  <div style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: t.texteSecondaire }}>
+                    {lang === 'fr' ? 'Horaire' : 'Schedule'}
+                  </div>
+                  <div style={{ fontSize: 12, color: t.texteSecondaire, lineHeight: 1.5 }}>
+                    {lang === 'fr' ? 'Gérer les shifts de la semaine' : 'Manage this week\'s shifts'}
+                  </div>
+                </button>
+              </div>
+
+            </div>
+          )}
+
+          {/* ─── EMPLOYEE VIEW ─── */}
+          {!isManager && (
+            <div style={{ maxWidth: 540 }}>
+              {/* Next shift */}
+              <div style={{
+                ...card(),
+                padding: '20px 22px', marginBottom: 14,
+                borderTop: `3px solid ${nextShift ? t.accent : t.border}`,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                  <span style={{ fontSize: 18 }}>📅</span>
+                  <span style={{ fontSize: 11, color: t.accent, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
+                    {lang === 'fr' ? 'Mon prochain shift' : 'My next shift'}
+                  </span>
+                </div>
+                {nextShift ? (
+                  <>
+                    <div style={{ fontSize: 16, color: t.texte, marginBottom: 8, fontWeight: 500 }}>
+                      {(() => {
+                        const d = new Date(nextShift.date + 'T00:00:00')
+                        return `${JOURS_FULL[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]}`
+                      })()}
+                    </div>
                     <span style={{
-                      padding: '3px 10px', borderRadius: 20, fontSize: 11,
-                      background: `${nextShift.shift_types?.couleur || t.accent}22`,
-                      border: `1px solid ${nextShift.shift_types?.couleur || t.accent}55`,
+                      display: 'inline-flex', padding: '4px 12px', borderRadius: 20, fontSize: 12,
+                      background: `${nextShift.shift_types?.couleur || t.accent}18`,
+                      border: `1px solid ${nextShift.shift_types?.couleur || t.accent}44`,
                       color: nextShift.shift_types?.couleur || t.accent,
                     }}>
                       {nextShift.shift_types?.nom} · {nextShift.shift_types?.debut}
                     </span>
+                  </>
+                ) : (
+                  <div style={{ fontSize: 13, color: t.texteFaible, fontStyle: 'italic' }}>
+                    {lang === 'fr' ? 'Aucun shift prévu' : 'No upcoming shifts'}
                   </div>
-                </>
-              ) : (
-                <div style={{ fontSize: 13, color: t.texteFaible }}>
-                  {lang === 'fr' ? 'Aucun shift prévu' : 'No upcoming shifts'}
-                </div>
-              )}
-            </div>
+                )}
+              </div>
 
-            {/* Estimated pay */}
-            <div style={{ background: 'rgba(114,186,128,0.08)', border: '1px solid rgba(114,186,128,0.25)', borderRadius: 14, padding: '16px 18px', marginBottom: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                <div style={{ fontSize: 11, color: '#72BA80', letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                  {lang === 'fr' ? 'Paie estimée cette semaine' : 'Estimated pay this week'}
+              {/* Estimated pay */}
+              <div style={{
+                ...card(),
+                padding: '20px 22px', marginBottom: 14,
+                borderTop: `3px solid #10B981`,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+                  <span style={{ fontSize: 18 }}>💰</span>
+                  <div>
+                    <div style={{ fontSize: 11, color: '#10B981', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
+                      {lang === 'fr' ? 'Paie estimée cette semaine' : 'Estimated pay this week'}
+                    </div>
+                  </div>
+                  <span style={{ marginLeft: 'auto', fontSize: 9, color: t.texteFaible, border: `1px solid ${t.border}`, borderRadius: 4, padding: '2px 6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                    {lang === 'fr' ? 'Estimation' : 'Estimate'}
+                  </span>
                 </div>
-                <span style={{ fontSize: 9, color: t.texteFaible, border: `1px solid ${t.border}`, borderRadius: 4, padding: '2px 5px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                  {lang === 'fr' ? 'Estimation' : 'Estimate'}
-                </span>
-              </div>
-              <div style={{ fontSize: 30, fontWeight: 300, color: '#72BA80', fontFamily: "'Courier New', monospace" }}>
-                ${(estimatedPay?.total || 0).toFixed(2)}
-              </div>
-              {(estimatedPay?.salaire ?? 0) === 0 && (
-                <div style={{ fontSize: 11, color: t.texteFaible, marginTop: 4 }}>
-                  {lang === 'fr' ? 'En attente des heures importées' : 'Awaiting imported hours'}
+                <div style={{ fontSize: 32, fontWeight: 300, color: '#10B981', fontFamily: "'Courier New', monospace", lineHeight: 1 }}>
+                  ${(estimatedPay?.total || 0).toFixed(2)}
                 </div>
-              )}
-            </div>
+                {(estimatedPay?.salaire ?? 0) === 0 && (
+                  <div style={{ fontSize: 11, color: t.texteFaible, marginTop: 8, fontStyle: 'italic' }}>
+                    {lang === 'fr' ? 'En attente des heures importées' : 'Awaiting imported hours'}
+                  </div>
+                )}
+              </div>
 
-            {/* Notifications */}
-            <button onClick={() => router.push('/notifications')} style={{
-              width: '100%', background: unreadNotifs > 0 ? `${t.accent}12` : t.surface1,
-              border: `1px solid ${unreadNotifs > 0 ? t.borderAccent : t.border}`,
-              borderRadius: 14, padding: '14px 18px', cursor: 'pointer', textAlign: 'left', fontFamily: font,
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-            }}>
-              <div>
-                <div style={{ fontSize: 11, color: unreadNotifs > 0 ? t.accent : t.texteSecondaire, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>
-                  🔔 {lang === 'fr' ? 'Notifications' : 'Notifications'}
+              {/* Notifications */}
+              <button onClick={() => router.push('/notifications')} style={{
+                width: '100%',
+                ...card(),
+                padding: '16px 20px', cursor: 'pointer', textAlign: 'left', fontFamily: font,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                borderTop: `3px solid ${unreadNotifs > 0 ? t.accent : t.border}`,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontSize: 20 }}>🔔</span>
+                  <div>
+                    <div style={{ fontSize: 13, color: t.texte, fontWeight: 500 }}>
+                      {unreadNotifs > 0
+                        ? (lang === 'fr' ? `${unreadNotifs} notification${unreadNotifs > 1 ? 's' : ''} non lue${unreadNotifs > 1 ? 's' : ''}` : `${unreadNotifs} unread`)
+                        : (lang === 'fr' ? 'Aucune nouvelle' : 'All caught up')}
+                    </div>
+                    <div style={{ fontSize: 11, color: t.texteFaible }}>
+                      {lang === 'fr' ? 'Alertes' : 'Notifications'}
+                    </div>
+                  </div>
                 </div>
-                <div style={{ fontSize: 13, color: t.texte }}>
-                  {unreadNotifs > 0
-                    ? (lang === 'fr' ? `${unreadNotifs} non lue${unreadNotifs > 1 ? 's' : ''}` : `${unreadNotifs} unread`)
-                    : (lang === 'fr' ? 'Aucune nouvelle' : 'All caught up')}
-                </div>
-              </div>
-              {unreadNotifs > 0 && (
-                <div style={{
-                  background: t.accent, color: t.isDark ? '#080808' : '#fff',
-                  borderRadius: 20, minWidth: 26, height: 26, display: 'flex',
-                  alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600,
-                }}>
-                  {unreadNotifs}
-                </div>
-              )}
-            </button>
-          </>
-        )}
+                {unreadNotifs > 0 && (
+                  <div style={{
+                    background: t.accent, color: '#fff',
+                    borderRadius: 20, minWidth: 26, height: 26, display: 'flex',
+                    alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600,
+                  }}>
+                    {unreadNotifs}
+                  </div>
+                )}
+              </button>
+            </div>
+          )}
+
+        </div>
       </main>
-
     </AppShell>
   )
 }

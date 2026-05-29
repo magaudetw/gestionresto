@@ -58,7 +58,7 @@ export default function ReglagesPage() {
   const [saved, setSaved]         = useState(false)
   const [saveError, setSaveError] = useState(false)
 
-  const [selectedTheme, setSelectedTheme] = useState<ThemeName>('Or noir')
+  const [selectedTheme, setSelectedTheme] = useState<ThemeName>('Lumière')
   const [selectedLang, setSelectedLang] = useState<'fr' | 'en'>('fr')
   const [selectedFont, setSelectedFont] = useState<string>(FONTS[0].value)
 
@@ -281,8 +281,8 @@ export default function ReglagesPage() {
   }
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#080808', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ color: '#C9A84C', fontSize: 12, letterSpacing: '0.2em' }}>CHARGEMENT...</div>
+    <div style={{ minHeight: '100vh', background: '#F8F9FA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ color: '#9CA3AF', fontSize: 12, letterSpacing: '0.2em' }}>CHARGEMENT…</div>
     </div>
   )
 
@@ -350,16 +350,18 @@ export default function ReglagesPage() {
   }
 
   const THEME_SWATCHES: Record<ThemeName, string> = {
-    'Or noir': '#C9A84C', 'Minuit': '#7EB8F7', 'Bordeaux': '#C04B6E',
-    'Forêt': '#72BA80', 'Ardoise': '#9BAFC0', 'Cuivre': '#C87941',
-    'Améthyste': '#A875C8', 'Océan': '#3BBBB0', 'Ivoire': '#8B6914',
-    'Brume': '#5E7A8C', 'Craie': '#6B5C4A',
+    'Lumière': '#3B82F6',
+    'Or noir': '#C9A84C', 'Minuit': '#60A5FA', 'Bordeaux': '#F06292',
+    'Forêt': '#4ADE80', 'Ardoise': '#94A3B8', 'Cuivre': '#FB923C',
+    'Améthyste': '#C084FC', 'Océan': '#2DD4BF', 'Ivoire': '#B45309',
+    'Brume': '#0369A1', 'Craie': '#7C3AED',
   }
   const THEME_BKGS: Record<ThemeName, string> = {
+    'Lumière': '#F8F9FA',
     'Or noir': '#080808', 'Minuit': '#050A14', 'Bordeaux': '#0A0506',
     'Forêt': '#050A06', 'Ardoise': '#080A0C', 'Cuivre': '#0A0806',
-    'Améthyste': '#08060A', 'Océan': '#040C0C', 'Ivoire': '#F8F4EE',
-    'Brume': '#EEF2F5', 'Craie': '#F5F2EE',
+    'Améthyste': '#08060A', 'Océan': '#040C0C', 'Ivoire': '#FFFBF4',
+    'Brume': '#F0F4F8', 'Craie': '#FAFAF9',
   }
 
   const btnCounter = {
@@ -418,7 +420,7 @@ export default function ReglagesPage() {
 
           <div style={{ background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 14, padding: '14px 16px', marginBottom: 10 }}>
             <div style={{ fontSize: 12, color: t.texteSecondaire, marginBottom: 12 }}>{T.theme}</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
               {THEME_NAMES.map(name => {
                 const isSelected = selectedTheme === name
                 return (
@@ -435,7 +437,7 @@ export default function ReglagesPage() {
                     }}
                   >
                     <div style={{ width: 16, height: 16, borderRadius: '50%', background: THEME_SWATCHES[name] }} />
-                    <span style={{ fontSize: 8, color: THEME_SWATCHES[name], letterSpacing: '0.04em', maxWidth: 44, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center' }}>
+                    <span style={{ fontSize: 8, color: THEME_BKGS[name] === '#F8F9FA' || THEME_BKGS[name].startsWith('#F') || THEME_BKGS[name].startsWith('#E') ? '#374151' : THEME_SWATCHES[name], letterSpacing: '0.04em', maxWidth: 54, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center' }}>
                       {name}
                     </span>
                     {isSelected && (

@@ -172,7 +172,7 @@ export default function EquipePage() {
     }
     const payload = modal.id
       ? { id: modal.id, ...base }
-      : { ...base, email: modal.email.trim(), password: modal.password.trim() || undefined, lang: 'fr', theme: 'Or noir' }
+      : { ...base, email: modal.email.trim(), password: modal.password.trim() || undefined, lang: 'fr', theme: 'Lumière' }
 
     const { data: { session } } = await supabase.auth.getSession()
     const res = await fetch('/api/manage-profile', {
@@ -198,8 +198,8 @@ export default function EquipePage() {
   }
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#080808', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ color: '#C9A84C', fontSize: 12, letterSpacing: '0.2em' }}>CHARGEMENT...</div>
+    <div style={{ minHeight: '100vh', background: '#F8F9FA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ color: '#9CA3AF', fontSize: 12, letterSpacing: '0.2em' }}>CHARGEMENT…</div>
     </div>
   )
 
@@ -246,26 +246,28 @@ export default function EquipePage() {
 
   return (
     <AppShell profile={profile} restaurant="Le Carré">
-      <main style={{ padding: '16px', paddingBottom: 88 }}>
+      <main className="page-content" style={{ padding: '24px 20px 88px', maxWidth: 1100, margin: '0 auto' }}>
 
         {/* Title + add button */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
           <div>
-            <h1 style={{ fontSize: 24, fontWeight: 300, margin: 0 }}>{T.equipe}</h1>
-            <div style={{ fontSize: 12, color: t.texteSecondaire, marginTop: 2 }}>
+            <h1 style={{ fontSize: 28, fontWeight: 600, margin: 0, color: t.texte }}>{T.equipe}</h1>
+            <div style={{ fontSize: 13, color: t.texteSecondaire, marginTop: 3 }}>
               {filteredEmployes.length} {T.membres}
             </div>
           </div>
           <button
             onClick={() => { setModal({ ...EMPTY_MODAL, restaurant_ids: profile?.restaurant_ids || [] }); setSaveError('') }}
             style={{
-              width: 36, height: 36, borderRadius: '50%', border: 'none', cursor: 'pointer',
-              background: t.accent, color: t.isDark ? '#080808' : '#fff',
-              fontSize: 22, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontWeight: 300,
+              display: 'flex', alignItems: 'center', gap: 6,
+              padding: '9px 18px', borderRadius: 10, border: 'none', cursor: 'pointer',
+              background: t.accent, color: '#fff',
+              fontSize: 13, fontWeight: 600, fontFamily: font,
+              boxShadow: t.isDark ? 'none' : '0 1px 4px rgba(59,130,246,0.25)',
             }}
           >
-            +
+            <span style={{ fontSize: 16, lineHeight: 1 }}>+</span>
+            <span>{lang === 'fr' ? 'Ajouter un employé' : 'Add employee'}</span>
           </button>
         </div>
 
@@ -288,102 +290,157 @@ export default function EquipePage() {
           })}
         </div>
 
-        {/* Employee list */}
+        {/* ─── Desktop table ─── */}
         {filteredEmployes.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '40px 0', color: t.texteFaible, fontSize: 13 }}>
             {lang === 'fr' ? 'Aucun employé' : 'No employees'}
           </div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {filteredEmployes.map(emp => {
-              const primaryRole = emp.roles?.[0] || 'serveur'
-              const primaryColor = ROLE_COLORS[primaryRole] || t.accent
-              const coeff = Math.max(...(emp.roles || []).map((r: string) => COEFF[r] || 1.0))
-              const dispos = emp.dispos_base as DisposBase | null
+          <>
+            {/* Desktop table view */}
+            <div className="hidden md:block" style={{ background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 14, overflow: 'hidden', boxShadow: t.isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.06)', marginBottom: 10 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ background: t.surface2 }}>
+                    {[lang === 'fr' ? 'Employé' : 'Employee', lang === 'fr' ? 'Rôles' : 'Roles', 'Restaurant', lang === 'fr' ? 'Statut' : 'Status', lang === 'fr' ? 'Taux' : 'Rate', ''].map((h, i) => (
+                      <th key={i} style={{ padding: '11px 16px', textAlign: 'left', fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: t.texteSecondaire, fontWeight: 600, borderBottom: `1px solid ${t.border}` }}>
+                        {h}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredEmployes.map((emp, ei) => {
+                    const primaryRole  = emp.roles?.[0] || 'serveur'
+                    const primaryColor = ROLE_COLORS[primaryRole] || t.accent
+                    const restName     = RESTAURANTS.find(r => (emp.restaurant_ids || []).includes(r.id))?.nom || '—'
+                    return (
+                      <tr key={emp.id} style={{ borderBottom: ei < filteredEmployes.length - 1 ? `1px solid ${t.border}` : 'none' }}>
+                        {/* Nom + avatar */}
+                        <td style={{ padding: '12px 16px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <div style={{
+                              width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                              background: primaryColor,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              fontSize: 15, color: '#fff', fontWeight: 700,
+                            }}>
+                              {(emp.nom || '?')[0].toUpperCase()}
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 14, color: t.texte, fontWeight: 500 }}>{emp.nom}</div>
+                              <div style={{ fontSize: 11, color: t.texteFaible }}>{emp.email || ''}</div>
+                            </div>
+                          </div>
+                        </td>
+                        {/* Rôles */}
+                        <td style={{ padding: '12px 16px' }}>
+                          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                            {(emp.roles || []).map((r: string) => (
+                              <span key={r} style={{
+                                padding: '2px 8px', borderRadius: 20, fontSize: 10,
+                                background: `${ROLE_COLORS[r] || t.accent}18`,
+                                border: `1px solid ${ROLE_COLORS[r] || t.accent}40`,
+                                color: ROLE_COLORS[r] || t.accent,
+                              }}>
+                                {ROLE_LABELS[r]?.[lang] || r}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                        {/* Restaurant */}
+                        <td style={{ padding: '12px 16px', fontSize: 13, color: t.texteSecondaire }}>{restName}</td>
+                        {/* Statut */}
+                        <td style={{ padding: '12px 16px' }}>
+                          <span style={{
+                            display: 'inline-flex', alignItems: 'center', gap: 5,
+                            padding: '3px 10px', borderRadius: 20, fontSize: 11,
+                            background: emp.actif !== false ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.1)',
+                            color: emp.actif !== false ? '#10B981' : '#EF4444',
+                            border: `1px solid ${emp.actif !== false ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.2)'}`,
+                          }}>
+                            <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', flexShrink: 0 }} />
+                            {emp.actif !== false ? T.actif : T.inactif}
+                          </span>
+                        </td>
+                        {/* Taux */}
+                        <td style={{ padding: '12px 16px', fontSize: 13, color: t.accent, fontFamily: "'Courier New', monospace" }}>
+                          {emp.taux_horaire ? `$${emp.taux_horaire.toFixed(2)}/h` : '—'}
+                        </td>
+                        {/* Actions */}
+                        <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                          <button
+                            onClick={() => {
+                              setModal({ id: emp.id, nom: emp.nom || '', email: emp.email || '', password: '', roles: emp.roles || [], taux_horaire: emp.taux_horaire?.toString() || '', restaurant_ids: emp.restaurant_ids || [], actif: emp.actif !== false, dispos_base: emp.dispos_base || { ...EMPTY_DISPOS } })
+                              setSaveError('')
+                            }}
+                            style={{ padding: '5px 14px', borderRadius: 7, border: `1px solid ${t.border}`, background: t.surface2, color: t.texteSecondaire, cursor: 'pointer', fontSize: 12, fontFamily: font }}
+                          >
+                            {lang === 'fr' ? 'Modifier' : 'Edit'}
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-              return (
-                <button
-                  key={emp.id}
-                  onClick={() => {
-                    setModal({
-                      id: emp.id,
-                      nom: emp.nom || '',
-                      email: emp.email || '',
-                      password: '',
-                      roles: emp.roles || [],
-                      taux_horaire: emp.taux_horaire?.toString() || '',
-                      restaurant_ids: emp.restaurant_ids || [],
-                      actif: emp.actif !== false,
-                      dispos_base: emp.dispos_base || { ...EMPTY_DISPOS },
-                    })
-                    setSaveError('')
-                  }}
-                  style={{
-                    background: t.surface1, border: `1px solid ${t.border}`,
-                    borderRadius: 14, padding: '14px 16px', cursor: 'pointer',
-                    textAlign: 'left', width: '100%', fontFamily: font,
-                  }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{
-                        width: 38, height: 38, borderRadius: 10,
-                        background: `${primaryColor}22`,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontSize: 18, flexShrink: 0,
-                      }}>
-                        {ROLE_ICONS[primaryRole] || '👤'}
-                      </div>
-                      <div>
-                        <div style={{ fontSize: 15, color: t.texte, fontWeight: 400 }}>{emp.nom}</div>
-                        <div style={{ fontSize: 10, color: emp.actif !== false ? '#72BA80' : '#E07070', marginTop: 2 }}>
-                          ● {emp.actif !== false ? T.actif : T.inactif}
+            {/* Mobile card list — unchanged */}
+            <div className="md:hidden" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {filteredEmployes.map(emp => {
+                const primaryRole  = emp.roles?.[0] || 'serveur'
+                const primaryColor = ROLE_COLORS[primaryRole] || t.accent
+                const coeff = Math.max(...(emp.roles || []).map((r: string) => COEFF[r] || 1.0))
+                const dispos = emp.dispos_base as DisposBase | null
+                return (
+                  <button
+                    key={emp.id}
+                    onClick={() => {
+                      setModal({ id: emp.id, nom: emp.nom || '', email: emp.email || '', password: '', roles: emp.roles || [], taux_horaire: emp.taux_horaire?.toString() || '', restaurant_ids: emp.restaurant_ids || [], actif: emp.actif !== false, dispos_base: emp.dispos_base || { ...EMPTY_DISPOS } })
+                      setSaveError('')
+                    }}
+                    style={{ background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 14, padding: '14px 16px', cursor: 'pointer', textAlign: 'left', width: '100%', fontFamily: font }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 38, height: 38, borderRadius: 10, background: primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: '#fff', fontWeight: 700, flexShrink: 0 }}>
+                          {(emp.nom || '?')[0].toUpperCase()}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 15, color: t.texte, fontWeight: 400 }}>{emp.nom}</div>
+                          <div style={{ fontSize: 10, color: emp.actif !== false ? '#10B981' : '#EF4444', marginTop: 2 }}>
+                            ● {emp.actif !== false ? T.actif : T.inactif}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 16, color: t.accent, fontFamily: "'Courier New', monospace" }}>
-                        ${emp.taux_horaire?.toFixed(2) || '—'}
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: 16, color: t.accent, fontFamily: "'Courier New', monospace" }}>${emp.taux_horaire?.toFixed(2) || '—'}</div>
+                        <div style={{ fontSize: 10, color: t.texteSecondaire }}>{T.taux}</div>
                       </div>
-                      <div style={{ fontSize: 10, color: t.texteSecondaire }}>{T.taux}</div>
                     </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                       {(emp.roles || []).map((r: string) => (
-                        <span key={r} style={{
-                          padding: '3px 9px', borderRadius: 20, fontSize: 10,
-                          background: `${ROLE_COLORS[r] || t.accent}1A`,
-                          border: `1px solid ${ROLE_COLORS[r] || t.accent}40`,
-                          color: ROLE_COLORS[r] || t.accent,
-                        }}>
-                          {ROLE_ICONS[r] && `${ROLE_ICONS[r]} `}{ROLE_LABELS[r]?.[lang] || r}
+                        <span key={r} style={{ padding: '3px 9px', borderRadius: 20, fontSize: 10, background: `${ROLE_COLORS[r] || t.accent}1A`, border: `1px solid ${ROLE_COLORS[r] || t.accent}40`, color: ROLE_COLORS[r] || t.accent }}>
+                          {ROLE_LABELS[r]?.[lang] || r}
                         </span>
                       ))}
                     </div>
-                    <div style={{ fontSize: 10, color: t.texteFaible, flexShrink: 0, marginLeft: 8 }}>
-                      {T.coeffs} ×{coeff.toFixed(1)}
-                    </div>
-                  </div>
-                  {/* Dispo summary */}
-                  {dispos && (dispos.jours?.length > 0 || dispos.services?.length > 0) && (
-                    <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${t.border}`, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                      {(dispos.jours || []).map(j => (
-                        <span key={j} style={{ fontSize: 9, padding: '2px 6px', borderRadius: 6, background: `${t.accent}15`, color: t.texteSecondaire, letterSpacing: '0.04em' }}>
-                          {JOUR_LABELS[j]?.[lang] || j}
-                        </span>
-                      ))}
-                      {(dispos.services || []).map(s => (
-                        <span key={s} style={{ fontSize: 9, padding: '2px 6px', borderRadius: 6, background: `${t.accent}15`, color: t.accent, letterSpacing: '0.04em' }}>
-                          {SERVICE_LABELS[s]?.[lang] || s}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </button>
-              )
-            })}
-          </div>
+                    {dispos && (dispos.jours?.length > 0 || dispos.services?.length > 0) && (
+                      <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${t.border}`, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        {(dispos.jours || []).map(j => (
+                          <span key={j} style={{ fontSize: 9, padding: '2px 6px', borderRadius: 6, background: `${t.accent}15`, color: t.texteSecondaire }}>{JOUR_LABELS[j]?.[lang] || j}</span>
+                        ))}
+                        {(dispos.services || []).map(s => (
+                          <span key={s} style={{ fontSize: 9, padding: '2px 6px', borderRadius: 6, background: `${t.accent}15`, color: t.accent }}>{SERVICE_LABELS[s]?.[lang] || s}</span>
+                        ))}
+                      </div>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </>
         )}
         {/* ── IMPORT HISTORY ── */}
         <div style={{ marginTop: 28 }}>
