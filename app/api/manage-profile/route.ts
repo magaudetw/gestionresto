@@ -1,5 +1,11 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { randomBytes } from 'crypto'
+
+function generateTempPassword(): string {
+  // 16 hex chars + fixed suffix ensures uppercase, digit, special
+  return randomBytes(8).toString('hex') + 'Aa1!'
+}
 
 const SUPABASE_URL      = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -67,16 +73,54 @@ export async function POST(req: NextRequest) {
     })
 
     if (action === 'create') {
-      const { error } = await admin.from('profiles').insert(payload)
-      if (error) {
-        console.error('[manage-profile] INSERT error:', error.message, '| code:', error.code, '| hint:', error.hint)
+      // Pull auth-specific fields out of the payload
+      const { email, password: rawPassword, ...profileFields } = payload
+
+      if (!email || typeof email !== 'string' || !email.includes('@')) {
+        return err('email valide requis pour créer un compte', 400)
+      }
+
+      const password = (typeof rawPassword === 'string' && rawPassword.trim())
+        ? rawPassword.trim()
+        : generateTempPassword()
+
+      // 1. Create the Auth user — this generates the UUID
+      const { data: authData, error: authErr } = await admin.auth.admin.createUser({
+        email: email.toLowerCase().trim(),
+        password,
+        email_confirm: true,
+      })
+
+      if (authErr || !authData?.user) {
+        console.error('[manage-profile] createUser error:', authErr?.message)
         return NextResponse.json(
-          { error: error.message, code: error.code, hint: error.hint },
+          { error: authErr?.message ?? 'Impossible de créer le compte Auth' },
           { status: 400 }
         )
       }
-      console.log('[manage-profile] INSERT ok')
-      return NextResponse.json({ ok: true })
+
+      const userId = authData.user.id
+      console.log('[manage-profile] Auth user created:', userId)
+
+      // 2. Insert the profile row using the Auth UUID as id
+      const { error: insertErr } = await admin.from('profiles').insert({
+        id: userId,
+        ...profileFields,
+      })
+
+      if (insertErr) {
+        console.error('[manage-profile] INSERT error:', insertErr.message, '| code:', insertErr.code, '| hint:', insertErr.hint)
+        // Rollback: remove the orphaned auth user
+        await admin.auth.admin.deleteUser(userId)
+        console.log('[manage-profile] Auth user deleted (rollback)')
+        return NextResponse.json(
+          { error: insertErr.message, code: insertErr.code, hint: insertErr.hint },
+          { status: 400 }
+        )
+      }
+
+      console.log('[manage-profile] Profile INSERT ok, id:', userId)
+      return NextResponse.json({ ok: true, userId })
     }
 
     if (action === 'update') {

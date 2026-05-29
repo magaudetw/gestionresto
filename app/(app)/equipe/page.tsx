@@ -48,6 +48,7 @@ interface ModalData {
   id?: string
   nom: string
   email: string
+  password: string
   roles: Role[]
   taux_horaire: string
   restaurant_ids: string[]
@@ -56,7 +57,7 @@ interface ModalData {
 }
 
 const EMPTY_MODAL: ModalData = {
-  nom: '', email: '', roles: [], taux_horaire: '', restaurant_ids: [], actif: true,
+  nom: '', email: '', password: '', roles: [], taux_horaire: '', restaurant_ids: [], actif: true,
   dispos_base: { ...EMPTY_DISPOS },
 }
 
@@ -156,6 +157,7 @@ export default function EquipePage() {
   async function handleSave() {
     if (!modal) return
     if (!modal.nom.trim()) { setSaveError(lang === 'fr' ? 'Le nom est requis' : 'Name required'); return }
+    if (!modal.id && !modal.email.trim()) { setSaveError(lang === 'fr' ? "L'email est requis" : 'Email is required'); return }
     setSaving(true)
     setSaveError('')
     const taux = parseFloat(modal.taux_horaire) || 0
@@ -170,7 +172,7 @@ export default function EquipePage() {
     }
     const payload = modal.id
       ? { id: modal.id, ...base }
-      : { ...base, lang: 'fr', theme: 'Or noir' }
+      : { ...base, email: modal.email.trim(), password: modal.password.trim() || undefined, lang: 'fr', theme: 'Or noir' }
 
     const { data: { session } } = await supabase.auth.getSession()
     const res = await fetch('/api/manage-profile', {
@@ -235,9 +237,11 @@ export default function EquipePage() {
     contraintesHint: lang === 'fr'
       ? 'Ex: Double obligatoire lundi, Bar requis...'
       : 'E.g.: Double required Monday, Bar required...',
-    noteAuth: lang === 'fr'
-      ? '* Compte Supabase Auth à créer séparément dans le dashboard'
-      : '* Supabase Auth account must be created separately in dashboard',
+    motDePasse:     lang === 'fr' ? 'Mot de passe temporaire'  : 'Temporary password',
+    mdpHint:        lang === 'fr' ? 'Laissez vide pour générer automatiquement' : 'Leave blank to auto-generate',
+    noteInvitation: lang === 'fr'
+      ? '📧 Un email de connexion sera envoyé à l\'employé'
+      : '📧 A login email will be sent to the employee',
   }
 
   return (
@@ -305,6 +309,7 @@ export default function EquipePage() {
                       id: emp.id,
                       nom: emp.nom || '',
                       email: emp.email || '',
+                      password: '',
                       roles: emp.roles || [],
                       taux_horaire: emp.taux_horaire?.toString() || '',
                       restaurant_ids: emp.restaurant_ids || [],
@@ -495,15 +500,33 @@ export default function EquipePage() {
                 style={{ width: '100%', background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 8, color: t.texte, padding: '10px 12px', fontSize: 14, fontFamily: font, outline: 'none', boxSizing: 'border-box' }} />
             </div>
 
-            {/* Email */}
+            {/* Email + Password (création uniquement) */}
             {!modal.id && (
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 11, color: t.texteSecondaire, marginBottom: 6, letterSpacing: '0.08em' }}>{T.email}</div>
-                <input value={modal.email} onChange={e => setModal(m => m ? { ...m, email: e.target.value } : m)}
-                  type="email" placeholder="prenom@email.com"
-                  style={{ width: '100%', background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 8, color: t.texte, padding: '10px 12px', fontSize: 14, fontFamily: font, outline: 'none', boxSizing: 'border-box' }} />
-                <div style={{ fontSize: 10, color: t.texteFaible, marginTop: 4, fontStyle: 'italic' }}>{T.noteAuth}</div>
-              </div>
+              <>
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 11, color: t.texteSecondaire, marginBottom: 6, letterSpacing: '0.08em' }}>{T.email} *</div>
+                  <input
+                    value={modal.email}
+                    onChange={e => setModal(m => m ? { ...m, email: e.target.value } : m)}
+                    type="email"
+                    placeholder="prenom@email.com"
+                    style={{ width: '100%', background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 8, color: t.texte, padding: '10px 12px', fontSize: 14, fontFamily: font, outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 11, color: t.texteSecondaire, marginBottom: 6, letterSpacing: '0.08em' }}>{T.motDePasse}</div>
+                  <input
+                    value={modal.password}
+                    onChange={e => setModal(m => m ? { ...m, password: e.target.value } : m)}
+                    type="text"
+                    placeholder={T.mdpHint}
+                    style={{ width: '100%', background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 8, color: t.texte, padding: '10px 12px', fontSize: 13, fontFamily: font, outline: 'none', boxSizing: 'border-box' }}
+                  />
+                  <div style={{ fontSize: 10, color: t.accent, marginTop: 6, padding: '6px 10px', background: `${t.accent}12`, borderRadius: 6, border: `1px solid ${t.accent}30` }}>
+                    {T.noteInvitation}
+                  </div>
+                </div>
+              </>
             )}
 
             {/* Taux horaire */}
