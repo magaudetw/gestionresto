@@ -18,7 +18,7 @@ export default function AppShell({ profile, restaurant, children }: AppShellProp
   const restaurantName = restaurant || ''
 
   return (
-    <div style={{ minHeight: '100vh', background: t.fond, color: t.texte, fontFamily: font }}>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', fontFamily: font }}>
 
       {/* Mobile header — hidden on desktop */}
       <div className="md:hidden">
