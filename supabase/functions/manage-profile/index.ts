@@ -32,7 +32,10 @@ serve(async (req: Request) => {
 
     const { data: caller, error: profileErr } = await userClient
       .from('profiles').select('roles').eq('id', user.id).single()
-    if (profileErr || !caller) return json({ error: 'Impossible de vérifier le rôle' }, 401)
+    if (profileErr || !caller) {
+      console.error('[manage-profile] role check failed:', profileErr?.message)
+      return json({ error: `Impossible de vérifier le rôle: ${profileErr?.message ?? 'profil introuvable'}` }, 401)
+    }
 
     const roles: string[] = Array.isArray(caller.roles) ? caller.roles : []
     if (!roles.includes('gerant') && !roles.includes('admin')) {
@@ -53,7 +56,10 @@ serve(async (req: Request) => {
 
     if (action === 'create') {
       const { error } = await admin.from('profiles').insert(payload)
-      if (error) return json({ error: error.message }, 400)
+      if (error) {
+        console.error('[manage-profile] insert error:', error.message, error.code)
+        return json({ error: error.message }, 400)
+      }
       return json({ ok: true })
     }
 
@@ -61,7 +67,10 @@ serve(async (req: Request) => {
       const { id, ...data } = payload
       if (!id) return json({ error: 'payload.id requis pour update' }, 400)
       const { error } = await admin.from('profiles').update(data).eq('id', id as string)
-      if (error) return json({ error: error.message }, 400)
+      if (error) {
+        console.error('[manage-profile] update error:', error.message, error.code)
+        return json({ error: error.message }, 400)
+      }
       return json({ ok: true })
     }
 
