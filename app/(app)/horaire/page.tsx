@@ -960,11 +960,19 @@ export default function HorairePage() {
             </div>
             {(() => {
               const { source, available } = getEmpDispoInfo(cellModal.empId, cellModal.jourKey)
-              if (source === 'unknown') return <div style={{ fontSize: 10, color: t.texteFaible, marginBottom: 10, fontStyle: 'italic' }}>⚠ {lang === 'fr' ? 'Dispos non soumises' : 'Availability not submitted'}</div>
-              if (source === 'base' && available) return <div style={{ fontSize: 10, color: '#E0A850', marginBottom: 10 }}>~ {lang === 'fr' ? 'Dispo habituelle (pas de fiche cette semaine)' : 'Usual availability (no form this week)'}</div>
-              if (!available) return <div style={{ fontSize: 10, color: '#E07070', marginBottom: 10 }}>⚠ {lang === 'fr' ? 'Employé indisponible ce jour' : 'Employee unavailable this day'}</div>
+              const note = lang === 'fr' ? ' (indicatif)' : ' (informational)'
+              if (source === 'unknown') return <div style={{ fontSize: 10, color: t.texteFaible, marginBottom: 10, fontStyle: 'italic' }}>· {lang === 'fr' ? 'Dispos non soumises cette semaine' : 'No availability form this week'}{note}</div>
+              if (source === 'base' && available) return <div style={{ fontSize: 10, color: '#E0A850', marginBottom: 10 }}>~ {lang === 'fr' ? 'Dispo habituelle — pas de fiche hebdo' : 'Usual availability — no weekly form'}{note}</div>
+              if (!available) return <div style={{ fontSize: 10, color: '#E07070', marginBottom: 10 }}>· {lang === 'fr' ? 'Non disponible selon ses dispos' : 'Marked unavailable'}{note}</div>
               return null
             })()}
+            {shiftTypes.length === 0 && (
+              <div style={{ background: `${t.accent}10`, border: `1px solid ${t.border}`, borderRadius: 8, padding: '10px 12px', marginBottom: 12, fontSize: 12, color: t.texteSecondaire }}>
+                {lang === 'fr'
+                  ? 'Aucun type de shift configuré. Allez dans Réglages → Types de shifts.'
+                  : 'No shift types configured. Go to Settings → Shift types.'}
+              </div>
+            )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
               {shiftTypes.map((st: any) => (
                 <button key={st.id} onClick={() => setCellStId(st.id)} style={{ padding: '10px 14px', borderRadius: 10, cursor: 'pointer', textAlign: 'left', fontFamily: font, background: cellStId === st.id ? `${st.couleur}22` : t.surface2, border: `1px solid ${cellStId === st.id ? st.couleur : t.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>

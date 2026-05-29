@@ -38,11 +38,13 @@ export default function Navigation({ role, lang }: { role: string; lang: string 
   }, [role])
 
   return (
-    <nav className="glass safe-bottom" style={{
+    <nav style={{
       position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
       width: '100%', maxWidth: 480,
-      borderTop: '1px solid rgba(255,255,255,0.07)',
+      background: 'var(--surface1)',
+      borderTop: '1px solid var(--border)',
       display: 'flex', alignItems: 'stretch', zIndex: 50,
+      paddingBottom: 'env(safe-area-inset-bottom, 0px)',
     }}>
       {nav.map(item => {
         const active = pathname === item.href
@@ -57,14 +59,14 @@ export default function Navigation({ role, lang }: { role: string; lang: string 
             }}>
             <span style={{
               fontSize: 17, lineHeight: 1, position: 'relative',
-              color: active ? '#C9A84C' : 'rgba(240,235,227,0.35)',
+              color: active ? 'var(--accent)' : 'var(--text-faint)',
               transition: 'color var(--transition)',
             }}>
               {item.icon}
               {badge > 0 && (
                 <span style={{
                   position: 'absolute', top: -4, right: -6,
-                  background: '#E07070', borderRadius: '50%',
+                  background: 'var(--danger)', borderRadius: '50%',
                   minWidth: 14, height: 14, fontSize: 8, fontWeight: 700,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   color: '#fff', padding: '0 3px', lineHeight: 1,
@@ -76,7 +78,7 @@ export default function Navigation({ role, lang }: { role: string; lang: string 
             <span style={{
               fontSize: 9, letterSpacing: '0.08em', textTransform: 'uppercase',
               fontFamily: 'var(--font-body)',
-              color: active ? '#C9A84C' : 'rgba(240,235,227,0.2)',
+              color: active ? 'var(--accent)' : 'var(--text-faint)',
               transition: 'color var(--transition)',
             }}>
               {item.label[l]}
@@ -85,7 +87,7 @@ export default function Navigation({ role, lang }: { role: string; lang: string 
               <div style={{
                 position: 'absolute', top: 0, left: '50%',
                 transform: 'translateX(-50%)', width: 24, height: 2,
-                background: '#C9A84C', borderRadius: '0 0 2px 2px',
+                background: 'var(--accent)', borderRadius: '0 0 2px 2px',
               }} />
             )}
           </button>

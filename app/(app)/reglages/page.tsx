@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import AppShell from '@/components/AppShell'
-import { getTheme, THEME_NAMES, FONTS, applyThemeToDocument } from '@/lib/themes'
+import { getTheme, THEME_NAMES, LIGHT_THEMES, DARK_THEMES, FONT_SIZES, FONTS, applyThemeToDocument } from '@/lib/themes'
 import type { ThemeName } from '@/lib/themes'
 import type { ShiftType, Jour } from '@/types'
 import { useAuth } from '@/lib/auth-context'
@@ -372,18 +372,16 @@ export default function ReglagesPage() {
   }
 
   const THEME_SWATCHES: Record<ThemeName, string> = {
-    'Lumière': '#3B82F6',
-    'Or noir': '#C9A84C', 'Minuit': '#60A5FA', 'Bordeaux': '#F06292',
-    'Forêt': '#4ADE80', 'Ardoise': '#94A3B8', 'Cuivre': '#FB923C',
-    'Améthyste': '#C084FC', 'Océan': '#2DD4BF', 'Ivoire': '#B45309',
-    'Brume': '#0369A1', 'Craie': '#7C3AED',
+    'Lumière': '#3B82F6', 'Ivoire': '#92724A', 'Brume': '#5B7FA6', 'Craie': '#4A4A4A',
+    'Or noir': '#C9A84C', 'Minuit': '#58A6FF', 'Bordeaux': '#9B2335',
+    'Forêt': '#4A9B5F', 'Ardoise': '#6B8CAE', 'Cuivre': '#B87333',
+    'Améthyste': '#8B5CF6', 'Océan': '#0EA5E9',
   }
   const THEME_BKGS: Record<ThemeName, string> = {
-    'Lumière': '#F8F9FA',
-    'Or noir': '#080808', 'Minuit': '#050A14', 'Bordeaux': '#0A0506',
-    'Forêt': '#050A06', 'Ardoise': '#080A0C', 'Cuivre': '#0A0806',
-    'Améthyste': '#08060A', 'Océan': '#040C0C', 'Ivoire': '#FFFBF4',
-    'Brume': '#F0F4F8', 'Craie': '#FAFAF9',
+    'Lumière': '#F8F9FA', 'Ivoire': '#FAF7F2', 'Brume': '#F0F4F8', 'Craie': '#F5F5F0',
+    'Or noir': '#080808', 'Minuit': '#0D1117', 'Bordeaux': '#0F0A0A',
+    'Forêt': '#0A0F0A', 'Ardoise': '#0F1115', 'Cuivre': '#0F0C08',
+    'Améthyste': '#0D0A12', 'Océan': '#080D12',
   }
 
   const btnCounter = {
@@ -441,34 +439,58 @@ export default function ReglagesPage() {
           </div>
 
           <div style={{ background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 14, padding: '14px 16px', marginBottom: 10 }}>
-            <div style={{ fontSize: 12, color: t.texteSecondaire, marginBottom: 12 }}>{T.theme}</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-              {THEME_NAMES.map(name => {
+            <div style={{ fontSize: 12, color: t.texteSecondaire, marginBottom: 10 }}>{T.theme}</div>
+
+            {/* Thèmes clairs */}
+            <div style={{ fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.texteFaible, marginBottom: 6 }}>
+              {lang === 'fr' ? 'Clairs' : 'Light'}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 12 }}>
+              {LIGHT_THEMES.map(name => {
                 const isSelected = selectedTheme === name
                 return (
-                  <button
-                    key={name}
-                    onClick={() => setSelectedTheme(name)}
-                    title={name}
-                    style={{
-                      background: THEME_BKGS[name],
-                      border: `2px solid ${isSelected ? THEME_SWATCHES[name] : 'transparent'}`,
-                      borderRadius: 10, height: 44, cursor: 'pointer',
-                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
-                      position: 'relative', overflow: 'hidden',
-                    }}
-                  >
-                    <div style={{ width: 16, height: 16, borderRadius: '50%', background: THEME_SWATCHES[name] }} />
-                    <span style={{ fontSize: 8, color: THEME_BKGS[name] === '#F8F9FA' || THEME_BKGS[name].startsWith('#F') || THEME_BKGS[name].startsWith('#E') ? '#374151' : THEME_SWATCHES[name], letterSpacing: '0.04em', maxWidth: 54, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center' }}>
+                  <button key={name} onClick={() => setSelectedTheme(name)} title={name} style={{
+                    background: THEME_BKGS[name],
+                    border: `2px solid ${isSelected ? THEME_SWATCHES[name] : '#E0DDD8'}`,
+                    borderRadius: 10, height: 48, cursor: 'pointer',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
+                    position: 'relative', overflow: 'hidden',
+                  }}>
+                    <div style={{ width: 14, height: 14, borderRadius: '50%', background: THEME_SWATCHES[name] }} />
+                    <span style={{ fontSize: 8, color: '#374151', letterSpacing: '0.04em', maxWidth: 52, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center' }}>
                       {name}
                     </span>
-                    {isSelected && (
-                      <div style={{ position: 'absolute', top: 3, right: 3, width: 8, height: 8, borderRadius: '50%', background: THEME_SWATCHES[name] }} />
-                    )}
+                    {isSelected && <div style={{ position: 'absolute', top: 3, right: 3, width: 7, height: 7, borderRadius: '50%', background: THEME_SWATCHES[name] }} />}
                   </button>
                 )
               })}
             </div>
+
+            {/* Thèmes sombres */}
+            <div style={{ fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.texteFaible, marginBottom: 6 }}>
+              {lang === 'fr' ? 'Sombres' : 'Dark'}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+              {DARK_THEMES.map(name => {
+                const isSelected = selectedTheme === name
+                return (
+                  <button key={name} onClick={() => setSelectedTheme(name)} title={name} style={{
+                    background: THEME_BKGS[name],
+                    border: `2px solid ${isSelected ? THEME_SWATCHES[name] : 'transparent'}`,
+                    borderRadius: 10, height: 48, cursor: 'pointer',
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
+                    position: 'relative', overflow: 'hidden',
+                  }}>
+                    <div style={{ width: 14, height: 14, borderRadius: '50%', background: THEME_SWATCHES[name] }} />
+                    <span style={{ fontSize: 8, color: THEME_SWATCHES[name], letterSpacing: '0.04em', maxWidth: 52, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center' }}>
+                      {name}
+                    </span>
+                    {isSelected && <div style={{ position: 'absolute', top: 3, right: 3, width: 7, height: 7, borderRadius: '50%', background: THEME_SWATCHES[name] }} />}
+                  </button>
+                )
+              })}
+            </div>
+
             <div style={{ marginTop: 10, fontSize: 12, color: t.accent, textAlign: 'center', letterSpacing: '0.06em' }}>
               {selectedTheme}
             </div>
@@ -505,7 +527,7 @@ export default function ReglagesPage() {
           <div style={{ fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 12 }}>
             {lang === 'fr' ? 'TAILLE DU TEXTE' : 'TEXT SIZE'}
           </div>
-          <div style={{ display: 'flex', background: t.surface1, borderRadius: 12, padding: 4, border: `1px solid ${t.border}`, gap: 4 }}>
+          <div style={{ display: 'flex', background: t.surface1, borderRadius: 12, padding: 4, border: `1px solid ${t.border}`, gap: 4, marginBottom: 10 }}>
             {([
               { key: 'sm', fr: 'Petit',  en: 'Small',  px: '12px' },
               { key: 'md', fr: 'Normal', en: 'Normal', px: '14px' },
@@ -516,7 +538,9 @@ export default function ReglagesPage() {
                 key={sz.key}
                 onClick={() => {
                   setSelectedFontSize(sz.key)
-                  document.documentElement.style.fontSize = sz.px
+                  const px = FONT_SIZES[sz.key]
+                  document.documentElement.style.setProperty('--font-size-base', px)
+                  document.documentElement.style.fontSize = px
                 }}
                 style={{
                   flex: 1, padding: '9px 4px', borderRadius: 9, border: 'none', cursor: 'pointer',
@@ -529,6 +553,15 @@ export default function ReglagesPage() {
                 {sz[lang]}
               </button>
             ))}
+          </div>
+          {/* Live preview */}
+          <div style={{ background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 10, padding: '12px 14px' }}>
+            <div style={{ fontSize: '1rem', color: t.texte, fontFamily: font, lineHeight: 1.5 }}>
+              {lang === 'fr' ? 'L\'aperçu du texte change en temps réel.' : 'Text preview updates in real time.'}
+            </div>
+            <div style={{ fontSize: '0.85rem', color: t.texteSecondaire, fontFamily: font, marginTop: 4 }}>
+              {lang === 'fr' ? 'Taille actuelle : ' : 'Current size: '}{FONT_SIZES[selectedFontSize]}
+            </div>
           </div>
         </div>
 
