@@ -156,7 +156,7 @@ export default function HorairePage() {
 
     if (isManager && restaurantId) {
       const [empsRes, stRes, disposRes, covRes] = await Promise.all([
-        supabase.from('profiles').select('id,nom,roles,taux_horaire')
+        supabase.from('profiles').select('id,nom,roles,taux_horaire,dispos_base')
           .contains('restaurant_ids', [restaurantId]).eq('actif', true).order('nom'),
         supabase.from('shift_types').select('*').eq('restaurant_id', restaurantId),
         supabase.from('dispos_hebdo').select('*').eq('restaurant_id', restaurantId).eq('semaine_du', mondayISO),
@@ -447,18 +447,27 @@ export default function HorairePage() {
     ['approuve','refuse','rejete'].includes(e.statut)
   )
 
-  function getEmpDispoSvcs(empId: string, jourKey: Jour): ('midi'|'soir')[] | null | undefined {
-    const d = disposHebdo.find((x: any) => x.user_id === empId)
-    if (!d) return undefined
-    const svcs = d.dispos?.[jourKey]
-    return svcs !== undefined ? svcs : null
+  function getEmpDispoInfo(empId: string, jourKey: Jour): { source: 'hebdo' | 'base' | 'unknown'; available: boolean } {
+    const hebdo = disposHebdo.find((x: any) => x.user_id === empId)
+    if (hebdo) {
+      const svcs = hebdo.dispos?.[jourKey]
+      const available = Array.isArray(svcs) && svcs.length > 0
+      return { source: 'hebdo', available }
+    }
+    const emp = employeeMap[empId]
+    const base = emp?.dispos_base
+    if (base?.jours) {
+      return { source: 'base', available: base.jours.includes(jourKey) }
+    }
+    return { source: 'unknown', available: false }
   }
 
   function cellBg(empId: string, jourKey: Jour): string | undefined {
-    const svcs = getEmpDispoSvcs(empId, jourKey)
-    if (svcs === undefined) return undefined
-    if (!svcs || svcs.length === 0) return 'rgba(224,112,112,0.10)'
-    return undefined
+    const { source, available } = getEmpDispoInfo(empId, jourKey)
+    if (source === 'unknown') return undefined
+    if (source === 'hebdo') return available ? 'rgba(114,186,128,0.10)' : 'rgba(224,112,112,0.10)'
+    // base fallback
+    return available ? 'rgba(224,168,80,0.10)' : 'rgba(224,112,112,0.06)'
   }
 
   function getCoverage(dayIdx: number) {
@@ -950,9 +959,10 @@ export default function HorairePage() {
               )}
             </div>
             {(() => {
-              const svcs = getEmpDispoSvcs(cellModal.empId, cellModal.jourKey)
-              if (svcs === undefined) return <div style={{ fontSize: 10, color: t.texteFaible, marginBottom: 10, fontStyle: 'italic' }}>⚠ {lang === 'fr' ? 'Dispos non soumises' : 'Availability not submitted'}</div>
-              if (!svcs || svcs.length === 0) return <div style={{ fontSize: 10, color: '#E07070', marginBottom: 10 }}>⚠ {lang === 'fr' ? 'Employé indisponible ce jour' : 'Employee unavailable this day'}</div>
+              const { source, available } = getEmpDispoInfo(cellModal.empId, cellModal.jourKey)
+              if (source === 'unknown') return <div style={{ fontSize: 10, color: t.texteFaible, marginBottom: 10, fontStyle: 'italic' }}>⚠ {lang === 'fr' ? 'Dispos non soumises' : 'Availability not submitted'}</div>
+              if (source === 'base' && available) return <div style={{ fontSize: 10, color: '#E0A850', marginBottom: 10 }}>~ {lang === 'fr' ? 'Dispo habituelle (pas de fiche cette semaine)' : 'Usual availability (no form this week)'}</div>
+              if (!available) return <div style={{ fontSize: 10, color: '#E07070', marginBottom: 10 }}>⚠ {lang === 'fr' ? 'Employé indisponible ce jour' : 'Employee unavailable this day'}</div>
               return null
             })()}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>

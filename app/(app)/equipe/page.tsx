@@ -61,10 +61,6 @@ const EMPTY_MODAL: ModalData = {
   dispos_base: { ...EMPTY_DISPOS },
 }
 
-const RESTAURANTS = [
-  { id: '1', nom: 'Le Carré' },
-  { id: '2', nom: 'Le Caméléon' },
-]
 
 const MOIS_FR = ['jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc']
 const MOIS_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
@@ -77,10 +73,12 @@ function fmtImportDate(iso: string, lang: 'fr'|'en'): string {
 export default function EquipePage() {
   const { profile, restaurantId, isManager, loading } = useAuth()
   const [employes, setEmployes] = useState<any[]>([])
+  const [restaurants, setRestaurants] = useState<{id: string; nom: string}[]>([])
   const [filter, setFilter] = useState<string>('tous')
   const [modal, setModal] = useState<ModalData | null>(null)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [inviteLink, setInviteLink] = useState<string | null>(null)
   const [importLogs, setImportLogs] = useState<any[]>([])
   const [undoing, setUndoing] = useState<string | null>(null)
   const [confirmUndo, setConfirmUndo] = useState<string | null>(null)
@@ -90,6 +88,11 @@ export default function EquipePage() {
   useEffect(() => {
     if (!loading && !isManager) router.push('/dashboard')
   }, [loading, isManager, router])
+
+  useEffect(() => {
+    supabase.from('restaurants').select('id,nom').eq('actif', true).order('nom')
+      .then(({ data }) => setRestaurants(data || []))
+  }, [])
 
   useEffect(() => {
     if (!profile) return
@@ -193,7 +196,11 @@ export default function EquipePage() {
     }
 
     await loadEmployes()
-    setModal(null)
+    if (!modal.id && result.inviteLink) {
+      setInviteLink(result.inviteLink)
+    } else {
+      setModal(null)
+    }
     setSaving(false)
   }
 
@@ -313,7 +320,7 @@ export default function EquipePage() {
                   {filteredEmployes.map((emp, ei) => {
                     const primaryRole  = emp.roles?.[0] || 'serveur'
                     const primaryColor = ROLE_COLORS[primaryRole] || t.accent
-                    const restName     = RESTAURANTS.find(r => (emp.restaurant_ids || []).includes(r.id))?.nom || '—'
+                    const restName     = restaurants.find(r => (emp.restaurant_ids || []).includes(r.id))?.nom || '—'
                     return (
                       <tr key={emp.id} style={{ borderBottom: ei < filteredEmployes.length - 1 ? `1px solid ${t.border}` : 'none' }}>
                         {/* Nom + avatar */}
@@ -529,7 +536,7 @@ export default function EquipePage() {
       {/* Modal overlay */}
       {modal && (
         <div
-          onClick={() => setModal(null)}
+          onClick={() => { setModal(null); setInviteLink(null) }}
           style={{
             position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)',
             zIndex: 100, display: 'flex', alignItems: 'flex-end',
@@ -624,7 +631,7 @@ export default function EquipePage() {
             <div style={{ marginBottom: 14 }}>
               <div style={{ fontSize: 11, color: t.texteSecondaire, marginBottom: 8, letterSpacing: '0.08em' }}>{T.restaurants}</div>
               <div style={{ display: 'flex', gap: 6 }}>
-                {RESTAURANTS.map(r => {
+                {restaurants.map(r => {
                   const isSelected = modal.restaurant_ids.includes(r.id)
                   return (
                     <button key={r.id} onClick={() => setModal(m => {
@@ -731,6 +738,31 @@ export default function EquipePage() {
               </div>
             </div>
 
+            {inviteLink && (
+              <div style={{ background: `${t.accent}12`, border: `1px solid ${t.accent}40`, borderRadius: 10, padding: '14px 12px', marginBottom: 16 }}>
+                <div style={{ fontSize: 11, color: t.accent, fontWeight: 600, marginBottom: 8, letterSpacing: '0.06em' }}>
+                  {lang === 'fr' ? 'LIEN DE CONNEXION' : 'LOGIN LINK'}
+                </div>
+                <div style={{ fontSize: 11, color: t.texteSecondaire, marginBottom: 10 }}>
+                  {lang === 'fr'
+                    ? "Partagez ce lien unique avec l'employé pour qu'il se connecte."
+                    : 'Share this one-time link with the employee to log in.'}
+                </div>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'stretch' }}>
+                  <input
+                    readOnly value={inviteLink}
+                    style={{ flex: 1, background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 7, color: t.texteFaible, padding: '8px 10px', fontSize: 10, fontFamily: 'monospace', outline: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                  />
+                  <button
+                    onClick={() => navigator.clipboard.writeText(inviteLink)}
+                    style={{ padding: '8px 12px', background: t.accent, border: 'none', borderRadius: 7, color: '#fff', cursor: 'pointer', fontSize: 11, fontFamily: font, flexShrink: 0 }}
+                  >
+                    {lang === 'fr' ? 'Copier' : 'Copy'}
+                  </button>
+                </div>
+              </div>
+            )}
+
             {saveError && (
               <div style={{ background: 'rgba(224,112,112,0.15)', border: '1px solid rgba(224,112,112,0.4)', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 12, color: '#E07070' }}>
                 {saveError}
@@ -738,7 +770,7 @@ export default function EquipePage() {
             )}
 
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setModal(null)} style={{
+              <button onClick={() => { setModal(null); setInviteLink(null) }} style={{
                 flex: 1, padding: '12px', background: t.surface2, border: `1px solid ${t.border}`,
                 borderRadius: 10, color: t.texteSecondaire, cursor: 'pointer', fontSize: 13, fontFamily: font,
               }}>

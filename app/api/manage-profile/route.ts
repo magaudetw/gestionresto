@@ -84,9 +84,11 @@ export async function POST(req: NextRequest) {
         ? rawPassword.trim()
         : generateTempPassword()
 
+      const normalizedEmail = (email as string).toLowerCase().trim()
+
       // 1. Create the Auth user — this generates the UUID
       const { data: authData, error: authErr } = await admin.auth.admin.createUser({
-        email: email.toLowerCase().trim(),
+        email: normalizedEmail,
         password,
         email_confirm: true,
       })
@@ -102,9 +104,22 @@ export async function POST(req: NextRequest) {
       const userId = authData.user.id
       console.log('[manage-profile] Auth user created:', userId)
 
-      // 2. Insert the profile row using the Auth UUID as id
+      // 2. Generate a one-time magic link so the manager can share it with the employee
+      let inviteLink: string | null = null
+      const { data: linkData, error: linkErr } = await admin.auth.admin.generateLink({
+        type: 'magiclink',
+        email: normalizedEmail,
+      })
+      if (linkData?.properties?.action_link) {
+        inviteLink = linkData.properties.action_link
+      } else {
+        console.warn('[manage-profile] generateLink error:', linkErr?.message)
+      }
+
+      // 3. Insert the profile row using the Auth UUID as id
       const { error: insertErr } = await admin.from('profiles').insert({
         id: userId,
+        email: normalizedEmail,
         ...profileFields,
       })
 
@@ -120,7 +135,7 @@ export async function POST(req: NextRequest) {
       }
 
       console.log('[manage-profile] Profile INSERT ok, id:', userId)
-      return NextResponse.json({ ok: true, userId })
+      return NextResponse.json({ ok: true, userId, inviteLink })
     }
 
     if (action === 'update') {
