@@ -135,3 +135,14 @@ input:focus, textarea:focus, select:focus {
 
 /* ── Safe area bottom padding ────────────────────────────────────────────────── */
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+/* ── Collapsible sidebar ──────────────────────────────────────────────────────── */
+[data-sidebar="collapsed"] { --sidebar-w: 64px; }
+
+/* Main content offset — follows sidebar state via CSS var */
+@media (min-width: 768px) {
+  .main-offset {
+    margin-left: var(--sidebar-w);
+    transition: margin-left 0.28s ease;
+  }
+}

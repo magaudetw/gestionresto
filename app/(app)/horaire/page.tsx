@@ -584,7 +584,7 @@ export default function HorairePage() {
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <AppShell profile={profile} restaurant="Le Carré">
-      <main style={{ paddingBottom: 96 }}>
+      <main className="page-content" style={{ paddingBottom: 96 }}>
 
         {/* Tab bar */}
         <div style={{ display: 'flex', borderBottom: `1px solid ${t.border}`, padding: '0 16px' }}>
@@ -663,10 +663,10 @@ export default function HorairePage() {
               {/* ── MANAGER: employee grid ── */}
               {isManager && (
                 <>
-                  <div style={{ background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 14, overflow: 'hidden', marginBottom: 10 }}>
+                  <div style={{ border: `1px solid ${t.border}`, borderRadius: 14, overflow: 'hidden', marginBottom: 10 }}>
                     {/* Header */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '76px repeat(6, 1fr)', borderBottom: `1px solid ${t.border}` }}>
-                      <div style={{ padding: '6px 8px' }} />
+                    <div style={{ display: 'grid', gridTemplateColumns: '76px repeat(6, 1fr)', borderBottom: `1px solid ${t.border}`, background: t.surface2 }}>
+                      <div style={{ padding: '6px 8px', position: 'sticky', left: 0, background: t.surface2, zIndex: 2 }} />
                       {days.map((day, di) => {
                         const dateStr = isoDate(day)
                         const isToday = dateStr === today
@@ -682,9 +682,11 @@ export default function HorairePage() {
                       })}
                     </div>
                     {employees.length === 0 && <div style={{ padding: 20, textAlign: 'center', color: t.texteFaible, fontSize: 12 }}>{lang === 'fr' ? 'Aucun employé' : 'No employees'}</div>}
-                    {employees.map((emp: any, ei: number) => (
-                      <div key={emp.id} style={{ display: 'grid', gridTemplateColumns: '76px repeat(6, 1fr)', borderBottom: ei < employees.length - 1 ? `1px solid ${t.border}` : 'none' }}>
-                        <div style={{ padding: '0 8px', fontSize: 11, color: t.texte, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', minHeight: 48 }}>
+                    {employees.map((emp: any, ei: number) => {
+                      const rowBg = ei % 2 === 1 ? `${t.surface2}88` : t.surface1
+                      return (
+                      <div key={emp.id} style={{ display: 'grid', gridTemplateColumns: '76px repeat(6, 1fr)', borderBottom: ei < employees.length - 1 ? `1px solid ${t.border}` : 'none', background: rowBg }}>
+                        <div style={{ padding: '0 8px', fontSize: 11, color: t.texte, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', minHeight: 48, position: 'sticky', left: 0, background: rowBg, zIndex: 1 }}>
                           {emp.nom.split(' ')[0]}
                         </div>
                         {days.map((day, di) => {
@@ -699,10 +701,10 @@ export default function HorairePage() {
                               onClick={() => { setCellModal({ empId: emp.id, date: dateStr, jourKey, shiftId: shift?.id, shiftTypeId: shift?.shift_type_id }); setCellStId(shift?.shift_type_id || '') }}
                               style={{ borderTop: 'none', borderRight: 'none', borderBottom: 'none', borderLeft: `1px solid ${t.border}`, background: bg || (isToday ? `${t.accent}08` : 'transparent'), cursor: 'pointer', padding: '5px 3px', minHeight: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               {shift ? (
-                                <div style={{ width: '100%', borderRadius: 5, padding: '3px 2px', background: `${st?.couleur || t.accent}28`, border: `1px solid ${st?.couleur || t.accent}55`, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-                                  <div style={{ width: 5, height: 5, borderRadius: '50%', background: st?.couleur || t.accent }} />
-                                  <div style={{ fontSize: 8, color: t.texte, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '100%', padding: '0 2px' }}>{(st?.nom || '?').split(' ')[0]}</div>
-                                  {shift.statut === 'brouillon' && <div style={{ width: 3, height: 3, borderRadius: '50%', background: '#E0A850' }} />}
+                                <div style={{ width: '100%', borderRadius: 4, padding: '3px 3px 3px 5px', background: `${st?.couleur || t.accent}22`, borderLeft: `2px solid ${st?.couleur || t.accent}`, position: 'relative', display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                  <div style={{ fontSize: 8, color: t.texte, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 500 }}>{(st?.nom || '?').split(' ')[0]}</div>
+                                  {st?.debut && <div style={{ fontSize: 7, color: t.texteFaible }}>{st.debut.slice(0,5)}–{(st.fin || '').slice(0,5)}</div>}
+                                  {shift.statut === 'brouillon' && <div style={{ position: 'absolute', top: 2, right: 2, width: 4, height: 4, borderRadius: '50%', background: '#E0A850' }} />}
                                 </div>
                               ) : (
                                 <span style={{ fontSize: 14, color: t.texteFaible, opacity: 0.35 }}>+</span>
@@ -711,7 +713,8 @@ export default function HorairePage() {
                           )
                         })}
                       </div>
-                    ))}
+                    )
+                    })}
                   </div>
 
                   {/* Coverage bar */}

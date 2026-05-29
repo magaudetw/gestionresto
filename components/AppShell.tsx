@@ -30,9 +30,8 @@ export default function AppShell({ profile, restaurant, children }: AppShellProp
         <Sidebar profile={{ ...profile, restaurant_name: restaurantName }} theme={t} />
       </div>
 
-      {/* Content — single render, responsive container */}
-      <div className="md:ml-[240px]">
-        {/* On mobile: constrain to 480px. On desktop: full width. */}
+      {/* Content — margin tracks sidebar width via CSS var */}
+      <div className="main-offset">
         <div className="max-w-[480px] mx-auto md:max-w-none md:mx-0">
           {children}
         </div>
