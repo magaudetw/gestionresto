@@ -172,18 +172,19 @@ export default function EquipePage() {
       ? { id: modal.id, ...base }
       : { ...base, lang: 'fr', theme: 'Or noir' }
 
-    const { error: fnError } = await supabase.functions.invoke('manage-profile', {
-      body: { action: modal.id ? 'update' : 'create', payload },
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch('/api/manage-profile', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session?.access_token ?? ''}`,
+      },
+      body: JSON.stringify({ action: modal.id ? 'update' : 'create', payload }),
     })
+    const result = await res.json()
 
-    if (fnError) {
-      let msg = lang === 'fr' ? 'Erreur serveur' : 'Server error'
-      try {
-        // FunctionsHttpError exposes the response body via .context
-        const body = await (fnError as any).context?.json?.()
-        if (body?.error) msg = body.error
-      } catch { /* ignore parse error, use generic message */ }
-      setSaveError(msg)
+    if (!res.ok || result.error) {
+      setSaveError(result.error ?? (lang === 'fr' ? 'Erreur serveur' : 'Server error'))
       setSaving(false)
       return
     }
