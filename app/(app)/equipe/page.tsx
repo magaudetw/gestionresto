@@ -160,28 +160,32 @@ export default function EquipePage() {
     setSaveError('')
     const taux = parseFloat(modal.taux_horaire) || 0
 
-    if (modal.id) {
-      const { error } = await supabase.from('profiles').update({
-        nom: modal.nom.trim(),
-        roles: modal.roles,
-        taux_horaire: taux,
-        restaurant_ids: modal.restaurant_ids,
-        actif: modal.actif,
-        dispos_base: modal.dispos_base,
-      }).eq('id', modal.id)
-      if (error) { setSaveError(error.message); setSaving(false); return }
-    } else {
-      const { error } = await supabase.from('profiles').insert({
-        nom: modal.nom.trim(),
-        roles: modal.roles,
-        taux_horaire: taux,
-        restaurant_ids: modal.restaurant_ids,
-        actif: modal.actif,
-        dispos_base: modal.dispos_base,
-        lang: 'fr',
-        theme: 'Or noir',
-      })
-      if (error) { setSaveError(error.message); setSaving(false); return }
+    const base = {
+      nom: modal.nom.trim(),
+      roles: modal.roles,
+      taux_horaire: taux,
+      restaurant_ids: modal.restaurant_ids,
+      actif: modal.actif,
+      dispos_base: modal.dispos_base,
+    }
+    const payload = modal.id
+      ? { id: modal.id, ...base }
+      : { ...base, lang: 'fr', theme: 'Or noir' }
+
+    const { error: fnError } = await supabase.functions.invoke('manage-profile', {
+      body: { action: modal.id ? 'update' : 'create', payload },
+    })
+
+    if (fnError) {
+      let msg = lang === 'fr' ? 'Erreur serveur' : 'Server error'
+      try {
+        // FunctionsHttpError exposes the response body via .context
+        const body = await (fnError as any).context?.json?.()
+        if (body?.error) msg = body.error
+      } catch { /* ignore parse error, use generic message */ }
+      setSaveError(msg)
+      setSaving(false)
+      return
     }
 
     await loadEmployes()
