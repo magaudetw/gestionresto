@@ -117,19 +117,26 @@ export function getTheme(name?: string | null): Theme {
   return THEMES[(name as ThemeName)] ?? THEMES['Lumière']
 }
 
+export function themeSlug(name: string): string {
+  return name.toLowerCase()
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/\s+/g, '_')
+}
+
 export function applyThemeToDocument(themeName?: string | null, fontFamily?: string | null) {
   if (typeof document === 'undefined') return
   const t = getTheme(themeName)
   const name = (themeName ?? 'Lumière') as ThemeName
-  document.documentElement.setAttribute('data-theme', name)
+  const slug = themeSlug(name)
+  document.documentElement.setAttribute('data-theme', slug)
   document.documentElement.setAttribute('data-font', fontFamily ?? '')
   document.documentElement.style.background = t.fond
   document.documentElement.style.color      = t.texte
   if (fontFamily) document.documentElement.style.fontFamily = fontFamily
-  // Cache for instant restore on next load
   if (typeof localStorage !== 'undefined') {
-    localStorage.setItem('gr-theme-fond', t.fond)
+    localStorage.setItem('gr-theme-fond',  t.fond)
     localStorage.setItem('gr-theme-texte', t.texte)
+    localStorage.setItem('gr-theme-slug',  slug)
   }
 }
 

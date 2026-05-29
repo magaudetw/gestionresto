@@ -132,15 +132,20 @@ export default function ReglagesPage() {
     setSaving(true)
     setSaveError(false)
 
-    const { error } = await supabase.from('profiles').update({
-      theme: selectedTheme,
-      lang: selectedLang,
-      font_family: selectedFont,
-    }).eq('id', userId)
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch('/api/save-prefs', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session?.access_token ?? ''}`,
+      },
+      body: JSON.stringify({ theme: selectedTheme, lang: selectedLang, font_family: selectedFont }),
+    })
 
     setSaving(false)
-    if (error) {
-      console.error('handleSave:', error.message)
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}))
+      console.error('handleSave:', json.error)
       setSaveError(true)
       setTimeout(() => setSaveError(false), 3000)
       return

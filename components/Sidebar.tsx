@@ -4,11 +4,10 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Theme } from '@/lib/themes'
 
-// Sidebar is always on a dark background (sidebarBg), so text is always light
-const SB_TEXT        = 'rgba(255,255,255,0.88)'
-const SB_TEXT_MUTED  = 'rgba(255,255,255,0.45)'
-const SB_TEXT_FAINT  = 'rgba(255,255,255,0.22)'
-const SB_BORDER      = 'rgba(255,255,255,0.08)'
+const SB_TEXT        = 'var(--sidebar-text)'
+const SB_TEXT_MUTED  = 'var(--sidebar-text-muted)'
+const SB_TEXT_FAINT  = 'var(--sidebar-text-faint)'
+const SB_BORDER      = 'var(--sidebar-border)'
 
 const NAV_GERANT = [
   { href: '/dashboard',     icon: '⬡', label: { fr: 'Tableau de bord', en: 'Dashboard'   }},
@@ -45,12 +44,13 @@ export default function Sidebar({ profile, theme: t }: SidebarProps) {
 
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false
-    const val = localStorage.getItem('sidebar-collapsed') === 'true'
-    // Apply stored theme colors immediately to avoid flash
-    const fond  = localStorage.getItem('gr-theme-fond')
+    const val  = localStorage.getItem('sidebar-collapsed') === 'true'
+    const fond = localStorage.getItem('gr-theme-fond')
     const texte = localStorage.getItem('gr-theme-texte')
+    const slug = localStorage.getItem('gr-theme-slug')
     if (fond)  document.documentElement.style.background = fond
     if (texte) document.documentElement.style.color      = texte
+    if (slug)  document.documentElement.setAttribute('data-theme', slug)
     document.documentElement.dataset.sidebar = val ? 'collapsed' : 'open'
     return val
   })
@@ -78,7 +78,7 @@ export default function Sidebar({ profile, theme: t }: SidebarProps) {
   return (
     <aside style={{
       position: 'fixed', top: 0, left: 0, width: 'var(--sidebar-w)', height: '100vh',
-      background: t.sidebarBg,
+      background: 'var(--sidebar-bg)',
       borderRight: `1px solid ${SB_BORDER}`,
       display: 'flex', flexDirection: 'column', zIndex: 50,
       transition: 'width 0.28s ease',
