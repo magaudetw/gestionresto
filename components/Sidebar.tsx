@@ -2,6 +2,7 @@
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/lib/auth-context'
 import type { Theme } from '@/lib/themes'
 
 const SB_TEXT        = 'var(--sidebar-text)'
@@ -41,6 +42,7 @@ export default function Sidebar({ profile, theme: t }: SidebarProps) {
   const lang      = (profile?.lang || 'fr') as 'fr' | 'en'
   const nav       = isManager ? NAV_GERANT : NAV_EMPLOYE
   const [exchangeBadge, setExchangeBadge] = useState(0)
+  const { userRestaurants, restaurantId: activeRestaurantId, setActiveRestaurant } = useAuth()
 
   const [collapsed, setCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false
@@ -110,6 +112,31 @@ export default function Sidebar({ profile, theme: t }: SidebarProps) {
           </div>
         )}
       </div>
+
+      {/* Restaurant switcher — managers with multiple restaurants */}
+      {userRestaurants.length > 1 && !collapsed && (
+        <div style={{ padding: '8px 10px', borderBottom: `1px solid ${SB_BORDER}` }}>
+          <select
+            value={activeRestaurantId || ''}
+            onChange={e => setActiveRestaurant(e.target.value)}
+            style={{
+              width: '100%', background: 'transparent',
+              border: `1px solid ${SB_BORDER}`,
+              borderRadius: 6, color: SB_TEXT_MUTED, fontSize: 11,
+              padding: '5px 8px', cursor: 'pointer',
+              fontFamily: 'var(--font-body)',
+            }}
+          >
+            {userRestaurants.map(r => (
+              <option key={r.id} value={r.id}
+                style={{ background: 'var(--sidebar-bg)', color: 'var(--sidebar-text)' }}
+              >
+                {r.nom}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Nav items */}
       <nav style={{

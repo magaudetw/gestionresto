@@ -36,15 +36,15 @@ export async function POST(req: NextRequest) {
   }
 
   // ── 2. Parse body ────────────────────────────────────────────────────────────
-  let body: { theme?: string; lang?: string; font_family?: string }
+  let body: { theme?: string; lang?: string; font_family?: string; font_size?: string }
   try {
     body = await req.json()
   } catch {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  const { theme, lang, font_family } = body
-  console.log('[save-prefs] payload:', { theme, lang, font_family })
+  const { theme, lang, font_family, font_size } = body
+  console.log('[save-prefs] payload:', { theme, lang, font_family, font_size })
 
   // ── 3. Service-role update (bypasses RLS) ────────────────────────────────────
   const admin = createClient(
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
 
   const { error, count } = await admin
     .from('profiles')
-    .update({ theme, lang, font_family })
+    .update({ theme, lang, font_family, font_size })
     .eq('id', user.id)
 
   if (error) {

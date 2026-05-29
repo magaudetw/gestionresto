@@ -3,10 +3,15 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import { supabase } from './supabase'
 import { applyThemeToDocument } from './themes'
 
+interface RestaurantInfo { id: string; nom: string }
+
 interface AuthCtx {
   profile: any | null
   userId: string | null
   restaurantId: string | null
+  restaurantName: string
+  userRestaurants: RestaurantInfo[]
+  setActiveRestaurant: (id: string) => void
   isGerant: boolean
   isAdmin: boolean
   isManager: boolean
@@ -17,15 +22,25 @@ interface AuthCtx {
 
 const AuthContext = createContext<AuthCtx>({
   profile: null, userId: null, restaurantId: null,
+  restaurantName: '', userRestaurants: [],
+  setActiveRestaurant: () => {},
   isGerant: false, isAdmin: false, isManager: false,
   lang: 'fr', loading: true,
   refreshProfile: async () => {},
 })
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [profile, setProfile] = useState<any>(null)
-  const [userId, setUserId]   = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [profile, setProfile]                     = useState<any>(null)
+  const [userId, setUserId]                       = useState<string | null>(null)
+  const [loading, setLoading]                     = useState(true)
+  const [activeRestaurantId, setActiveId]         = useState<string | null>(null)
+  const [userRestaurants, setUserRestaurants]     = useState<RestaurantInfo[]>([])
+
+  const setActiveRestaurant = useCallback((id: string) => {
+    setActiveId(id)
+    if (typeof localStorage !== 'undefined')
+      localStorage.setItem('active_restaurant_id', id)
+  }, [])
 
   const loadProfile = useCallback(async (uid: string) => {
     const { data: p, error } = await supabase
@@ -33,7 +48,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (error) console.error('AuthContext profile:', error.message)
     setProfile(p ?? null)
     setLoading(false)
-    if (p) applyThemeToDocument(p.theme, p.font_family)
+
+    if (p) {
+      applyThemeToDocument(p.theme, p.font_family, p.font_size)
+
+      // Fetch restaurant names (table may not exist yet — handle gracefully)
+      const ids: string[] = Array.isArray(p.restaurant_ids) ? p.restaurant_ids : []
+      if (ids.length > 0) {
+        const { data: rests } = await supabase
+          .from('restaurants').select('id,nom').in('id', ids)
+        setUserRestaurants(rests || [])
+      } else {
+        setUserRestaurants([])
+      }
+
+      // Active restaurant: validate stored value or fall back to first
+      const stored = typeof localStorage !== 'undefined'
+        ? localStorage.getItem('active_restaurant_id') : null
+      const validId = stored && ids.includes(stored) ? stored : (ids[0] ?? null)
+      setActiveId(validId)
+      if (validId && typeof localStorage !== 'undefined')
+        localStorage.setItem('active_restaurant_id', validId)
+    }
   }, [])
 
   const refreshProfile = useCallback(async () => {
@@ -54,6 +90,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else if (event === 'SIGNED_OUT') {
         setProfile(null)
         setUserId(null)
+        setActiveId(null)
+        setUserRestaurants([])
         setLoading(false)
       }
     })
@@ -65,11 +103,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const isAdmin   = roles.includes('admin')
   const isManager = isGerant || isAdmin
 
+  const restaurantName =
+    userRestaurants.find(r => r.id === activeRestaurantId)?.nom || ''
+
   return (
     <AuthContext.Provider value={{
       profile,
       userId,
-      restaurantId: profile?.restaurant_ids?.[0] ?? null,
+      restaurantId: activeRestaurantId,
+      restaurantName,
+      userRestaurants,
+      setActiveRestaurant,
       isGerant,
       isAdmin,
       isManager,

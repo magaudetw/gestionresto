@@ -3,6 +3,7 @@ import Header from './Header'
 import Navigation from './Navigation'
 import Sidebar from './Sidebar'
 import { getTheme } from '@/lib/themes'
+import { useAuth } from '@/lib/auth-context'
 
 interface AppShellProps {
   profile: any
@@ -10,12 +11,12 @@ interface AppShellProps {
   children: React.ReactNode
 }
 
-export default function AppShell({ profile, restaurant, children }: AppShellProps) {
+export default function AppShell({ profile, children }: AppShellProps) {
   const t = getTheme(profile?.theme)
   const role = profile?.roles?.[0] || 'employe'
   const lang = (profile?.lang || 'fr') as 'fr' | 'en'
   const font = profile?.font_family || 'var(--font-body)'
-  const restaurantName = restaurant || ''
+  const { restaurantName } = useAuth()
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', color: 'var(--text)', fontFamily: font }}>

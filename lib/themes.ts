@@ -123,7 +123,13 @@ export function themeSlug(name: string): string {
     .replace(/\s+/g, '_')
 }
 
-export function applyThemeToDocument(themeName?: string | null, fontFamily?: string | null) {
+const FONT_SIZES: Record<string, string> = { sm: '12px', md: '14px', lg: '16px', xl: '18px' }
+
+export function applyThemeToDocument(
+  themeName?: string | null,
+  fontFamily?: string | null,
+  fontSize?: string | null,
+) {
   if (typeof document === 'undefined') return
   const t = getTheme(themeName)
   const name = (themeName ?? 'Lumière') as ThemeName
@@ -133,10 +139,13 @@ export function applyThemeToDocument(themeName?: string | null, fontFamily?: str
   document.documentElement.style.background = t.fond
   document.documentElement.style.color      = t.texte
   if (fontFamily) document.documentElement.style.fontFamily = fontFamily
+  const fsz = fontSize || 'md'
+  document.documentElement.style.fontSize = FONT_SIZES[fsz] ?? '14px'
   if (typeof localStorage !== 'undefined') {
     localStorage.setItem('gr-theme-fond',  t.fond)
     localStorage.setItem('gr-theme-texte', t.texte)
     localStorage.setItem('gr-theme-slug',  slug)
+    localStorage.setItem('gr-font-size',   fsz)
   }
 }
 

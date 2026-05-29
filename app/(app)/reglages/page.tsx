@@ -61,6 +61,7 @@ export default function ReglagesPage() {
   const [selectedTheme, setSelectedTheme] = useState<ThemeName>('Lumière')
   const [selectedLang, setSelectedLang] = useState<'fr' | 'en'>('fr')
   const [selectedFont, setSelectedFont] = useState<string>(FONTS[0].value)
+  const [selectedFontSize, setSelectedFontSize] = useState<string>('md')
 
   // Shift types
   const [shiftTypes, setShiftTypes] = useState<ShiftType[]>([])
@@ -90,6 +91,7 @@ export default function ReglagesPage() {
     if (profile.theme)       setSelectedTheme(profile.theme as ThemeName)
     if (profile.lang)        setSelectedLang(profile.lang as 'fr' | 'en')
     if (profile.font_family) setSelectedFont(profile.font_family)
+    if (profile.font_size)   setSelectedFontSize(profile.font_size)
   }, [profile])
 
   // Load manager data when profile is ready
@@ -139,7 +141,7 @@ export default function ReglagesPage() {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${session?.access_token ?? ''}`,
       },
-      body: JSON.stringify({ theme: selectedTheme, lang: selectedLang, font_family: selectedFont }),
+      body: JSON.stringify({ theme: selectedTheme, lang: selectedLang, font_family: selectedFont, font_size: selectedFontSize }),
     })
 
     setSaving(false)
@@ -151,7 +153,7 @@ export default function ReglagesPage() {
       return
     }
 
-    applyThemeToDocument(selectedTheme, selectedFont)
+    applyThemeToDocument(selectedTheme, selectedFont, selectedFontSize)
     await refreshProfile()
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
@@ -273,7 +275,22 @@ export default function ReglagesPage() {
         bar_requis: service === 'soir' ? (couverture[`${jour}_${service}`]?.bar_requis ?? false) : false,
       }))
     )
-    await supabase.from('couverture_minimale').upsert(rows, { onConflict: 'restaurant_id,jour,service' })
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch('/api/manage-shifts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session?.access_token ?? ''}`,
+      },
+      body: JSON.stringify({ action: 'upsert_couverture', payload: { rows } }),
+    })
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}))
+      console.error('[couverture] save error:', json.error)
+      setSavingCouverture(false)
+      return
+    }
+    // Refresh from DB to confirm
     const { data } = await supabase.from('couverture_minimale').select('*').eq('restaurant_id', restaurantId)
     const covMap: Record<string, CovEntry> = {}
     for (const c of (data || [])) {
@@ -480,6 +497,38 @@ export default function ReglagesPage() {
                 )
               })}
             </div>
+          </div>
+        </div>
+
+        {/* ── TAILLE DE POLICE ── */}
+        <div style={{ marginBottom: 28 }}>
+          <div style={{ fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 12 }}>
+            {lang === 'fr' ? 'TAILLE DU TEXTE' : 'TEXT SIZE'}
+          </div>
+          <div style={{ display: 'flex', background: t.surface1, borderRadius: 12, padding: 4, border: `1px solid ${t.border}`, gap: 4 }}>
+            {([
+              { key: 'sm', fr: 'Petit',  en: 'Small',  px: '12px' },
+              { key: 'md', fr: 'Normal', en: 'Normal', px: '14px' },
+              { key: 'lg', fr: 'Grand',  en: 'Large',  px: '16px' },
+              { key: 'xl', fr: 'XL',     en: 'XL',     px: '18px' },
+            ] as const).map(sz => (
+              <button
+                key={sz.key}
+                onClick={() => {
+                  setSelectedFontSize(sz.key)
+                  document.documentElement.style.fontSize = sz.px
+                }}
+                style={{
+                  flex: 1, padding: '9px 4px', borderRadius: 9, border: 'none', cursor: 'pointer',
+                  background: selectedFontSize === sz.key ? t.accent : 'transparent',
+                  color: selectedFontSize === sz.key ? (t.isDark ? '#080808' : '#fff') : t.texteSecondaire,
+                  fontSize: sz.px, fontFamily: font, fontWeight: selectedFontSize === sz.key ? 600 : 400,
+                  transition: 'all 0.15s',
+                }}
+              >
+                {sz[lang]}
+              </button>
+            ))}
           </div>
         </div>
 

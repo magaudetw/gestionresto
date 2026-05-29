@@ -199,15 +199,31 @@ export default function HorairePage() {
   }, [proposeColleagueId, proposeModal, weekOffset])
 
   // ─── Shift CRUD ───────────────────────────────────────────────────────────
+  async function callShiftsAPI(action: string, payload: Record<string, unknown>): Promise<boolean> {
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch('/api/manage-shifts', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session?.access_token ?? ''}`,
+      },
+      body: JSON.stringify({ action, payload }),
+    })
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}))
+      console.error(`[manage-shifts] ${action}:`, json.error, json.hint ?? '')
+    }
+    return res.ok
+  }
+
   async function addShift() {
     if (!cellModal || !cellStId) return
     setSaving(true)
-    await supabase.from('horaire_shifts').insert({
+    await callShiftsAPI('upsert', {
       restaurant_id: ctxRestaurantId,
       user_id: cellModal.empId,
       shift_type_id: cellStId,
       date: cellModal.date,
-      statut: 'brouillon',
     })
     setCellModal(null)
     await loadData()
@@ -217,7 +233,10 @@ export default function HorairePage() {
   async function updateShift() {
     if (!cellModal?.shiftId || !cellStId) return
     setSaving(true)
-    await supabase.from('horaire_shifts').update({ shift_type_id: cellStId }).eq('id', cellModal.shiftId)
+    await callShiftsAPI('upsert', {
+      shift_id: cellModal.shiftId,
+      shift_type_id: cellStId,
+    })
     setCellModal(null)
     await loadData()
     setSaving(false)
@@ -225,7 +244,7 @@ export default function HorairePage() {
 
   async function deleteShift(shiftId: string) {
     setSaving(true)
-    await supabase.from('horaire_shifts').delete().eq('id', shiftId)
+    await callShiftsAPI('delete', { shift_id: shiftId })
     setCellModal(null)
     await loadData()
     setSaving(false)
@@ -234,12 +253,12 @@ export default function HorairePage() {
   async function publishSchedule() {
     setSaving(true)
     const { monday, saturday } = getWeekRange(weekOffset)
-    const restaurantId = ctxRestaurantId
     const lang = profile?.lang || 'fr'
-    await supabase.from('horaire_shifts')
-      .update({ statut: 'publie' })
-      .eq('restaurant_id', restaurantId).eq('statut', 'brouillon')
-      .gte('date', isoDate(monday)).lte('date', isoDate(saturday))
+    await callShiftsAPI('publish', {
+      restaurant_id: ctxRestaurantId,
+      week_start: isoDate(monday),
+      week_end: isoDate(saturday),
+    })
     const affectedIds = [...new Set(shifts.map((s: any) => s.user_id as string))]
     const weekLabel = `${monday.getDate()}/${monday.getMonth() + 1} – ${saturday.getDate()}/${saturday.getMonth() + 1}`
     const notifs = affectedIds.map(uid => ({
