@@ -11,6 +11,18 @@ function err(msg: string, status: number) {
 }
 
 export async function POST(req: NextRequest) {
+  // ── 0. Diagnose environment ────────────────────────────────────────────────
+  console.log('SERVICE KEY EXISTS:', !!process.env.SUPABASE_SERVICE_ROLE_KEY)
+  console.log('SUPABASE URL:', process.env.NEXT_PUBLIC_SUPABASE_URL ?? '(not set)')
+
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('[manage-profile] SUPABASE_SERVICE_ROLE_KEY is not set in environment')
+    return NextResponse.json(
+      { error: 'Server misconfiguration: SUPABASE_SERVICE_ROLE_KEY not set' },
+      { status: 500 }
+    )
+  }
+
   try {
     // ── 1. Verify caller via their JWT ───────────────────────────────────────
     const authHeader = req.headers.get('Authorization') ?? ''
@@ -46,7 +58,8 @@ export async function POST(req: NextRequest) {
     // ── 3. Parse request body ────────────────────────────────────────────────
     const body = await req.json() as { action: string; payload: Record<string, unknown> }
     const { action, payload } = body
-    console.log('[manage-profile] action:', action, '| payload keys:', Object.keys(payload ?? {}))
+    console.log('ACTION:', action)
+    console.log('PAYLOAD:', JSON.stringify(payload))
 
     // ── 4. Service-role client bypasses RLS entirely ─────────────────────────
     const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
@@ -56,8 +69,11 @@ export async function POST(req: NextRequest) {
     if (action === 'create') {
       const { error } = await admin.from('profiles').insert(payload)
       if (error) {
-        console.error('[manage-profile] INSERT error:', error.message, 'code:', error.code)
-        return err(error.message, 400)
+        console.error('[manage-profile] INSERT error:', error.message, '| code:', error.code, '| hint:', error.hint)
+        return NextResponse.json(
+          { error: error.message, code: error.code, hint: error.hint },
+          { status: 400 }
+        )
       }
       console.log('[manage-profile] INSERT ok')
       return NextResponse.json({ ok: true })
@@ -68,8 +84,11 @@ export async function POST(req: NextRequest) {
       if (!id) return err('payload.id required for update', 400)
       const { error } = await admin.from('profiles').update(data).eq('id', id as string)
       if (error) {
-        console.error('[manage-profile] UPDATE error:', error.message, 'code:', error.code)
-        return err(error.message, 400)
+        console.error('[manage-profile] UPDATE error:', error.message, '| code:', error.code, '| hint:', error.hint)
+        return NextResponse.json(
+          { error: error.message, code: error.code, hint: error.hint },
+          { status: 400 }
+        )
       }
       console.log('[manage-profile] UPDATE ok, id:', id)
       return NextResponse.json({ ok: true })

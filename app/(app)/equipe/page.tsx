@@ -184,7 +184,8 @@ export default function EquipePage() {
     const result = await res.json()
 
     if (!res.ok || result.error) {
-      setSaveError(result.error ?? (lang === 'fr' ? 'Erreur serveur' : 'Server error'))
+      const detail = [result.code, result.hint].filter(Boolean).join(' — ')
+      setSaveError(`${result.error ?? 'Erreur serveur'}${detail ? ` [${detail}]` : ''}`)
       setSaving(false)
       return
     }
