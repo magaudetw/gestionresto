@@ -385,11 +385,7 @@ export default function ReglagesPage() {
     setSavingCouverture(false)
   }
 
-  if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#F8F9FA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ color: '#9CA3AF', fontSize: 12, letterSpacing: '0.2em' }}>CHARGEMENT…</div>
-    </div>
-  )
+  if (loading) return <div className="loading-screen"><div className="loading-dot">CHARGEMENT…</div></div>
 
   const t = getTheme(selectedTheme)
   const lang = selectedLang
@@ -462,13 +458,13 @@ export default function ReglagesPage() {
     'Lumière': '#3B82F6', 'Ivoire': '#92724A', 'Brume': '#5B7FA6', 'Craie': '#4A4A4A',
     'Or noir': '#C9A84C', 'Minuit': '#58A6FF', 'Bordeaux': '#9B2335',
     'Forêt': '#4A9B5F', 'Ardoise': '#6B8CAE', 'Cuivre': '#B87333',
-    'Améthyste': '#8B5CF6', 'Océan': '#0EA5E9',
+    'Améthyste': '#8B5CF6', 'Océan': '#0EA5E9', 'Professionnel': '#5B8DEF',
   }
   const THEME_BKGS: Record<ThemeName, string> = {
     'Lumière': '#F8F9FA', 'Ivoire': '#FAF7F2', 'Brume': '#F0F4F8', 'Craie': '#F5F5F0',
     'Or noir': '#080808', 'Minuit': '#0D1117', 'Bordeaux': '#0F0A0A',
     'Forêt': '#0A0F0A', 'Ardoise': '#0F1115', 'Cuivre': '#0F0C08',
-    'Améthyste': '#0D0A12', 'Océan': '#080D12',
+    'Améthyste': '#0D0A12', 'Océan': '#080D12', 'Professionnel': '#111827',
   }
 
   const btnCounter = {

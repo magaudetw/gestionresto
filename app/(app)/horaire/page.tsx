@@ -3,7 +3,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
-import { getTheme } from '@/lib/themes'
+
 import { useAuth } from '@/lib/auth-context'
 import type { Jour } from '@/types'
 
@@ -402,13 +402,8 @@ export default function HorairePage() {
   }
 
   // ─── Loading ──────────────────────────────────────────────────────────────
-  if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#080808', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ color: '#C9A84C', fontSize: 12, letterSpacing: '0.2em' }}>CHARGEMENT...</div>
-    </div>
-  )
+  if (loading) return <div className="loading-screen"><div className="loading-dot">CHARGEMENT...</div></div>
 
-  const t = getTheme(profile?.theme)
   const lang = (profile?.lang || 'fr') as 'fr' | 'en'
   const font = profile?.font_family || 'Georgia, serif'
   const MOIS = lang === 'fr' ? MOIS_FR : MOIS_EN
@@ -538,14 +533,14 @@ export default function HorairePage() {
 
     return (
       <div style={{
-        background: t.surface1, border: `1px solid ${e.statut === 'accepte' ? `${cfg.color}44` : t.border}`,
+        background: 'var(--surface1)', border: `1px solid ${e.statut === 'accepte' ? `${cfg.color}44` : 'var(--border)'}`,
         borderRadius: 12, padding: '12px 14px', marginBottom: 8,
       }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: t.texte }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text)' }}>
             <span>{e.demandeur?.nom?.split(' ')[0]}</span>
-            <span style={{ color: t.texteFaible }}>↔</span>
+            <span style={{ color: 'var(--text-faint)' }}>↔</span>
             <span>{e.recepteur?.nom?.split(' ')[0]}</span>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -558,24 +553,24 @@ export default function HorairePage() {
 
         {/* Shifts */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-          <div style={{ flex: 1, background: `${sdSt?.couleur || t.accent}14`, borderRadius: 8, padding: '6px 8px' }}>
-            <div style={{ fontSize: 9, color: t.texteFaible, marginBottom: 2 }}>{e.demandeur?.nom?.split(' ')[0]}</div>
-            <div style={{ fontSize: 11, color: t.texte }}>{sdSt?.nom || '—'}</div>
-            <div style={{ fontSize: 10, color: t.texteSecondaire }}>{fmtShiftDate(e.shift_demandeur?.date, lang, MOIS)}</div>
-            {sdSt && <div style={{ fontSize: 9, color: t.texteFaible }}>{sdSt.debut}–{sdSt.fin}</div>}
+          <div style={{ flex: 1, background: `${sdSt?.couleur || 'var(--accent)'}14`, borderRadius: 8, padding: '6px 8px' }}>
+            <div style={{ fontSize: 9, color: 'var(--text-faint)', marginBottom: 2 }}>{e.demandeur?.nom?.split(' ')[0]}</div>
+            <div style={{ fontSize: 11, color: 'var(--text)' }}>{sdSt?.nom || '—'}</div>
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{fmtShiftDate(e.shift_demandeur?.date, lang, MOIS)}</div>
+            {sdSt && <div style={{ fontSize: 9, color: 'var(--text-faint)' }}>{sdSt.debut}–{sdSt.fin}</div>}
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', color: t.texteFaible, fontSize: 12 }}>⇄</div>
-          <div style={{ flex: 1, background: `${srSt?.couleur || t.accent}14`, borderRadius: 8, padding: '6px 8px' }}>
-            <div style={{ fontSize: 9, color: t.texteFaible, marginBottom: 2 }}>{e.recepteur?.nom?.split(' ')[0]}</div>
-            <div style={{ fontSize: 11, color: t.texte }}>{srSt?.nom || '—'}</div>
-            <div style={{ fontSize: 10, color: t.texteSecondaire }}>{fmtShiftDate(e.shift_recepteur?.date, lang, MOIS)}</div>
-            {srSt && <div style={{ fontSize: 9, color: t.texteFaible }}>{srSt.debut}–{srSt.fin}</div>}
+          <div style={{ display: 'flex', alignItems: 'center', color: 'var(--text-faint)', fontSize: 12 }}>⇄</div>
+          <div style={{ flex: 1, background: `${srSt?.couleur || 'var(--accent)'}14`, borderRadius: 8, padding: '6px 8px' }}>
+            <div style={{ fontSize: 9, color: 'var(--text-faint)', marginBottom: 2 }}>{e.recepteur?.nom?.split(' ')[0]}</div>
+            <div style={{ fontSize: 11, color: 'var(--text)' }}>{srSt?.nom || '—'}</div>
+            <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{fmtShiftDate(e.shift_recepteur?.date, lang, MOIS)}</div>
+            {srSt && <div style={{ fontSize: 9, color: 'var(--text-faint)' }}>{srSt.debut}–{srSt.fin}</div>}
           </div>
         </div>
 
         {/* Comment */}
         {e.commentaire && (
-          <div style={{ fontSize: 10, color: t.texteFaible, fontStyle: 'italic', marginBottom: 8 }}>
+          <div style={{ fontSize: 10, color: 'var(--text-faint)', fontStyle: 'italic', marginBottom: 8 }}>
             "{e.commentaire}"
           </div>
         )}
@@ -591,8 +586,8 @@ export default function HorairePage() {
         )}
         {canCancel && (
           <button onClick={() => cancelExchange(e.id)} disabled={saving} style={{
-            width: '100%', padding: '6px', background: 'transparent', border: `1px solid ${t.border}`,
-            borderRadius: 8, color: t.texteFaible, cursor: 'pointer', fontSize: 11, fontFamily: font,
+            width: '100%', padding: '6px', background: 'transparent', border: '1px solid var(--border)',
+            borderRadius: 8, color: 'var(--text-faint)', cursor: 'pointer', fontSize: 11, fontFamily: font,
           }}>
             {lang === 'fr' ? 'Annuler ma demande' : 'Cancel my request'}
           </button>
@@ -615,7 +610,7 @@ export default function HorairePage() {
       <main className="page-content" style={{ paddingBottom: 96 }}>
 
         {/* Tab bar */}
-        <div style={{ display: 'flex', borderBottom: `1px solid ${t.border}`, padding: '0 16px' }}>
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', padding: '0 16px' }}>
           {(['horaire', 'echanges'] as const).map(tab => {
             const isActive = activeTab === tab
             const badge = tab === 'echanges'
@@ -624,8 +619,8 @@ export default function HorairePage() {
             return (
               <button key={tab} onClick={() => setActiveTab(tab)} style={{
                 flex: 1, padding: '14px 4px', background: 'none', border: 'none',
-                borderBottom: `2px solid ${isActive ? t.accent : 'transparent'}`,
-                color: isActive ? t.accent : t.texteSecondaire,
+                borderBottom: `2px solid ${isActive ? 'var(--accent)' : 'transparent'}`,
+                color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
                 cursor: 'pointer', fontSize: 11, fontFamily: font,
                 letterSpacing: '0.08em', textTransform: 'uppercase',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
@@ -653,24 +648,24 @@ export default function HorairePage() {
             <>
               {/* Week navigation */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                <button onClick={() => setWeekOffset(w => w - 1)} style={{ background: t.surface2, border: `1px solid ${t.border}`, color: t.texte, borderRadius: 8, padding: '8px 13px', cursor: 'pointer', fontSize: 16, flexShrink: 0 }}>‹</button>
+                <button onClick={() => setWeekOffset(w => w - 1)} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: 8, padding: '8px 13px', cursor: 'pointer', fontSize: 16, flexShrink: 0 }}>‹</button>
                 <div style={{ flex: 1, textAlign: 'center' }}>
-                  <div style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 1 }}>
+                  <div style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 1 }}>
                     {weekOffset === 0 ? (lang === 'fr' ? 'Cette semaine' : 'This week')
                       : weekOffset === 1 ? (lang === 'fr' ? 'Semaine prochaine' : 'Next week')
                       : weekOffset < 0 ? (lang === 'fr' ? `Il y a ${-weekOffset} sem.` : `${-weekOffset} wk ago`)
                       : (lang === 'fr' ? `Dans ${weekOffset} semaines` : `In ${weekOffset} weeks`)}
                   </div>
-                  <div style={{ fontSize: 12, color: t.texte }}>{weekLabel}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text)' }}>{weekLabel}</div>
                 </div>
                 <button onClick={() => { if (!isManager || weekOffset < 4) setWeekOffset(w => w + 1) }}
-                  style={{ background: t.surface2, border: `1px solid ${t.border}`, color: isManager && weekOffset >= 4 ? t.texteFaible : t.texte, borderRadius: 8, padding: '8px 13px', cursor: isManager && weekOffset >= 4 ? 'default' : 'pointer', fontSize: 16, flexShrink: 0 }}>
+                  style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: isManager && weekOffset >= 4 ? 'var(--text-faint)' : 'var(--text)', borderRadius: 8, padding: '8px 13px', cursor: isManager && weekOffset >= 4 ? 'default' : 'pointer', fontSize: 16, flexShrink: 0 }}>
                   ›
                 </button>
               </div>
               {weekOffset !== 0 && (
                 <div style={{ textAlign: 'center', marginBottom: 10 }}>
-                  <button onClick={() => setWeekOffset(0)} style={{ background: 'none', border: `1px solid ${t.border}`, borderRadius: 20, color: t.texteSecondaire, fontSize: 10, padding: '3px 12px', cursor: 'pointer', fontFamily: font, letterSpacing: '0.06em' }}>
+                  <button onClick={() => setWeekOffset(0)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 20, color: 'var(--text-secondary)', fontSize: 10, padding: '3px 12px', cursor: 'pointer', fontFamily: font, letterSpacing: '0.06em' }}>
                     {lang === 'fr' ? '↩ Cette semaine' : '↩ This week'}
                   </button>
                 </div>
@@ -679,10 +674,10 @@ export default function HorairePage() {
               {/* ── MANAGER: top actions ── */}
               {isManager && (
                 <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-                  <button onClick={() => router.push('/dispos')} style={{ padding: '9px 12px', background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 10, color: t.texteSecondaire, cursor: 'pointer', fontSize: 11, fontFamily: font, flexShrink: 0 }}>
+                  <button onClick={() => router.push('/dispos')} style={{ padding: '9px 12px', background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 11, fontFamily: font, flexShrink: 0 }}>
                     📋 {lang === 'fr' ? 'Dispos' : 'Avail.'}
                   </button>
-                  <button onClick={() => setPublishModal(true)} disabled={brouillonCount === 0} style={{ flex: 1, padding: '9px', borderRadius: 10, fontSize: 11, fontFamily: font, background: brouillonCount > 0 ? t.accent : t.surface1, border: `1px solid ${brouillonCount > 0 ? t.accent : t.border}`, color: brouillonCount > 0 ? (t.isDark ? '#080808' : '#fff') : t.texteFaible, cursor: brouillonCount === 0 ? 'default' : 'pointer', fontWeight: brouillonCount > 0 ? 600 : 400 }}>
+                  <button onClick={() => setPublishModal(true)} disabled={brouillonCount === 0} style={{ flex: 1, padding: '9px', borderRadius: 10, fontSize: 11, fontFamily: font, background: brouillonCount > 0 ? 'var(--accent)' : 'var(--surface1)', border: `1px solid ${brouillonCount > 0 ? 'var(--accent)' : 'var(--border)'}`, color: brouillonCount > 0 ? 'var(--accent-text)' : 'var(--text-faint)', cursor: brouillonCount === 0 ? 'default' : 'pointer', fontWeight: brouillonCount > 0 ? 600 : 400 }}>
                     📢 {lang === 'fr' ? `Publier (${brouillonCount})` : `Publish (${brouillonCount})`}
                   </button>
                 </div>
@@ -691,30 +686,30 @@ export default function HorairePage() {
               {/* ── MANAGER: employee grid ── */}
               {isManager && (
                 <>
-                  <div style={{ border: `1px solid ${t.border}`, borderRadius: 14, overflow: 'hidden', marginBottom: 10 }}>
+                  <div style={{ border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', marginBottom: 10 }}>
                     {/* Header */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '76px repeat(6, 1fr)', borderBottom: `1px solid ${t.border}`, background: t.surface2 }}>
-                      <div style={{ padding: '6px 8px', position: 'sticky', left: 0, background: t.surface2, zIndex: 2 }} />
+                    <div style={{ display: 'grid', gridTemplateColumns: '76px repeat(6, 1fr)', borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
+                      <div style={{ padding: '6px 8px', position: 'sticky', left: 0, background: 'var(--surface2)', zIndex: 2 }} />
                       {days.map((day, di) => {
                         const dateStr = isoDate(day)
                         const isToday = dateStr === today
                         const cov = getCoverage(di)
                         const covOk = cov.midi.ok && cov.soir.ok
                         return (
-                          <div key={dateStr} style={{ padding: '5px 2px', textAlign: 'center', borderLeft: `1px solid ${t.border}` }}>
-                            <div style={{ fontSize: 'var(--fz-9)', letterSpacing: '0.06em', textTransform: 'uppercase', color: isToday ? t.accent : t.texteSecondaire }}>{JOUR_SHORT[JOURS[di]][lang]}</div>
-                            <div style={{ fontSize: 'var(--fz-9)', color: t.texteFaible }}>{day.getDate()}</div>
+                          <div key={dateStr} style={{ padding: '5px 2px', textAlign: 'center', borderLeft: '1px solid var(--border)' }}>
+                            <div style={{ fontSize: 'var(--fz-9)', letterSpacing: '0.06em', textTransform: 'uppercase', color: isToday ? 'var(--accent)' : 'var(--text-secondary)' }}>{JOUR_SHORT[JOURS[di]][lang]}</div>
+                            <div style={{ fontSize: 'var(--fz-9)', color: 'var(--text-faint)' }}>{day.getDate()}</div>
                             {couverture.length > 0 && <div style={{ fontSize: 'var(--fz-8)', color: covOk ? '#72BA80' : '#E07070', marginTop: 1 }}>{covOk ? '✓' : '✗'}</div>}
                           </div>
                         )
                       })}
                     </div>
-                    {employees.length === 0 && <div style={{ padding: 20, textAlign: 'center', color: t.texteFaible, fontSize: 12 }}>{lang === 'fr' ? 'Aucun employé' : 'No employees'}</div>}
+                    {employees.length === 0 && <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-faint)', fontSize: 12 }}>{lang === 'fr' ? 'Aucun employé' : 'No employees'}</div>}
                     {employees.map((emp: any, ei: number) => {
-                      const rowBg = ei % 2 === 1 ? `${t.surface2}88` : t.surface1
+                      const rowBg = ei % 2 === 1 ? 'var(--surface2)' : 'var(--surface1)'
                       return (
-                      <div key={emp.id} style={{ display: 'grid', gridTemplateColumns: '76px repeat(6, 1fr)', borderBottom: ei < employees.length - 1 ? `1px solid ${t.border}` : 'none', background: rowBg }}>
-                        <div style={{ padding: '0 8px', fontSize: 'var(--fz-13)', fontWeight: 700, color: t.texte, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', minHeight: 60, position: 'sticky', left: 0, background: rowBg, zIndex: 1 }}>
+                      <div key={emp.id} style={{ display: 'grid', gridTemplateColumns: '76px repeat(6, 1fr)', borderBottom: ei < employees.length - 1 ? '1px solid var(--border)' : 'none', background: rowBg }}>
+                        <div style={{ padding: '0 8px', fontSize: 'var(--fz-13)', fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', minHeight: 60, position: 'sticky', left: 0, background: rowBg, zIndex: 1 }}>
                           {emp.nom.split(' ')[0]}
                         </div>
                         {days.map((day, di) => {
@@ -727,15 +722,15 @@ export default function HorairePage() {
                           return (
                             <button key={dateStr}
                               onClick={() => { setCellModal({ empId: emp.id, date: dateStr, jourKey, shiftId: shift?.id, shiftTypeId: shift?.shift_type_id }); setCellStId(shift?.shift_type_id || '') }}
-                              style={{ borderTop: 'none', borderRight: 'none', borderBottom: 'none', borderLeft: `1px solid ${t.border}`, background: bg || (isToday ? `${t.accent}08` : 'transparent'), cursor: 'pointer', padding: '4px 3px', minHeight: 60, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              style={{ borderTop: 'none', borderRight: 'none', borderBottom: 'none', borderLeft: '1px solid var(--border)', background: bg || (isToday ? 'var(--accent-subtle)' : 'transparent'), cursor: 'pointer', padding: '4px 3px', minHeight: 60, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               {shift ? (
-                                <div style={{ width: '100%', borderRadius: 5, padding: '4px 4px 4px 6px', background: `${st?.couleur || t.accent}22`, borderLeft: `3px solid ${st?.couleur || t.accent}`, position: 'relative', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                  <div style={{ fontSize: 'var(--fz-10)', color: t.texte, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>{(st?.nom || '?').split(' ')[0]}</div>
-                                  {st?.debut && <div style={{ fontSize: 'var(--fz-9)', color: t.texteFaible }}>{st.debut.slice(0,5)}–{(st.fin || '').slice(0,5)}</div>}
+                                <div style={{ width: '100%', borderRadius: 5, padding: '4px 4px 4px 6px', background: `${st?.couleur || 'var(--accent)'}22`, borderLeft: `3px solid ${st?.couleur || 'var(--accent)'}`, position: 'relative', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                  <div style={{ fontSize: 'var(--fz-10)', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>{(st?.nom || '?').split(' ')[0]}</div>
+                                  {st?.debut && <div style={{ fontSize: 'var(--fz-9)', color: 'var(--text-faint)' }}>{st.debut.slice(0,5)}–{(st.fin || '').slice(0,5)}</div>}
                                   {shift.statut === 'brouillon' && <div style={{ position: 'absolute', top: 2, right: 2, width: 5, height: 5, borderRadius: '50%', background: '#E0A850' }} />}
                                 </div>
                               ) : (
-                                <span style={{ fontSize: 'var(--fz-16)', color: t.texteFaible, opacity: 0.25 }}>+</span>
+                                <span style={{ fontSize: 'var(--fz-16)', color: 'var(--text-faint)', opacity: 0.25 }}>+</span>
                               )}
                             </button>
                           )
@@ -747,7 +742,7 @@ export default function HorairePage() {
 
                   {/* Coverage bar */}
                   {couverture.length > 0 && (
-                    <div style={{ background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 10, padding: '8px 10px', marginBottom: 12 }}>
+                    <div style={{ background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 10px', marginBottom: 12 }}>
                       <div style={{ display: 'grid', gridTemplateColumns: '76px repeat(6, 1fr)' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, justifyContent: 'center' }}>
                           <span style={{ fontSize: 8, color: '#F4A261', letterSpacing: '0.06em' }}>MIDI</span>
@@ -783,30 +778,30 @@ export default function HorairePage() {
 
                       if (dayShifts.length === 0) {
                         return (
-                          <div key={dateStr} style={{ background: t.surface1, border: `1px solid ${isToday ? t.borderAccent : t.border}`, borderRadius: 12, padding: '10px 14px', opacity: isPast ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <span style={{ fontSize: 12, color: isToday ? t.accent : t.texteSecondaire }}>
+                          <div key={dateStr} style={{ background: 'var(--surface1)', border: `1px solid ${isToday ? 'var(--border-accent)' : 'var(--border)'}`, borderRadius: 12, padding: '10px 14px', opacity: isPast ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <span style={{ fontSize: 12, color: isToday ? 'var(--accent)' : 'var(--text-secondary)' }}>
                               {JOUR_LONG[JOURS[di]][lang]} {day.getDate()} {MOIS[day.getMonth()]}
                             </span>
-                            <span style={{ fontSize: 11, color: t.texteFaible, fontStyle: 'italic' }}>{lang === 'fr' ? 'Congé' : 'Day off'}</span>
+                            <span style={{ fontSize: 11, color: 'var(--text-faint)', fontStyle: 'italic' }}>{lang === 'fr' ? 'Congé' : 'Day off'}</span>
                           </div>
                         )
                       }
 
                       return dayShifts.map((s: any) => {
                         const st = s.shift_types
-                        const couleur = st?.couleur || t.accent
+                        const couleur = st?.couleur || 'var(--accent)'
                         return (
-                          <div key={s.id} style={{ background: isToday ? `linear-gradient(135deg, ${t.surface2}, ${t.surface1})` : t.surface1, border: `1px solid ${isToday ? t.borderAccent : t.border}`, borderRadius: 12, padding: '12px 14px', opacity: isPast ? 0.65 : 1 }}>
+                          <div key={s.id} style={{ background: isToday ? `linear-gradient(135deg, var(--surface2), var(--surface1))` : 'var(--surface1)', border: `1px solid ${isToday ? 'var(--border-accent)' : 'var(--border)'}`, borderRadius: 12, padding: '12px 14px', opacity: isPast ? 0.65 : 1 }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                               <div style={{ width: 3, height: 36, borderRadius: 2, background: couleur, flexShrink: 0 }} />
                               <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: 11, color: isToday ? t.accent : t.texteSecondaire, marginBottom: 3 }}>
+                                <div style={{ fontSize: 11, color: isToday ? 'var(--accent)' : 'var(--text-secondary)', marginBottom: 3 }}>
                                   {JOUR_LONG[JOURS[di]][lang]} {day.getDate()} {MOIS[day.getMonth()]}
                                 </div>
-                                <div style={{ fontSize: 14, color: t.texte }}>{st?.nom || '—'}</div>
-                                {st && <div style={{ fontSize: 11, color: t.texteSecondaire }}>{st.debut} – {st.fin}</div>}
+                                <div style={{ fontSize: 14, color: 'var(--text)' }}>{st?.nom || '—'}</div>
+                                {st && <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{st.debut} – {st.fin}</div>}
                               </div>
-                              <button onClick={() => { setProposeModal({ shift: s }); setProposeColleagueId(''); setProposeColleagueShiftId('') }} style={{ background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 8, padding: '5px 9px', color: t.texteSecondaire, cursor: 'pointer', fontSize: 10, fontFamily: font, flexShrink: 0 }}>
+                              <button onClick={() => { setProposeModal({ shift: s }); setProposeColleagueId(''); setProposeColleagueShiftId('') }} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '5px 9px', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 10, fontFamily: font, flexShrink: 0 }}>
                                 🔄 {lang === 'fr' ? 'Échange' : 'Swap'}
                               </button>
                             </div>
@@ -817,16 +812,16 @@ export default function HorairePage() {
                   </div>
 
                   {/* Pay estimate */}
-                  <div style={{ marginTop: 20, background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 14, padding: '14px 16px' }}>
-                    <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 10 }}>{lang === 'fr' ? 'Estimation paie' : 'Pay estimate'}</div>
+                  <div style={{ marginTop: 20, background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px' }}>
+                    <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 10 }}>{lang === 'fr' ? 'Estimation paie' : 'Pay estimate'}</div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                       <div>
-                        <span style={{ fontSize: 22, color: t.accent }}>{payEstimate.toFixed(2)}</span>
-                        <span style={{ fontSize: 12, color: t.texteSecondaire, marginLeft: 4 }}>$</span>
+                        <span style={{ fontSize: 22, color: 'var(--accent)' }}>{payEstimate.toFixed(2)}</span>
+                        <span style={{ fontSize: 12, color: 'var(--text-secondary)', marginLeft: 4 }}>$</span>
                       </div>
-                      <div style={{ fontSize: 11, color: t.texteFaible }}>{totalHeures.toFixed(1)}h × {profile?.taux_horaire || 0}$/h</div>
+                      <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>{totalHeures.toFixed(1)}h × {profile?.taux_horaire || 0}$/h</div>
                     </div>
-                    <div style={{ fontSize: 9, color: t.texteFaible, marginTop: 8, fontStyle: 'italic' }}>* {lang === 'fr' ? 'Estimation — exclut les pourboires' : 'Estimate — excludes tips'}</div>
+                    <div style={{ fontSize: 9, color: 'var(--text-faint)', marginTop: 8, fontStyle: 'italic' }}>* {lang === 'fr' ? 'Estimation — exclut les pourboires' : 'Estimate — excludes tips'}</div>
                   </div>
                 </>
               )}
@@ -865,7 +860,7 @@ export default function HorairePage() {
                   )}
 
                   {echanges.length === 0 && historyEchanges.length === 0 && (
-                    <div style={{ textAlign: 'center', paddingTop: 40, color: t.texteFaible }}>
+                    <div style={{ textAlign: 'center', paddingTop: 40, color: 'var(--text-faint)' }}>
                       <div style={{ fontSize: 32, marginBottom: 10 }}>🔄</div>
                       <div style={{ fontSize: 13 }}>{lang === 'fr' ? 'Aucun échange en cours' : 'No active swaps'}</div>
                     </div>
@@ -874,7 +869,7 @@ export default function HorairePage() {
                   {/* Historique 4 semaines */}
                   {historyEchanges.length > 0 && (
                     <div>
-                      <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 10 }}>
+                      <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 10 }}>
                         {lang === 'fr' ? 'Historique (4 semaines)' : 'History (4 weeks)'}
                       </div>
                       {historyEchanges.map((e: any) => <EchangeCard key={e.id} e={e} isManager />)}
@@ -919,7 +914,7 @@ export default function HorairePage() {
                   {/* Historique */}
                   {myHistory.length > 0 && (
                     <div>
-                      <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 10 }}>
+                      <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 10 }}>
                         {lang === 'fr' ? 'Terminé' : 'Completed'}
                       </div>
                       {myHistory.map((e: any) => <EchangeCard key={e.id} e={e} />)}
@@ -927,10 +922,10 @@ export default function HorairePage() {
                   )}
 
                   {echanges.length === 0 && (
-                    <div style={{ textAlign: 'center', paddingTop: 40, color: t.texteFaible }}>
+                    <div style={{ textAlign: 'center', paddingTop: 40, color: 'var(--text-faint)' }}>
                       <div style={{ fontSize: 32, marginBottom: 10 }}>🔄</div>
                       <div style={{ fontSize: 13 }}>{lang === 'fr' ? 'Aucun échange en cours' : 'No swaps yet'}</div>
-                      <div style={{ fontSize: 11, marginTop: 6, color: t.texteFaible }}>
+                      <div style={{ fontSize: 11, marginTop: 6, color: 'var(--text-faint)' }}>
                         {lang === 'fr' ? 'Proposez un échange depuis l\'onglet Horaire' : 'Propose a swap from the Schedule tab'}
                       </div>
                     </div>
@@ -945,12 +940,12 @@ export default function HorairePage() {
       {/* ─── Cell modal (manager add/edit shift) ─── */}
       {cellModal && (
         <div onClick={() => setCellModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 100, display: 'flex', alignItems: 'flex-end' }}>
-          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, margin: '0 auto', background: t.surface1, borderRadius: '20px 20px 0 0', padding: '20px 18px 32px', maxHeight: '80vh', overflowY: 'auto' }}>
-            <div style={{ width: 36, height: 4, borderRadius: 2, background: t.border, margin: '0 auto 16px' }} />
+          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, margin: '0 auto', background: 'var(--surface1)', borderRadius: '20px 20px 0 0', padding: '20px 18px 32px', maxHeight: '80vh', overflowY: 'auto' }}>
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border)', margin: '0 auto 16px' }} />
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
               <div>
-                <h3 style={{ fontSize: 15, fontWeight: 300, margin: '0 0 2px', color: t.texte }}>{employeeMap[cellModal.empId]?.nom?.split(' ')[0]}</h3>
-                <div style={{ fontSize: 12, color: t.texteSecondaire }}>{JOUR_LONG[cellModal.jourKey][lang]} · {cellModal.date}</div>
+                <h3 style={{ fontSize: 15, fontWeight: 300, margin: '0 0 2px', color: 'var(--text)' }}>{employeeMap[cellModal.empId]?.nom?.split(' ')[0]}</h3>
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{JOUR_LONG[cellModal.jourKey][lang]} · {cellModal.date}</div>
               </div>
               {cellModal.shiftId && (
                 <button onClick={() => deleteShift(cellModal.shiftId!)} disabled={saving} style={{ background: 'rgba(224,112,112,0.15)', border: '1px solid rgba(224,112,112,0.3)', borderRadius: 8, padding: '6px 12px', color: '#E07070', cursor: 'pointer', fontSize: 11, fontFamily: font }}>
@@ -961,13 +956,13 @@ export default function HorairePage() {
             {(() => {
               const { source, available } = getEmpDispoInfo(cellModal.empId, cellModal.jourKey)
               const note = lang === 'fr' ? ' (indicatif)' : ' (informational)'
-              if (source === 'unknown') return <div style={{ fontSize: 10, color: t.texteFaible, marginBottom: 10, fontStyle: 'italic' }}>· {lang === 'fr' ? 'Dispos non soumises cette semaine' : 'No availability form this week'}{note}</div>
+              if (source === 'unknown') return <div style={{ fontSize: 10, color: 'var(--text-faint)', marginBottom: 10, fontStyle: 'italic' }}>· {lang === 'fr' ? 'Dispos non soumises cette semaine' : 'No availability form this week'}{note}</div>
               if (source === 'base' && available) return <div style={{ fontSize: 10, color: '#E0A850', marginBottom: 10 }}>~ {lang === 'fr' ? 'Dispo habituelle — pas de fiche hebdo' : 'Usual availability — no weekly form'}{note}</div>
               if (!available) return <div style={{ fontSize: 10, color: '#E07070', marginBottom: 10 }}>· {lang === 'fr' ? 'Non disponible selon ses dispos' : 'Marked unavailable'}{note}</div>
               return null
             })()}
             {shiftTypes.length === 0 && (
-              <div style={{ background: `${t.accent}10`, border: `1px solid ${t.border}`, borderRadius: 8, padding: '10px 12px', marginBottom: 12, fontSize: 12, color: t.texteSecondaire }}>
+              <div style={{ background: 'var(--accent-subtle)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', marginBottom: 12, fontSize: 12, color: 'var(--text-secondary)' }}>
                 {lang === 'fr'
                   ? 'Aucun type de shift configuré. Allez dans Réglages → Types de shifts.'
                   : 'No shift types configured. Go to Settings → Shift types.'}
@@ -975,17 +970,17 @@ export default function HorairePage() {
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
               {shiftTypes.map((st: any) => (
-                <button key={st.id} onClick={() => setCellStId(st.id)} style={{ padding: '10px 14px', borderRadius: 10, cursor: 'pointer', textAlign: 'left', fontFamily: font, background: cellStId === st.id ? `${st.couleur}22` : t.surface2, border: `1px solid ${cellStId === st.id ? st.couleur : t.border}`, display: 'flex', alignItems: 'center', gap: 10 }}>
+                <button key={st.id} onClick={() => setCellStId(st.id)} style={{ padding: '10px 14px', borderRadius: 10, cursor: 'pointer', textAlign: 'left', fontFamily: font, background: cellStId === st.id ? `${st.couleur}22` : 'var(--surface2)', border: `1px solid ${cellStId === st.id ? st.couleur : 'var(--border)'}`, display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ width: 10, height: 10, borderRadius: '50%', background: st.couleur, flexShrink: 0 }} />
-                  <span style={{ fontSize: 13, color: t.texte }}>{st.nom}</span>
-                  <span style={{ fontSize: 11, color: t.texteSecondaire, marginLeft: 'auto' }}>{st.debut}–{st.fin}</span>
+                  <span style={{ fontSize: 13, color: 'var(--text)' }}>{st.nom}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginLeft: 'auto' }}>{st.debut}–{st.fin}</span>
                 </button>
               ))}
-              {shiftTypes.length === 0 && <div style={{ fontSize: 12, color: t.texteFaible, padding: '8px 0' }}>{lang === 'fr' ? 'Aucun type de shift configuré' : 'No shift types configured'}</div>}
+              {shiftTypes.length === 0 && <div style={{ fontSize: 12, color: 'var(--text-faint)', padding: '8px 0' }}>{lang === 'fr' ? 'Aucun type de shift configuré' : 'No shift types configured'}</div>}
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setCellModal(null)} style={{ flex: 1, padding: '12px', background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 10, color: t.texteSecondaire, cursor: 'pointer', fontSize: 13, fontFamily: font }}>{lang === 'fr' ? 'Annuler' : 'Cancel'}</button>
-              <button onClick={cellModal.shiftId ? updateShift : addShift} disabled={saving || !cellStId} style={{ flex: 2, padding: '12px', background: t.accent, border: 'none', borderRadius: 10, color: t.isDark ? '#080808' : '#fff', cursor: !cellStId || saving ? 'default' : 'pointer', fontSize: 13, fontFamily: font, fontWeight: 600, opacity: !cellStId ? 0.4 : 1 }}>
+              <button onClick={() => setCellModal(null)} style={{ flex: 1, padding: '12px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 13, fontFamily: font }}>{lang === 'fr' ? 'Annuler' : 'Cancel'}</button>
+              <button onClick={cellModal.shiftId ? updateShift : addShift} disabled={saving || !cellStId} style={{ flex: 2, padding: '12px', background: 'var(--accent)', border: 'none', borderRadius: 10, color: 'var(--accent-text)', cursor: !cellStId || saving ? 'default' : 'pointer', fontSize: 13, fontFamily: font, fontWeight: 600, opacity: !cellStId ? 0.4 : 1 }}>
                 {saving ? '...' : lang === 'fr' ? 'Confirmer' : 'Confirm'}
               </button>
             </div>
@@ -998,10 +993,10 @@ export default function HorairePage() {
         const alerts = computeAlerts()
         return (
           <div onClick={() => setPublishModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 100, display: 'flex', alignItems: 'flex-end' }}>
-            <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, margin: '0 auto', background: t.surface1, borderRadius: '20px 20px 0 0', padding: '20px 18px 32px', maxHeight: '80vh', overflowY: 'auto' }}>
-              <div style={{ width: 36, height: 4, borderRadius: 2, background: t.border, margin: '0 auto 16px' }} />
-              <h3 style={{ fontSize: 16, fontWeight: 300, margin: '0 0 4px', color: t.texte }}>📢 {lang === 'fr' ? "Publier l'horaire" : 'Publish schedule'}</h3>
-              <div style={{ fontSize: 12, color: t.texteSecondaire, marginBottom: 16 }}>{weekLabel}</div>
+            <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, margin: '0 auto', background: 'var(--surface1)', borderRadius: '20px 20px 0 0', padding: '20px 18px 32px', maxHeight: '80vh', overflowY: 'auto' }}>
+              <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border)', margin: '0 auto 16px' }} />
+              <h3 style={{ fontSize: 16, fontWeight: 300, margin: '0 0 4px', color: 'var(--text)' }}>📢 {lang === 'fr' ? "Publier l'horaire" : 'Publish schedule'}</h3>
+              <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16 }}>{weekLabel}</div>
               {alerts.length > 0 ? (
                 <div style={{ background: 'rgba(224,160,80,0.08)', border: '1px solid rgba(224,160,80,0.25)', borderRadius: 10, padding: '10px 12px', marginBottom: 16 }}>
                   <div style={{ fontSize: 11, color: '#E0A850', marginBottom: 8 }}>⚠ {lang === 'fr' ? `${alerts.length} alerte(s)` : `${alerts.length} alert(s)`}</div>
@@ -1010,10 +1005,10 @@ export default function HorairePage() {
               ) : (
                 <div style={{ background: 'rgba(114,186,128,0.1)', border: '1px solid rgba(114,186,128,0.3)', borderRadius: 10, padding: '10px 12px', marginBottom: 16, fontSize: 12, color: '#72BA80' }}>✓ {lang === 'fr' ? 'Aucune alerte — horaire complet' : 'No alerts — schedule complete'}</div>
               )}
-              <div style={{ fontSize: 11, color: t.texteFaible, marginBottom: 16 }}>{lang === 'fr' ? `${brouillonCount} shift(s) publiés, employés notifiés.` : `${brouillonCount} shift(s) published, employees notified.`}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-faint)', marginBottom: 16 }}>{lang === 'fr' ? `${brouillonCount} shift(s) publiés, employés notifiés.` : `${brouillonCount} shift(s) published, employees notified.`}</div>
               <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={() => setPublishModal(false)} style={{ flex: 1, padding: '12px', background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 10, color: t.texteSecondaire, cursor: 'pointer', fontSize: 13, fontFamily: font }}>{lang === 'fr' ? 'Annuler' : 'Cancel'}</button>
-                <button onClick={publishSchedule} disabled={saving} style={{ flex: 2, padding: '12px', background: t.accent, border: 'none', borderRadius: 10, color: t.isDark ? '#080808' : '#fff', cursor: saving ? 'wait' : 'pointer', fontSize: 13, fontFamily: font, fontWeight: 600 }}>
+                <button onClick={() => setPublishModal(false)} style={{ flex: 1, padding: '12px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 13, fontFamily: font }}>{lang === 'fr' ? 'Annuler' : 'Cancel'}</button>
+                <button onClick={publishSchedule} disabled={saving} style={{ flex: 2, padding: '12px', background: 'var(--accent)', border: 'none', borderRadius: 10, color: 'var(--accent-text)', cursor: saving ? 'wait' : 'pointer', fontSize: 13, fontFamily: font, fontWeight: 600 }}>
                   {saving ? '...' : alerts.length > 0 ? (lang === 'fr' ? 'Publier quand même' : 'Publish anyway') : (lang === 'fr' ? 'Publier' : 'Publish')}
                 </button>
               </div>
@@ -1025,36 +1020,36 @@ export default function HorairePage() {
       {/* ─── Propose exchange modal ─── */}
       {proposeModal && (
         <div onClick={() => setProposeModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 100, display: 'flex', alignItems: 'flex-end' }}>
-          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, margin: '0 auto', background: t.surface1, borderRadius: '20px 20px 0 0', padding: '20px 18px 32px', maxHeight: '80vh', overflowY: 'auto' }}>
-            <div style={{ width: 36, height: 4, borderRadius: 2, background: t.border, margin: '0 auto 16px' }} />
-            <h3 style={{ fontSize: 16, fontWeight: 300, margin: '0 0 6px', color: t.texte }}>🔄 {lang === 'fr' ? 'Proposer un échange' : 'Propose a swap'}</h3>
-            <div style={{ fontSize: 12, color: t.texteSecondaire, marginBottom: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, margin: '0 auto', background: 'var(--surface1)', borderRadius: '20px 20px 0 0', padding: '20px 18px 32px', maxHeight: '80vh', overflowY: 'auto' }}>
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border)', margin: '0 auto 16px' }} />
+            <h3 style={{ fontSize: 16, fontWeight: 300, margin: '0 0 6px', color: 'var(--text)' }}>🔄 {lang === 'fr' ? 'Proposer un échange' : 'Propose a swap'}</h3>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16 }}>
               {lang === 'fr' ? 'Mon shift :' : 'My shift:'} {proposeModal.shift.shift_types?.nom} · {fmtShiftDate(proposeModal.shift.date, lang, MOIS)}
             </div>
             <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 11, color: t.texteSecondaire, marginBottom: 6 }}>{lang === 'fr' ? 'Collègue (même rôle)' : 'Colleague (same role)'}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6 }}>{lang === 'fr' ? 'Collègue (même rôle)' : 'Colleague (same role)'}</div>
               <select value={proposeColleagueId} onChange={e => { setProposeColleagueId(e.target.value); setProposeColleagueShiftId('') }}
-                style={{ width: '100%', background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 8, color: t.texte, padding: '10px', fontSize: 13, fontFamily: font, outline: 'none' }}>
+                style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', padding: '10px', fontSize: 13, fontFamily: font, outline: 'none' }}>
                 <option value="">{lang === 'fr' ? '— Sélectionner —' : '— Select —'}</option>
                 {getCompatibleColleagues().map((e: any) => <option key={e.id} value={e.id}>{e.nom}</option>)}
               </select>
             </div>
             {proposeColleagueId && (
               <div style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 11, color: t.texteSecondaire, marginBottom: 6 }}>{lang === 'fr' ? 'Son shift à échanger' : 'Their shift to swap'}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6 }}>{lang === 'fr' ? 'Son shift à échanger' : 'Their shift to swap'}</div>
                 {colleagueShifts.length === 0 ? (
-                  <div style={{ fontSize: 12, color: t.texteFaible }}>{lang === 'fr' ? 'Aucun shift cette semaine' : 'No shifts this week'}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-faint)' }}>{lang === 'fr' ? 'Aucun shift cette semaine' : 'No shifts this week'}</div>
                 ) : (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {colleagueShifts.map((s: any) => {
                       const st = s.shift_types
                       const isSelected = proposeColleagueShiftId === s.id
                       return (
-                        <button key={s.id} onClick={() => setProposeColleagueShiftId(s.id)} style={{ padding: '10px 12px', borderRadius: 10, cursor: 'pointer', textAlign: 'left', fontFamily: font, background: isSelected ? `${st?.couleur || t.accent}22` : t.surface2, border: `1px solid ${isSelected ? (st?.couleur || t.accent) : t.border}`, display: 'flex', gap: 8, alignItems: 'center' }}>
-                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: st?.couleur || t.accent, flexShrink: 0 }} />
-                          <span style={{ fontSize: 13, color: t.texte }}>{fmtShiftDate(s.date, lang, MOIS)}</span>
-                          <span style={{ fontSize: 12, color: t.texteSecondaire }}>{st?.nom}</span>
-                          <span style={{ fontSize: 11, color: t.texteFaible, marginLeft: 'auto' }}>{st?.debut}–{st?.fin}</span>
+                        <button key={s.id} onClick={() => setProposeColleagueShiftId(s.id)} style={{ padding: '10px 12px', borderRadius: 10, cursor: 'pointer', textAlign: 'left', fontFamily: font, background: isSelected ? `${st?.couleur || 'var(--accent)'}22` : 'var(--surface2)', border: `1px solid ${isSelected ? (st?.couleur || 'var(--accent)') : 'var(--border)'}`, display: 'flex', gap: 8, alignItems: 'center' }}>
+                          <div style={{ width: 8, height: 8, borderRadius: '50%', background: st?.couleur || 'var(--accent)', flexShrink: 0 }} />
+                          <span style={{ fontSize: 13, color: 'var(--text)' }}>{fmtShiftDate(s.date, lang, MOIS)}</span>
+                          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{st?.nom}</span>
+                          <span style={{ fontSize: 11, color: 'var(--text-faint)', marginLeft: 'auto' }}>{st?.debut}–{st?.fin}</span>
                         </button>
                       )
                     })}
@@ -1063,8 +1058,8 @@ export default function HorairePage() {
               </div>
             )}
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => setProposeModal(null)} style={{ flex: 1, padding: '12px', background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 10, color: t.texteSecondaire, cursor: 'pointer', fontSize: 13, fontFamily: font }}>{lang === 'fr' ? 'Annuler' : 'Cancel'}</button>
-              <button onClick={proposeExchange} disabled={saving || !proposeColleagueId || !proposeColleagueShiftId} style={{ flex: 2, padding: '12px', background: t.accent, border: 'none', borderRadius: 10, color: t.isDark ? '#080808' : '#fff', cursor: 'pointer', fontSize: 13, fontFamily: font, fontWeight: 600, opacity: (!proposeColleagueId || !proposeColleagueShiftId) ? 0.4 : 1 }}>
+              <button onClick={() => setProposeModal(null)} style={{ flex: 1, padding: '12px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 13, fontFamily: font }}>{lang === 'fr' ? 'Annuler' : 'Cancel'}</button>
+              <button onClick={proposeExchange} disabled={saving || !proposeColleagueId || !proposeColleagueShiftId} style={{ flex: 2, padding: '12px', background: 'var(--accent)', border: 'none', borderRadius: 10, color: 'var(--accent-text)', cursor: 'pointer', fontSize: 13, fontFamily: font, fontWeight: 600, opacity: (!proposeColleagueId || !proposeColleagueShiftId) ? 0.4 : 1 }}>
                 {saving ? '...' : lang === 'fr' ? 'Envoyer la demande' : 'Send request'}
               </button>
             </div>
@@ -1075,10 +1070,10 @@ export default function HorairePage() {
       {/* ─── Respond modal (employee/colleague) ─── */}
       {respondModal && (
         <div onClick={() => { setRespondModal(null); setRespondAccept(null); setRespondComment('') }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 100, display: 'flex', alignItems: 'flex-end' }}>
-          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, margin: '0 auto', background: t.surface1, borderRadius: '20px 20px 0 0', padding: '20px 18px 32px', maxHeight: '85vh', overflowY: 'auto' }}>
-            <div style={{ width: 36, height: 4, borderRadius: 2, background: t.border, margin: '0 auto 16px' }} />
-            <h3 style={{ fontSize: 16, fontWeight: 300, margin: '0 0 4px', color: t.texte }}>🔄 {lang === 'fr' ? 'Demande d\'échange' : 'Swap request'}</h3>
-            <div style={{ fontSize: 12, color: t.texteSecondaire, marginBottom: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, margin: '0 auto', background: 'var(--surface1)', borderRadius: '20px 20px 0 0', padding: '20px 18px 32px', maxHeight: '85vh', overflowY: 'auto' }}>
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border)', margin: '0 auto 16px' }} />
+            <h3 style={{ fontSize: 16, fontWeight: 300, margin: '0 0 4px', color: 'var(--text)' }}>🔄 {lang === 'fr' ? 'Demande d\'échange' : 'Swap request'}</h3>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16 }}>
               {lang === 'fr' ? `${respondModal.echange.demandeur?.nom} propose un échange` : `${respondModal.echange.demandeur?.nom} is proposing a swap`}
             </div>
 
@@ -1089,22 +1084,22 @@ export default function HorairePage() {
               const srSt = e.shift_recepteur?.shift_types
               return (
                 <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-                  <div style={{ flex: 1, background: `${sdSt?.couleur || t.accent}14`, borderRadius: 10, padding: '10px 12px' }}>
-                    <div style={{ fontSize: 9, color: t.texteFaible, marginBottom: 4, letterSpacing: '0.06em' }}>
+                  <div style={{ flex: 1, background: `${sdSt?.couleur || 'var(--accent)'}14`, borderRadius: 10, padding: '10px 12px' }}>
+                    <div style={{ fontSize: 9, color: 'var(--text-faint)', marginBottom: 4, letterSpacing: '0.06em' }}>
                       {lang === 'fr' ? 'LEUR SHIFT' : 'THEIR SHIFT'}
                     </div>
-                    <div style={{ fontSize: 13, color: t.texte, marginBottom: 2 }}>{sdSt?.nom || '—'}</div>
-                    <div style={{ fontSize: 11, color: t.texteSecondaire }}>{fmtShiftDate(e.shift_demandeur?.date, lang, MOIS)}</div>
-                    {sdSt && <div style={{ fontSize: 10, color: t.texteFaible }}>{sdSt.debut} – {sdSt.fin}</div>}
+                    <div style={{ fontSize: 13, color: 'var(--text)', marginBottom: 2 }}>{sdSt?.nom || '—'}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{fmtShiftDate(e.shift_demandeur?.date, lang, MOIS)}</div>
+                    {sdSt && <div style={{ fontSize: 10, color: 'var(--text-faint)' }}>{sdSt.debut} – {sdSt.fin}</div>}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', color: t.texteFaible, fontSize: 18 }}>⇄</div>
-                  <div style={{ flex: 1, background: `${srSt?.couleur || t.accent}14`, borderRadius: 10, padding: '10px 12px' }}>
-                    <div style={{ fontSize: 9, color: t.texteFaible, marginBottom: 4, letterSpacing: '0.06em' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', color: 'var(--text-faint)', fontSize: 18 }}>⇄</div>
+                  <div style={{ flex: 1, background: `${srSt?.couleur || 'var(--accent)'}14`, borderRadius: 10, padding: '10px 12px' }}>
+                    <div style={{ fontSize: 9, color: 'var(--text-faint)', marginBottom: 4, letterSpacing: '0.06em' }}>
                       {lang === 'fr' ? 'VOTRE SHIFT' : 'YOUR SHIFT'}
                     </div>
-                    <div style={{ fontSize: 13, color: t.texte, marginBottom: 2 }}>{srSt?.nom || '—'}</div>
-                    <div style={{ fontSize: 11, color: t.texteSecondaire }}>{fmtShiftDate(e.shift_recepteur?.date, lang, MOIS)}</div>
-                    {srSt && <div style={{ fontSize: 10, color: t.texteFaible }}>{srSt.debut} – {srSt.fin}</div>}
+                    <div style={{ fontSize: 13, color: 'var(--text)', marginBottom: 2 }}>{srSt?.nom || '—'}</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{fmtShiftDate(e.shift_recepteur?.date, lang, MOIS)}</div>
+                    {srSt && <div style={{ fontSize: 10, color: 'var(--text-faint)' }}>{srSt.debut} – {srSt.fin}</div>}
                   </div>
                 </div>
               )
@@ -1112,10 +1107,10 @@ export default function HorairePage() {
 
             {/* Choice */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-              <button onClick={() => setRespondAccept(true)} style={{ flex: 1, padding: '12px', borderRadius: 10, cursor: 'pointer', fontFamily: font, fontSize: 13, background: respondAccept === true ? 'rgba(114,186,128,0.2)' : t.surface2, border: `1px solid ${respondAccept === true ? 'rgba(114,186,128,0.6)' : t.border}`, color: respondAccept === true ? '#72BA80' : t.texteSecondaire }}>
+              <button onClick={() => setRespondAccept(true)} style={{ flex: 1, padding: '12px', borderRadius: 10, cursor: 'pointer', fontFamily: font, fontSize: 13, background: respondAccept === true ? 'rgba(114,186,128,0.2)' : 'var(--surface2)', border: `1px solid ${respondAccept === true ? 'rgba(114,186,128,0.6)' : 'var(--border)'}`, color: respondAccept === true ? '#72BA80' : 'var(--text-secondary)' }}>
                 ✓ {lang === 'fr' ? 'Accepter' : 'Accept'}
               </button>
-              <button onClick={() => setRespondAccept(false)} style={{ flex: 1, padding: '12px', borderRadius: 10, cursor: 'pointer', fontFamily: font, fontSize: 13, background: respondAccept === false ? 'rgba(224,112,112,0.2)' : t.surface2, border: `1px solid ${respondAccept === false ? 'rgba(224,112,112,0.6)' : t.border}`, color: respondAccept === false ? '#E07070' : t.texteSecondaire }}>
+              <button onClick={() => setRespondAccept(false)} style={{ flex: 1, padding: '12px', borderRadius: 10, cursor: 'pointer', fontFamily: font, fontSize: 13, background: respondAccept === false ? 'rgba(224,112,112,0.2)' : 'var(--surface2)', border: `1px solid ${respondAccept === false ? 'rgba(224,112,112,0.6)' : 'var(--border)'}`, color: respondAccept === false ? '#E07070' : 'var(--text-secondary)' }}>
                 ✗ {lang === 'fr' ? 'Refuser' : 'Decline'}
               </button>
             </div>
@@ -1123,23 +1118,23 @@ export default function HorairePage() {
             {/* Comment on refusal */}
             {respondAccept === false && (
               <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 11, color: t.texteSecondaire, marginBottom: 6 }}>{lang === 'fr' ? 'Motif (optionnel)' : 'Reason (optional)'}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6 }}>{lang === 'fr' ? 'Motif (optionnel)' : 'Reason (optional)'}</div>
                 <textarea
                   value={respondComment}
                   onChange={e => setRespondComment(e.target.value)}
                   placeholder={lang === 'fr' ? 'Ex: Je ne peux pas ce jour-là…' : 'E.g. I have a conflict that day…'}
                   rows={3}
-                  style={{ width: '100%', background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 8, color: t.texte, padding: '10px', fontSize: 12, fontFamily: font, outline: 'none', resize: 'none', boxSizing: 'border-box' }}
+                  style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', padding: '10px', fontSize: 12, fontFamily: font, outline: 'none', resize: 'none', boxSizing: 'border-box' }}
                 />
               </div>
             )}
 
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => { setRespondModal(null); setRespondAccept(null); setRespondComment('') }} style={{ flex: 1, padding: '12px', background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 10, color: t.texteSecondaire, cursor: 'pointer', fontSize: 13, fontFamily: font }}>{lang === 'fr' ? 'Annuler' : 'Cancel'}</button>
+              <button onClick={() => { setRespondModal(null); setRespondAccept(null); setRespondComment('') }} style={{ flex: 1, padding: '12px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 13, fontFamily: font }}>{lang === 'fr' ? 'Annuler' : 'Cancel'}</button>
               <button
                 onClick={() => respondAccept !== null && respondExchange(respondAccept)}
                 disabled={saving || respondAccept === null}
-                style={{ flex: 2, padding: '12px', background: respondAccept === false ? '#E07070' : respondAccept === true ? '#72BA80' : t.accent, border: 'none', borderRadius: 10, color: '#fff', cursor: respondAccept === null ? 'default' : 'pointer', fontSize: 13, fontFamily: font, fontWeight: 600, opacity: respondAccept === null ? 0.4 : 1 }}>
+                style={{ flex: 2, padding: '12px', background: respondAccept === false ? '#E07070' : respondAccept === true ? '#72BA80' : 'var(--accent)', border: 'none', borderRadius: 10, color: '#fff', cursor: respondAccept === null ? 'default' : 'pointer', fontSize: 13, fontFamily: font, fontWeight: 600, opacity: respondAccept === null ? 0.4 : 1 }}>
                 {saving ? '...' : respondAccept === false ? (lang === 'fr' ? 'Confirmer le refus' : 'Confirm decline') : respondAccept === true ? (lang === 'fr' ? 'Confirmer l\'acceptation' : 'Confirm acceptance') : (lang === 'fr' ? 'Choisir' : 'Choose')}
               </button>
             </div>
@@ -1150,10 +1145,10 @@ export default function HorairePage() {
       {/* ─── Approve modal (manager) ─── */}
       {approveModal && (
         <div onClick={() => { setApproveModal(null); setApproveReject(null); setApproveComment('') }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 100, display: 'flex', alignItems: 'flex-end' }}>
-          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, margin: '0 auto', background: t.surface1, borderRadius: '20px 20px 0 0', padding: '20px 18px 32px', maxHeight: '85vh', overflowY: 'auto' }}>
-            <div style={{ width: 36, height: 4, borderRadius: 2, background: t.border, margin: '0 auto 16px' }} />
-            <h3 style={{ fontSize: 16, fontWeight: 300, margin: '0 0 4px', color: t.texte }}>🔄 {lang === 'fr' ? 'Approuver l\'échange' : 'Approve swap'}</h3>
-            <div style={{ fontSize: 12, color: t.texteSecondaire, marginBottom: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, margin: '0 auto', background: 'var(--surface1)', borderRadius: '20px 20px 0 0', padding: '20px 18px 32px', maxHeight: '85vh', overflowY: 'auto' }}>
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border)', margin: '0 auto 16px' }} />
+            <h3 style={{ fontSize: 16, fontWeight: 300, margin: '0 0 4px', color: 'var(--text)' }}>🔄 {lang === 'fr' ? 'Approuver l\'échange' : 'Approve swap'}</h3>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16 }}>
               {approveModal.echange.demandeur?.nom} ↔ {approveModal.echange.recepteur?.nom}
             </div>
 
@@ -1164,18 +1159,18 @@ export default function HorairePage() {
               const srSt = e.shift_recepteur?.shift_types
               return (
                 <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-                  <div style={{ flex: 1, background: `${sdSt?.couleur || t.accent}14`, borderRadius: 10, padding: '10px 12px' }}>
-                    <div style={{ fontSize: 9, color: t.texteFaible, marginBottom: 4 }}>{e.demandeur?.nom?.split(' ')[0]}</div>
-                    <div style={{ fontSize: 12, color: t.texte }}>{sdSt?.nom || '—'}</div>
-                    <div style={{ fontSize: 10, color: t.texteSecondaire }}>{fmtShiftDate(e.shift_demandeur?.date, lang, MOIS)}</div>
-                    {sdSt && <div style={{ fontSize: 9, color: t.texteFaible }}>{sdSt.debut}–{sdSt.fin}</div>}
+                  <div style={{ flex: 1, background: `${sdSt?.couleur || 'var(--accent)'}14`, borderRadius: 10, padding: '10px 12px' }}>
+                    <div style={{ fontSize: 9, color: 'var(--text-faint)', marginBottom: 4 }}>{e.demandeur?.nom?.split(' ')[0]}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text)' }}>{sdSt?.nom || '—'}</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{fmtShiftDate(e.shift_demandeur?.date, lang, MOIS)}</div>
+                    {sdSt && <div style={{ fontSize: 9, color: 'var(--text-faint)' }}>{sdSt.debut}–{sdSt.fin}</div>}
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', color: t.texteFaible, fontSize: 16 }}>⇄</div>
-                  <div style={{ flex: 1, background: `${srSt?.couleur || t.accent}14`, borderRadius: 10, padding: '10px 12px' }}>
-                    <div style={{ fontSize: 9, color: t.texteFaible, marginBottom: 4 }}>{e.recepteur?.nom?.split(' ')[0]}</div>
-                    <div style={{ fontSize: 12, color: t.texte }}>{srSt?.nom || '—'}</div>
-                    <div style={{ fontSize: 10, color: t.texteSecondaire }}>{fmtShiftDate(e.shift_recepteur?.date, lang, MOIS)}</div>
-                    {srSt && <div style={{ fontSize: 9, color: t.texteFaible }}>{srSt.debut}–{srSt.fin}</div>}
+                  <div style={{ display: 'flex', alignItems: 'center', color: 'var(--text-faint)', fontSize: 16 }}>⇄</div>
+                  <div style={{ flex: 1, background: `${srSt?.couleur || 'var(--accent)'}14`, borderRadius: 10, padding: '10px 12px' }}>
+                    <div style={{ fontSize: 9, color: 'var(--text-faint)', marginBottom: 4 }}>{e.recepteur?.nom?.split(' ')[0]}</div>
+                    <div style={{ fontSize: 12, color: 'var(--text)' }}>{srSt?.nom || '—'}</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{fmtShiftDate(e.shift_recepteur?.date, lang, MOIS)}</div>
+                    {srSt && <div style={{ fontSize: 9, color: 'var(--text-faint)' }}>{srSt.debut}–{srSt.fin}</div>}
                   </div>
                 </div>
               )
@@ -1195,10 +1190,10 @@ export default function HorairePage() {
 
             {/* Choice */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-              <button onClick={() => setApproveReject(false)} style={{ flex: 1, padding: '12px', borderRadius: 10, cursor: 'pointer', fontFamily: font, fontSize: 13, background: approveReject === false ? 'rgba(114,186,128,0.2)' : t.surface2, border: `1px solid ${approveReject === false ? 'rgba(114,186,128,0.6)' : t.border}`, color: approveReject === false ? '#72BA80' : t.texteSecondaire }}>
+              <button onClick={() => setApproveReject(false)} style={{ flex: 1, padding: '12px', borderRadius: 10, cursor: 'pointer', fontFamily: font, fontSize: 13, background: approveReject === false ? 'rgba(114,186,128,0.2)' : 'var(--surface2)', border: `1px solid ${approveReject === false ? 'rgba(114,186,128,0.6)' : 'var(--border)'}`, color: approveReject === false ? '#72BA80' : 'var(--text-secondary)' }}>
                 ✓ {lang === 'fr' ? 'Approuver' : 'Approve'}
               </button>
-              <button onClick={() => setApproveReject(true)} style={{ flex: 1, padding: '12px', borderRadius: 10, cursor: 'pointer', fontFamily: font, fontSize: 13, background: approveReject === true ? 'rgba(224,112,112,0.2)' : t.surface2, border: `1px solid ${approveReject === true ? 'rgba(224,112,112,0.6)' : t.border}`, color: approveReject === true ? '#E07070' : t.texteSecondaire }}>
+              <button onClick={() => setApproveReject(true)} style={{ flex: 1, padding: '12px', borderRadius: 10, cursor: 'pointer', fontFamily: font, fontSize: 13, background: approveReject === true ? 'rgba(224,112,112,0.2)' : 'var(--surface2)', border: `1px solid ${approveReject === true ? 'rgba(224,112,112,0.6)' : 'var(--border)'}`, color: approveReject === true ? '#E07070' : 'var(--text-secondary)' }}>
                 ✗ {lang === 'fr' ? 'Rejeter' : 'Reject'}
               </button>
             </div>
@@ -1206,23 +1201,23 @@ export default function HorairePage() {
             {/* Comment on rejection */}
             {approveReject === true && (
               <div style={{ marginBottom: 14 }}>
-                <div style={{ fontSize: 11, color: t.texteSecondaire, marginBottom: 6 }}>{lang === 'fr' ? 'Motif du rejet (optionnel)' : 'Rejection reason (optional)'}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6 }}>{lang === 'fr' ? 'Motif du rejet (optionnel)' : 'Rejection reason (optional)'}</div>
                 <textarea
                   value={approveComment}
                   onChange={e => setApproveComment(e.target.value)}
                   placeholder={lang === 'fr' ? 'Ex: Couverture insuffisante ce soir-là…' : 'E.g. Insufficient coverage that evening…'}
                   rows={3}
-                  style={{ width: '100%', background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 8, color: t.texte, padding: '10px', fontSize: 12, fontFamily: font, outline: 'none', resize: 'none', boxSizing: 'border-box' }}
+                  style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', padding: '10px', fontSize: 12, fontFamily: font, outline: 'none', resize: 'none', boxSizing: 'border-box' }}
                 />
               </div>
             )}
 
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => { setApproveModal(null); setApproveReject(null); setApproveComment('') }} style={{ flex: 1, padding: '12px', background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 10, color: t.texteSecondaire, cursor: 'pointer', fontSize: 13, fontFamily: font }}>{lang === 'fr' ? 'Annuler' : 'Cancel'}</button>
+              <button onClick={() => { setApproveModal(null); setApproveReject(null); setApproveComment('') }} style={{ flex: 1, padding: '12px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 13, fontFamily: font }}>{lang === 'fr' ? 'Annuler' : 'Cancel'}</button>
               <button
                 onClick={() => approveReject !== null && approveExchange(!approveReject)}
                 disabled={saving || approveReject === null}
-                style={{ flex: 2, padding: '12px', background: approveReject === true ? '#E07070' : approveReject === false ? '#72BA80' : t.accent, border: 'none', borderRadius: 10, color: '#fff', cursor: approveReject === null ? 'default' : 'pointer', fontSize: 13, fontFamily: font, fontWeight: 600, opacity: approveReject === null ? 0.4 : 1 }}>
+                style={{ flex: 2, padding: '12px', background: approveReject === true ? '#E07070' : approveReject === false ? '#72BA80' : 'var(--accent)', border: 'none', borderRadius: 10, color: '#fff', cursor: approveReject === null ? 'default' : 'pointer', fontSize: 13, fontFamily: font, fontWeight: 600, opacity: approveReject === null ? 0.4 : 1 }}>
                 {saving ? '...' : approveReject === true ? (lang === 'fr' ? 'Confirmer le rejet' : 'Confirm rejection') : approveReject === false ? (lang === 'fr' ? 'Confirmer l\'approbation' : 'Confirm approval') : (lang === 'fr' ? 'Choisir' : 'Choose')}
               </button>
             </div>

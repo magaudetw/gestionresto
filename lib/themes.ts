@@ -1,7 +1,7 @@
 export type ThemeName =
   | 'Lumière' | 'Ivoire' | 'Brume' | 'Craie'
   | 'Or noir' | 'Minuit' | 'Bordeaux' | 'Forêt' | 'Ardoise'
-  | 'Cuivre' | 'Améthyste' | 'Océan'
+  | 'Cuivre' | 'Améthyste' | 'Océan' | 'Professionnel'
 
 export interface Theme {
   fond: string
@@ -109,10 +109,17 @@ export const THEMES: Record<ThemeName, Theme> = {
     border:'rgba(232,244,248,0.09)', borderAccent:'rgba(14,165,233,0.35)',
     sidebarBg:'#0F1520', sidebarActiveText:'#38BDF8', isDark:true,
   },
+  'Professionnel': {
+    fond:'#111827', surface1:'#1F2937', surface2:'#283144', surface3:'#374151',
+    accent:'#5B8DEF', accentClair:'#7BAAF7', accentSombre:'#3B6DD8',
+    texte:'#F9FAFB', texteSecondaire:'rgba(249,250,251,0.60)', texteFaible:'rgba(249,250,251,0.22)',
+    border:'rgba(249,250,251,0.09)', borderAccent:'rgba(91,141,239,0.32)',
+    sidebarBg:'#1B2340', sidebarActiveText:'#7BAAF7', isDark:true,
+  },
 }
 
 export const LIGHT_THEMES: ThemeName[] = ['Lumière', 'Ivoire', 'Brume', 'Craie']
-export const DARK_THEMES: ThemeName[]  = ['Or noir', 'Minuit', 'Bordeaux', 'Forêt', 'Ardoise', 'Cuivre', 'Améthyste', 'Océan']
+export const DARK_THEMES: ThemeName[]  = ['Or noir', 'Minuit', 'Bordeaux', 'Forêt', 'Ardoise', 'Cuivre', 'Améthyste', 'Océan', 'Professionnel']
 export const THEME_NAMES: ThemeName[] = [...LIGHT_THEMES, ...DARK_THEMES]
 
 export function getTheme(name?: string | null): Theme {

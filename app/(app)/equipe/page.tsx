@@ -3,11 +3,9 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
-import { getTheme } from '@/lib/themes'
 import { useAuth } from '@/lib/auth-context'
 import type { Role, Jour, Service, DisposBase } from '@/types'
 
-// Fallbacks used until role_types loads from DB
 const DEFAULT_ROLE_LABELS: Record<string, { fr: string; en: string }> = {
   admin:   { fr: 'Admin',            en: 'Admin' },
   gerant:  { fr: 'Gérant',           en: 'Manager' },
@@ -61,7 +59,6 @@ const EMPTY_MODAL: ModalData = {
   nom: '', email: '', password: '', roles: [], taux_horaire: '', restaurant_ids: [], actif: true,
   dispos_base: { ...EMPTY_DISPOS },
 }
-
 
 const MOIS_FR = ['jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc']
 const MOIS_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
@@ -208,17 +205,11 @@ export default function EquipePage() {
     setSaving(false)
   }
 
-  if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#F8F9FA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ color: '#9CA3AF', fontSize: 12, letterSpacing: '0.2em' }}>CHARGEMENT…</div>
-    </div>
-  )
+  if (loading) return <div className="loading-screen"><div className="loading-dot">CHARGEMENT…</div></div>
 
-  const t = getTheme(profile?.theme)
   const lang = (profile?.lang || 'fr') as 'fr' | 'en'
   const font = profile?.font_family || 'Georgia, serif'
 
-  // Derived from DB; fall back to defaults while loading
   const ROLE_LABELS: Record<string, { fr: string; en: string }> = roleTypesList.length
     ? Object.fromEntries(roleTypesList.map(r => [r.slug, { fr: r.nom, en: r.nom }]))
     : DEFAULT_ROLE_LABELS
@@ -274,25 +265,19 @@ export default function EquipePage() {
 
   return (
     <AppShell profile={profile} restaurant="Le Carré">
-      <main className="page-content" style={{ padding: '24px 20px 88px', maxWidth: 1100, margin: '0 auto' }}>
+      <main className="page-content page-wrapper" style={{ paddingBottom: 88 }}>
 
         {/* Title + add button */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+        <div className="page-header">
           <div>
-            <h1 style={{ fontSize: 28, fontWeight: 600, margin: 0, color: t.texte }}>{T.equipe}</h1>
-            <div style={{ fontSize: 13, color: t.texteSecondaire, marginTop: 3 }}>
+            <h1 className="page-title">{T.equipe}</h1>
+            <div style={{ fontSize: 'var(--fz-sm)', color: 'var(--text-secondary)', marginTop: 3 }}>
               {filteredEmployes.length} {T.membres}
             </div>
           </div>
           <button
             onClick={() => { setModal({ ...EMPTY_MODAL, restaurant_ids: profile?.restaurant_ids || [] }); setSaveError('') }}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              padding: '9px 18px', borderRadius: 10, border: 'none', cursor: 'pointer',
-              background: t.accent, color: '#fff',
-              fontSize: 13, fontWeight: 600, fontFamily: font,
-              boxShadow: t.isDark ? 'none' : '0 1px 4px rgba(59,130,246,0.25)',
-            }}
+            className="btn btn-primary"
           >
             <span style={{ fontSize: 16, lineHeight: 1 }}>+</span>
             <span>{lang === 'fr' ? 'Ajouter un employé' : 'Add employee'}</span>
@@ -303,13 +288,13 @@ export default function EquipePage() {
         <div style={{ display: 'flex', gap: 6, marginBottom: 20, overflowX: 'auto', paddingBottom: 4 }}>
           {allRoles.map(r => {
             const isActive = filter === r
-            const col = r === 'tous' ? t.accent : (ROLE_COLORS[r] || t.accent)
+            const rc = r === 'tous' ? null : ROLE_COLORS[r]
             return (
               <button key={r} onClick={() => setFilter(r)} style={{
                 flexShrink: 0, padding: '6px 14px', borderRadius: 20,
-                border: `1px solid ${isActive ? col : t.border}`,
-                background: isActive ? `${col}22` : 'transparent',
-                color: isActive ? col : t.texteSecondaire,
+                border: `1px solid ${isActive ? (rc || 'var(--accent)') : 'var(--border)'}`,
+                background: isActive ? (rc ? `${rc}22` : 'var(--accent-subtle)') : 'transparent',
+                color: isActive ? (rc || 'var(--accent)') : 'var(--text-secondary)',
                 fontSize: 11, letterSpacing: '0.06em', cursor: 'pointer', fontFamily: font,
               }}>
                 {r === 'tous' ? T.tous : `${ROLE_ICONS[r] || ''} ${ROLE_LABELS[r]?.[lang] || r}`}
@@ -318,91 +303,87 @@ export default function EquipePage() {
           })}
         </div>
 
-        {/* ─── Desktop table ─── */}
+        {/* ─── Employee list ─── */}
         {filteredEmployes.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '40px 0', color: t.texteFaible, fontSize: 13 }}>
+          <div style={{ textAlign: 'center', padding: '40px 0', color: 'var(--text-faint)', fontSize: 'var(--fz-sm)' }}>
             {lang === 'fr' ? 'Aucun employé' : 'No employees'}
           </div>
         ) : (
           <>
-            {/* Desktop table view */}
-            <div className="hidden md:block" style={{ background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 14, overflow: 'hidden', boxShadow: t.isDark ? 'none' : '0 1px 3px rgba(0,0,0,0.06)', marginBottom: 10 }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            {/* Desktop table */}
+            <div className="hidden md:block card" style={{ overflow: 'hidden', marginBottom: 10 }}>
+              <table className="data-table">
                 <thead>
-                  <tr style={{ background: t.surface2 }}>
+                  <tr>
                     {[lang === 'fr' ? 'Employé' : 'Employee', lang === 'fr' ? 'Rôles' : 'Roles', 'Restaurant', lang === 'fr' ? 'Statut' : 'Status', lang === 'fr' ? 'Taux' : 'Rate', ''].map((h, i) => (
-                      <th key={i} style={{ padding: '11px 16px', textAlign: 'left', fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: t.texteSecondaire, fontWeight: 600, borderBottom: `1px solid ${t.border}` }}>
-                        {h}
-                      </th>
+                      <th key={i}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredEmployes.map((emp, ei) => {
+                  {filteredEmployes.map(emp => {
                     const primaryRole  = emp.roles?.[0] || 'serveur'
-                    const primaryColor = ROLE_COLORS[primaryRole] || t.accent
+                    const primaryColor = ROLE_COLORS[primaryRole]
                     const restName     = restaurants.find(r => (emp.restaurant_ids || []).includes(r.id))?.nom || '—'
                     return (
-                      <tr key={emp.id} style={{ borderBottom: ei < filteredEmployes.length - 1 ? `1px solid ${t.border}` : 'none' }}>
+                      <tr key={emp.id}>
                         {/* Nom + avatar */}
-                        <td style={{ padding: '12px 16px' }}>
+                        <td>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                             <div style={{
                               width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                              background: primaryColor,
+                              background: primaryColor || 'var(--accent)',
                               display: 'flex', alignItems: 'center', justifyContent: 'center',
                               fontSize: 15, color: '#fff', fontWeight: 700,
                             }}>
                               {(emp.nom || '?')[0].toUpperCase()}
                             </div>
                             <div>
-                              <div style={{ fontSize: 14, color: t.texte, fontWeight: 500 }}>{emp.nom}</div>
-                              <div style={{ fontSize: 11, color: t.texteFaible }}>{emp.email || ''}</div>
+                              <div style={{ fontWeight: 500 }}>{emp.nom}</div>
+                              <div style={{ fontSize: 'var(--fz-xs)', color: 'var(--text-faint)' }}>{emp.email || ''}</div>
                             </div>
                           </div>
                         </td>
                         {/* Rôles */}
-                        <td style={{ padding: '12px 16px' }}>
+                        <td>
                           <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                            {(emp.roles || []).map((r: string) => (
-                              <span key={r} style={{
-                                padding: '2px 8px', borderRadius: 20, fontSize: 10,
-                                background: `${ROLE_COLORS[r] || t.accent}18`,
-                                border: `1px solid ${ROLE_COLORS[r] || t.accent}40`,
-                                color: ROLE_COLORS[r] || t.accent,
-                              }}>
-                                {ROLE_LABELS[r]?.[lang] || r}
-                              </span>
-                            ))}
+                            {(emp.roles || []).map((r: string) => {
+                              const rc = ROLE_COLORS[r]
+                              return (
+                                <span key={r} style={{
+                                  padding: '2px 8px', borderRadius: 20, fontSize: 'var(--fz-xs)',
+                                  background: rc ? `${rc}18` : 'var(--accent-subtle)',
+                                  border: `1px solid ${rc ? `${rc}40` : 'var(--border-accent)'}`,
+                                  color: rc || 'var(--accent)',
+                                }}>
+                                  {ROLE_LABELS[r]?.[lang] || r}
+                                </span>
+                              )
+                            })}
                           </div>
                         </td>
                         {/* Restaurant */}
-                        <td style={{ padding: '12px 16px', fontSize: 13, color: t.texteSecondaire }}>{restName}</td>
+                        <td style={{ color: 'var(--text-secondary)' }}>{restName}</td>
                         {/* Statut */}
-                        <td style={{ padding: '12px 16px' }}>
-                          <span style={{
-                            display: 'inline-flex', alignItems: 'center', gap: 5,
-                            padding: '3px 10px', borderRadius: 20, fontSize: 11,
-                            background: emp.actif !== false ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.1)',
-                            color: emp.actif !== false ? '#10B981' : '#EF4444',
-                            border: `1px solid ${emp.actif !== false ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.2)'}`,
-                          }}>
-                            <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', flexShrink: 0 }} />
+                        <td>
+                          <span className={`badge ${emp.actif !== false ? 'badge-success' : 'badge-danger'}`}>
+                            <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'currentColor', flexShrink: 0, marginRight: 4 }} />
                             {emp.actif !== false ? T.actif : T.inactif}
                           </span>
                         </td>
                         {/* Taux */}
-                        <td style={{ padding: '12px 16px', fontSize: 13, color: t.accent, fontFamily: "'Courier New', monospace" }}>
+                        <td style={{ color: 'var(--accent)', fontFamily: "'Courier New', monospace" }}>
                           {emp.taux_horaire ? `$${emp.taux_horaire.toFixed(2)}/h` : '—'}
                         </td>
                         {/* Actions */}
-                        <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                        <td style={{ textAlign: 'right' }}>
                           <button
                             onClick={() => {
                               setModal({ id: emp.id, nom: emp.nom || '', email: emp.email || '', password: '', roles: emp.roles || [], taux_horaire: emp.taux_horaire?.toString() || '', restaurant_ids: emp.restaurant_ids || [], actif: emp.actif !== false, dispos_base: emp.dispos_base || { ...EMPTY_DISPOS } })
                               setSaveError('')
                             }}
-                            style={{ padding: '5px 14px', borderRadius: 7, border: `1px solid ${t.border}`, background: t.surface2, color: t.texteSecondaire, cursor: 'pointer', fontSize: 12, fontFamily: font }}
+                            className="btn btn-ghost"
+                            style={{ fontSize: 12 }}
                           >
                             {lang === 'fr' ? 'Modifier' : 'Edit'}
                           </button>
@@ -414,11 +395,11 @@ export default function EquipePage() {
               </table>
             </div>
 
-            {/* Mobile card list — unchanged */}
+            {/* Mobile card list */}
             <div className="md:hidden" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {filteredEmployes.map(emp => {
                 const primaryRole  = emp.roles?.[0] || 'serveur'
-                const primaryColor = ROLE_COLORS[primaryRole] || t.accent
+                const primaryColor = ROLE_COLORS[primaryRole]
                 const coeff = Math.max(...(emp.roles || []).map((r: string) => COEFF[r] || 1.0))
                 const dispos = emp.dispos_base as DisposBase | null
                 return (
@@ -428,39 +409,43 @@ export default function EquipePage() {
                       setModal({ id: emp.id, nom: emp.nom || '', email: emp.email || '', password: '', roles: emp.roles || [], taux_horaire: emp.taux_horaire?.toString() || '', restaurant_ids: emp.restaurant_ids || [], actif: emp.actif !== false, dispos_base: emp.dispos_base || { ...EMPTY_DISPOS } })
                       setSaveError('')
                     }}
-                    style={{ background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 14, padding: '14px 16px', cursor: 'pointer', textAlign: 'left', width: '100%', fontFamily: font }}
+                    className="card"
+                    style={{ padding: '14px 16px', cursor: 'pointer', textAlign: 'left', width: '100%', fontFamily: font }}
                   >
                     <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ width: 38, height: 38, borderRadius: 10, background: primaryColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: '#fff', fontWeight: 700, flexShrink: 0 }}>
+                        <div style={{ width: 38, height: 38, borderRadius: 10, background: primaryColor || 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: '#fff', fontWeight: 700, flexShrink: 0 }}>
                           {(emp.nom || '?')[0].toUpperCase()}
                         </div>
                         <div>
-                          <div style={{ fontSize: 15, color: t.texte, fontWeight: 400 }}>{emp.nom}</div>
-                          <div style={{ fontSize: 10, color: emp.actif !== false ? '#10B981' : '#EF4444', marginTop: 2 }}>
+                          <div style={{ fontSize: 'var(--fz-md)', fontWeight: 400 }}>{emp.nom}</div>
+                          <div style={{ fontSize: 'var(--fz-xs)', color: emp.actif !== false ? 'var(--success)' : 'var(--danger)', marginTop: 2 }}>
                             ● {emp.actif !== false ? T.actif : T.inactif}
                           </div>
                         </div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: 16, color: t.accent, fontFamily: "'Courier New', monospace" }}>${emp.taux_horaire?.toFixed(2) || '—'}</div>
-                        <div style={{ fontSize: 10, color: t.texteSecondaire }}>{T.taux}</div>
+                        <div style={{ fontSize: 'var(--fz-lg)', color: 'var(--accent)', fontFamily: "'Courier New', monospace" }}>${emp.taux_horaire?.toFixed(2) || '—'}</div>
+                        <div style={{ fontSize: 'var(--fz-xs)', color: 'var(--text-secondary)' }}>{T.taux}</div>
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                      {(emp.roles || []).map((r: string) => (
-                        <span key={r} style={{ padding: '3px 9px', borderRadius: 20, fontSize: 10, background: `${ROLE_COLORS[r] || t.accent}1A`, border: `1px solid ${ROLE_COLORS[r] || t.accent}40`, color: ROLE_COLORS[r] || t.accent }}>
-                          {ROLE_LABELS[r]?.[lang] || r}
-                        </span>
-                      ))}
+                      {(emp.roles || []).map((r: string) => {
+                        const rc = ROLE_COLORS[r]
+                        return (
+                          <span key={r} style={{ padding: '3px 9px', borderRadius: 20, fontSize: 'var(--fz-xs)', background: rc ? `${rc}1A` : 'var(--accent-subtle)', border: `1px solid ${rc ? `${rc}40` : 'var(--border-accent)'}`, color: rc || 'var(--accent)' }}>
+                            {ROLE_LABELS[r]?.[lang] || r}
+                          </span>
+                        )
+                      })}
                     </div>
                     {dispos && (dispos.jours?.length > 0 || dispos.services?.length > 0) && (
-                      <div style={{ marginTop: 8, paddingTop: 8, borderTop: `1px solid ${t.border}`, display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                      <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)', display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                         {(dispos.jours || []).map(j => (
-                          <span key={j} style={{ fontSize: 9, padding: '2px 6px', borderRadius: 6, background: `${t.accent}15`, color: t.texteSecondaire }}>{JOUR_LABELS[j]?.[lang] || j}</span>
+                          <span key={j} style={{ fontSize: 'var(--fz-xs)', padding: '2px 6px', borderRadius: 6, background: 'var(--accent-subtle)', color: 'var(--text-secondary)' }}>{JOUR_LABELS[j]?.[lang] || j}</span>
                         ))}
                         {(dispos.services || []).map(s => (
-                          <span key={s} style={{ fontSize: 9, padding: '2px 6px', borderRadius: 6, background: `${t.accent}15`, color: t.accent }}>{SERVICE_LABELS[s]?.[lang] || s}</span>
+                          <span key={s} style={{ fontSize: 'var(--fz-xs)', padding: '2px 6px', borderRadius: 6, background: 'var(--accent-subtle)', color: 'var(--accent)' }}>{SERVICE_LABELS[s]?.[lang] || s}</span>
                         ))}
                       </div>
                     )}
@@ -470,7 +455,8 @@ export default function EquipePage() {
             </div>
           </>
         )}
-        {/* ── IMPORT HISTORY ── */}
+
+        {/* ── Import history ── */}
         <div style={{ marginTop: 28 }}>
           <button
             onClick={() => setShowImportHistory(v => !v)}
@@ -480,66 +466,56 @@ export default function EquipePage() {
               padding: '2px 0', marginBottom: showImportHistory ? 10 : 0, fontFamily: font,
             }}
           >
-            <div style={{ fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: t.texteSecondaire }}>
+            <div style={{ fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
               {lang === 'fr' ? 'Historique des imports' : 'Import history'}
               {importLogs.length > 0 && (
-                <span style={{ marginLeft: 8, background: t.surface2, borderRadius: 8, padding: '1px 7px', fontSize: 10, color: t.texteFaible }}>
+                <span style={{ marginLeft: 8, background: 'var(--surface2)', borderRadius: 8, padding: '1px 7px', fontSize: 10, color: 'var(--text-faint)' }}>
                   {importLogs.length}
                 </span>
               )}
             </div>
-            <span style={{ color: t.texteFaible, fontSize: 14 }}>{showImportHistory ? '▲' : '▼'}</span>
+            <span style={{ color: 'var(--text-faint)', fontSize: 14 }}>{showImportHistory ? '▲' : '▼'}</span>
           </button>
 
           {showImportHistory && (
             <>
               {importLogs.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '16px 0', color: t.texteFaible, fontSize: 13 }}>
+                <div style={{ textAlign: 'center', padding: '16px 0', color: 'var(--text-faint)', fontSize: 'var(--fz-sm)' }}>
                   {lang === 'fr' ? 'Aucun import effectué' : 'No imports yet'}
                 </div>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
                   {importLogs.map((log, i) => (
-                    <div key={log.id} style={{
-                      background: t.surface1, border: `1px solid ${t.border}`,
-                      borderRadius: 12, padding: '12px 14px',
-                    }}>
+                    <div key={log.id} className="card" style={{ padding: '12px 14px' }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 12, color: t.texte, marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          <div style={{ fontSize: 'var(--fz-sm)', marginBottom: 3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {log.fichier_nom || '—'}
                           </div>
-                          <div style={{ fontSize: 10, color: t.texteSecondaire }}>
+                          <div style={{ fontSize: 'var(--fz-xs)', color: 'var(--text-secondary)' }}>
                             {fmtImportDate(log.created_at, lang)}
                           </div>
-                          <div style={{ fontSize: 10, color: t.texteFaible, marginTop: 2 }}>
+                          <div style={{ fontSize: 'var(--fz-xs)', color: 'var(--text-faint)', marginTop: 2 }}>
                             {log.nb_lignes} {lang === 'fr' ? 'lignes' : 'rows'} · {log.nb_employes} {lang === 'fr' ? 'employés' : 'employees'}
                           </div>
                         </div>
-
-                        {/* Undo button — only on most recent */}
                         {i === 0 && (
                           confirmUndo === log.id ? (
                             <div style={{ display: 'flex', gap: 5, flexShrink: 0 }}>
-                              <button
-                                onClick={() => setConfirmUndo(null)}
-                                style={{ padding: '4px 8px', background: 'transparent', border: `1px solid ${t.border}`, borderRadius: 7, cursor: 'pointer', fontSize: 11, color: t.texteSecondaire, fontFamily: font }}
-                              >
+                              <button onClick={() => setConfirmUndo(null)} className="btn btn-ghost" style={{ fontSize: 11 }}>
                                 {lang === 'fr' ? 'Non' : 'No'}
                               </button>
                               <button
                                 onClick={() => handleUndoImport(log)}
                                 disabled={undoing === log.id}
-                                style={{ padding: '4px 10px', background: 'rgba(224,112,112,0.15)', border: '1px solid rgba(224,112,112,0.4)', borderRadius: 7, cursor: undoing === log.id ? 'wait' : 'pointer', fontSize: 11, color: '#E07070', fontFamily: font }}
+                                className="btn btn-danger"
+                                style={{ fontSize: 11 }}
                               >
                                 {undoing === log.id ? '...' : (lang === 'fr' ? 'Confirmer' : 'Confirm')}
                               </button>
                             </div>
                           ) : (
-                            <button
-                              onClick={() => setConfirmUndo(log.id)}
-                              style={{ padding: '5px 10px', background: 'transparent', border: `1px solid ${t.border}`, borderRadius: 8, cursor: 'pointer', fontSize: 11, color: t.texteSecondaire, fontFamily: font, flexShrink: 0 }}
-                            >
+                            <button onClick={() => setConfirmUndo(log.id)} className="btn btn-ghost" style={{ fontSize: 11, flexShrink: 0 }}>
                               {lang === 'fr' ? 'Annuler' : 'Undo'}
                             </button>
                           )
@@ -567,47 +543,47 @@ export default function EquipePage() {
             onClick={e => e.stopPropagation()}
             style={{
               width: '100%', maxWidth: 480, margin: '0 auto',
-              background: t.surface1, borderRadius: '20px 20px 0 0',
+              background: 'var(--surface1)', borderRadius: '20px 20px 0 0',
               padding: '20px 18px 32px', maxHeight: '90vh', overflowY: 'auto',
             }}
           >
             {/* Handle */}
-            <div style={{ width: 36, height: 4, borderRadius: 2, background: t.border, margin: '0 auto 20px' }} />
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border)', margin: '0 auto 20px' }} />
 
-            <h2 style={{ fontSize: 18, fontWeight: 300, margin: '0 0 20px', color: t.texte }}>
+            <h2 style={{ fontSize: 18, fontWeight: 300, margin: '0 0 20px', color: 'var(--text)' }}>
               {modal.id ? T.modifierEmploye : T.nouvelEmploye}
             </h2>
 
             {/* Nom */}
             <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 11, color: t.texteSecondaire, marginBottom: 6, letterSpacing: '0.08em' }}>{T.nomComplet} *</div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6, letterSpacing: '0.08em' }}>{T.nomComplet} *</div>
               <input value={modal.nom} onChange={e => setModal(m => m ? { ...m, nom: e.target.value } : m)}
-                style={{ width: '100%', background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 8, color: t.texte, padding: '10px 12px', fontSize: 14, fontFamily: font, outline: 'none', boxSizing: 'border-box' }} />
+                className="input" style={{ fontFamily: font }} />
             </div>
 
             {/* Email + Password (création uniquement) */}
             {!modal.id && (
               <>
                 <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontSize: 11, color: t.texteSecondaire, marginBottom: 6, letterSpacing: '0.08em' }}>{T.email} *</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6, letterSpacing: '0.08em' }}>{T.email} *</div>
                   <input
                     value={modal.email}
                     onChange={e => setModal(m => m ? { ...m, email: e.target.value } : m)}
                     type="email"
                     placeholder="prenom@email.com"
-                    style={{ width: '100%', background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 8, color: t.texte, padding: '10px 12px', fontSize: 14, fontFamily: font, outline: 'none', boxSizing: 'border-box' }}
+                    className="input" style={{ fontFamily: font }}
                   />
                 </div>
                 <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontSize: 11, color: t.texteSecondaire, marginBottom: 6, letterSpacing: '0.08em' }}>{T.motDePasse}</div>
+                  <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6, letterSpacing: '0.08em' }}>{T.motDePasse}</div>
                   <input
                     value={modal.password}
                     onChange={e => setModal(m => m ? { ...m, password: e.target.value } : m)}
                     type="text"
                     placeholder={T.mdpHint}
-                    style={{ width: '100%', background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 8, color: t.texte, padding: '10px 12px', fontSize: 13, fontFamily: font, outline: 'none', boxSizing: 'border-box' }}
+                    className="input" style={{ fontFamily: font, fontSize: 13 }}
                   />
-                  <div style={{ fontSize: 10, color: t.accent, marginTop: 6, padding: '6px 10px', background: `${t.accent}12`, borderRadius: 6, border: `1px solid ${t.accent}30` }}>
+                  <div style={{ fontSize: 10, color: 'var(--accent)', marginTop: 6, padding: '6px 10px', background: 'var(--accent-subtle)', borderRadius: 6, border: '1px solid var(--border-accent)' }}>
                     {T.noteInvitation}
                   </div>
                 </div>
@@ -616,19 +592,19 @@ export default function EquipePage() {
 
             {/* Taux horaire */}
             <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 11, color: t.texteSecondaire, marginBottom: 6, letterSpacing: '0.08em' }}>{T.tauxH}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6, letterSpacing: '0.08em' }}>{T.tauxH}</div>
               <input value={modal.taux_horaire} onChange={e => setModal(m => m ? { ...m, taux_horaire: e.target.value } : m)}
                 type="number" min="0" step="0.25" placeholder="18.50"
-                style={{ width: '100%', background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 8, color: t.texte, padding: '10px 12px', fontSize: 14, fontFamily: font, outline: 'none', boxSizing: 'border-box' }} />
+                className="input" style={{ fontFamily: font }} />
             </div>
 
             {/* Rôles */}
             <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 11, color: t.texteSecondaire, marginBottom: 8, letterSpacing: '0.08em' }}>{T.roles}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8, letterSpacing: '0.08em' }}>{T.roles}</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {SELECTABLE_ROLES.map(r => {
                   const isSelected = modal.roles.includes(r)
-                  const col = ROLE_COLORS[r]
+                  const rc = ROLE_COLORS[r]
                   return (
                     <button key={r} onClick={() => setModal(m => {
                       if (!m) return m
@@ -636,9 +612,9 @@ export default function EquipePage() {
                       return { ...m, roles: next }
                     })} style={{
                       padding: '6px 12px', borderRadius: 20, cursor: 'pointer',
-                      border: `1px solid ${isSelected ? col : t.border}`,
-                      background: isSelected ? `${col}22` : 'transparent',
-                      color: isSelected ? col : t.texteSecondaire,
+                      border: `1px solid ${isSelected ? (rc || 'var(--accent)') : 'var(--border)'}`,
+                      background: isSelected ? (rc ? `${rc}22` : 'var(--accent-subtle)') : 'transparent',
+                      color: isSelected ? (rc || 'var(--accent)') : 'var(--text-secondary)',
                       fontSize: 12, fontFamily: font,
                     }}>
                       {ROLE_ICONS[r]} {ROLE_LABELS[r]?.[lang] || r}
@@ -650,7 +626,7 @@ export default function EquipePage() {
 
             {/* Restaurants */}
             <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 11, color: t.texteSecondaire, marginBottom: 8, letterSpacing: '0.08em' }}>{T.restaurants}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8, letterSpacing: '0.08em' }}>{T.restaurants}</div>
               <div style={{ display: 'flex', gap: 6 }}>
                 {restaurants.map(r => {
                   const isSelected = modal.restaurant_ids.includes(r.id)
@@ -661,9 +637,9 @@ export default function EquipePage() {
                       return { ...m, restaurant_ids: next }
                     })} style={{
                       flex: 1, padding: '8px', borderRadius: 10, cursor: 'pointer',
-                      border: `1px solid ${isSelected ? t.accent : t.border}`,
-                      background: isSelected ? `${t.accent}18` : 'transparent',
-                      color: isSelected ? t.accent : t.texteSecondaire,
+                      border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--border)'}`,
+                      background: isSelected ? 'var(--accent-subtle)' : 'transparent',
+                      color: isSelected ? 'var(--accent)' : 'var(--text-secondary)',
                       fontSize: 12, fontFamily: font,
                     }}>
                       {r.nom}
@@ -675,22 +651,22 @@ export default function EquipePage() {
 
             {/* ── DISPONIBILITÉS ── */}
             <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 10, color: t.texteSecondaire, marginBottom: 10, letterSpacing: '0.12em', textTransform: 'uppercase', paddingTop: 6, borderTop: `1px solid ${t.border}` }}>
+              <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginBottom: 10, letterSpacing: '0.12em', textTransform: 'uppercase', paddingTop: 6, borderTop: '1px solid var(--border)' }}>
                 {T.dispos}
               </div>
 
               {/* Jours */}
               <div style={{ marginBottom: 10 }}>
-                <div style={{ fontSize: 11, color: t.texteFaible, marginBottom: 6 }}>{T.jours}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-faint)', marginBottom: 6 }}>{T.jours}</div>
                 <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
                   {JOURS.map(j => {
                     const isSelected = modal.dispos_base.jours.includes(j)
                     return (
                       <button key={j} onClick={() => toggleJour(j)} style={{
                         padding: '6px 10px', borderRadius: 8, cursor: 'pointer',
-                        border: `1px solid ${isSelected ? t.accent : t.border}`,
-                        background: isSelected ? `${t.accent}22` : 'transparent',
-                        color: isSelected ? t.accent : t.texteSecondaire,
+                        border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--border)'}`,
+                        background: isSelected ? 'var(--accent-subtle)' : 'transparent',
+                        color: isSelected ? 'var(--accent)' : 'var(--text-secondary)',
                         fontSize: 12, fontFamily: font,
                       }}>
                         {JOUR_LABELS[j][lang]}
@@ -702,16 +678,16 @@ export default function EquipePage() {
 
               {/* Services */}
               <div style={{ marginBottom: 10 }}>
-                <div style={{ fontSize: 11, color: t.texteFaible, marginBottom: 6 }}>{T.services}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-faint)', marginBottom: 6 }}>{T.services}</div>
                 <div style={{ display: 'flex', gap: 6 }}>
                   {SERVICES.map(s => {
                     const isSelected = modal.dispos_base.services.includes(s)
                     return (
                       <button key={s} onClick={() => toggleService(s)} style={{
                         flex: 1, padding: '7px 4px', borderRadius: 8, cursor: 'pointer',
-                        border: `1px solid ${isSelected ? t.accent : t.border}`,
-                        background: isSelected ? `${t.accent}22` : 'transparent',
-                        color: isSelected ? t.accent : t.texteSecondaire,
+                        border: `1px solid ${isSelected ? 'var(--accent)' : 'var(--border)'}`,
+                        background: isSelected ? 'var(--accent-subtle)' : 'transparent',
+                        color: isSelected ? 'var(--accent)' : 'var(--text-secondary)',
                         fontSize: 11, fontFamily: font,
                       }}>
                         {SERVICE_LABELS[s][lang]}
@@ -723,48 +699,44 @@ export default function EquipePage() {
 
               {/* Contraintes */}
               <div>
-                <div style={{ fontSize: 11, color: t.texteFaible, marginBottom: 6 }}>{T.contraintes}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-faint)', marginBottom: 6 }}>{T.contraintes}</div>
                 <textarea
                   value={modal.dispos_base.contraintes}
                   onChange={e => setModal(m => m ? { ...m, dispos_base: { ...m.dispos_base, contraintes: e.target.value } } : m)}
                   placeholder={T.contraintesHint}
                   rows={2}
-                  style={{
-                    width: '100%', background: t.surface2, border: `1px solid ${t.border}`,
-                    borderRadius: 8, color: t.texte, padding: '10px 12px',
-                    fontSize: 13, fontFamily: font, outline: 'none',
-                    boxSizing: 'border-box', resize: 'none',
-                  }}
+                  className="input"
+                  style={{ fontFamily: font, fontSize: 13, resize: 'none' }}
                 />
               </div>
             </div>
 
             {/* Actif toggle */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-              <div style={{ fontSize: 13, color: t.texte }}>{T.statut}</div>
+              <div style={{ fontSize: 13, color: 'var(--text)' }}>{T.statut}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 12, color: modal.actif ? '#72BA80' : '#E07070' }}>
+                <span style={{ fontSize: 12, color: modal.actif ? 'var(--success)' : 'var(--danger)' }}>
                   {modal.actif ? T.actif : T.inactif}
                 </span>
                 <button onClick={() => setModal(m => m ? { ...m, actif: !m.actif } : m)} style={{
                   width: 44, height: 24, borderRadius: 12, border: 'none', cursor: 'pointer',
-                  background: modal.actif ? '#72BA80' : t.surface2, position: 'relative', transition: 'background 0.2s',
+                  background: modal.actif ? 'var(--success)' : 'var(--surface2)', position: 'relative', transition: 'background 0.2s',
                 }}>
                   <div style={{
                     position: 'absolute', top: 4, left: modal.actif ? 22 : 4,
                     width: 16, height: 16, borderRadius: '50%',
-                    background: modal.actif ? '#fff' : t.texteSecondaire, transition: 'left 0.2s',
+                    background: modal.actif ? '#fff' : 'var(--text-secondary)', transition: 'left 0.2s',
                   }} />
                 </button>
               </div>
             </div>
 
             {inviteLink && (
-              <div style={{ background: `${t.accent}12`, border: `1px solid ${t.accent}40`, borderRadius: 10, padding: '14px 12px', marginBottom: 16 }}>
-                <div style={{ fontSize: 11, color: t.accent, fontWeight: 600, marginBottom: 8, letterSpacing: '0.06em' }}>
+              <div style={{ background: 'var(--accent-subtle)', border: '1px solid var(--border-accent)', borderRadius: 10, padding: '14px 12px', marginBottom: 16 }}>
+                <div style={{ fontSize: 11, color: 'var(--accent)', fontWeight: 600, marginBottom: 8, letterSpacing: '0.06em' }}>
                   {lang === 'fr' ? 'LIEN DE CONNEXION' : 'LOGIN LINK'}
                 </div>
-                <div style={{ fontSize: 11, color: t.texteSecondaire, marginBottom: 10 }}>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 10 }}>
                   {lang === 'fr'
                     ? "Partagez ce lien unique avec l'employé pour qu'il se connecte."
                     : 'Share this one-time link with the employee to log in.'}
@@ -772,11 +744,13 @@ export default function EquipePage() {
                 <div style={{ display: 'flex', gap: 6, alignItems: 'stretch' }}>
                   <input
                     readOnly value={inviteLink}
-                    style={{ flex: 1, background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 7, color: t.texteFaible, padding: '8px 10px', fontSize: 10, fontFamily: 'monospace', outline: 'none', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    className="input"
+                    style={{ fontFamily: 'monospace', fontSize: 10, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
                   />
                   <button
                     onClick={() => navigator.clipboard.writeText(inviteLink)}
-                    style={{ padding: '8px 12px', background: t.accent, border: 'none', borderRadius: 7, color: '#fff', cursor: 'pointer', fontSize: 11, fontFamily: font, flexShrink: 0 }}
+                    className="btn btn-primary"
+                    style={{ flexShrink: 0, fontSize: 11 }}
                   >
                     {lang === 'fr' ? 'Copier' : 'Copy'}
                   </button>
@@ -785,23 +759,16 @@ export default function EquipePage() {
             )}
 
             {saveError && (
-              <div style={{ background: 'rgba(224,112,112,0.15)', border: '1px solid rgba(224,112,112,0.4)', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 12, color: '#E07070' }}>
+              <div style={{ background: 'var(--danger-subtle)', border: '1px solid color-mix(in srgb, var(--danger) 30%, transparent)', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 12, color: 'var(--danger)' }}>
                 {saveError}
               </div>
             )}
 
             <div style={{ display: 'flex', gap: 8 }}>
-              <button onClick={() => { setModal(null); setInviteLink(null) }} style={{
-                flex: 1, padding: '12px', background: t.surface2, border: `1px solid ${t.border}`,
-                borderRadius: 10, color: t.texteSecondaire, cursor: 'pointer', fontSize: 13, fontFamily: font,
-              }}>
+              <button onClick={() => { setModal(null); setInviteLink(null) }} className="btn btn-secondary" style={{ flex: 1 }}>
                 {T.annuler}
               </button>
-              <button onClick={handleSave} disabled={saving} style={{
-                flex: 2, padding: '12px', background: t.accent, border: 'none',
-                borderRadius: 10, color: t.isDark ? '#080808' : '#fff',
-                cursor: saving ? 'wait' : 'pointer', fontSize: 13, fontFamily: font, fontWeight: 600,
-              }}>
+              <button onClick={handleSave} disabled={saving} className="btn btn-primary" style={{ flex: 2 }}>
                 {saving ? '...' : T.enregistrer}
               </button>
             </div>

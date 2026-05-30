@@ -3,11 +3,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
-import { getTheme } from '@/lib/themes'
 import { useAuth } from '@/lib/auth-context'
 import type { Virement } from '@/types'
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function isoDate(d: Date): string { return d.toISOString().split('T')[0] }
 function fmt$(n: number): string { return '$' + n.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',') }
@@ -46,8 +43,6 @@ const ROLE_LBL: Record<'fr' | 'en', Record<string, string>> = {
   en: { admin: 'Admin', gerant: 'Manager', bar: 'Bar', serveur: 'Server', busboy: 'Busboy' },
 }
 
-// ── Local types ───────────────────────────────────────────────────────────────
-
 interface EmpSummary {
   userId: string
   nom: string
@@ -70,12 +65,10 @@ interface CoteVerseeRow {
   nbServices: number
 }
 
-// ── SVG Trend Chart ───────────────────────────────────────────────────────────
-
-function TrendChart({ data, t, font }: { data: WeekTrend[]; t: any; font: string }) {
+function TrendChart({ data, font }: { data: WeekTrend[]; font: string }) {
   const hasData = data.some(d => d.pool > 0 || d.salaire > 0)
   if (!hasData) return (
-    <div style={{ textAlign: 'center', padding: '24px 0', color: t.texteFaible, fontSize: 12 }}>
+    <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-faint)', fontSize: 12 }}>
       Aucune donnée
     </div>
   )
@@ -95,14 +88,14 @@ function TrendChart({ data, t, font }: { data: WeekTrend[]; t: any; font: string
         const y = padT + chartH * (1 - f)
         return (
           <g key={f}>
-            <line x1={padL} x2={W - padR} y1={y} y2={y} stroke={t.border} strokeWidth={0.5} strokeDasharray="2,3" />
-            <text x={padL - 3} y={y + 3} textAnchor="end" fontSize={7} fill={t.texteFaible}>
+            <line x1={padL} x2={W - padR} y1={y} y2={y} stroke="var(--border)" strokeWidth={0.5} strokeDasharray="2,3" />
+            <text x={padL - 3} y={y + 3} textAnchor="end" fontSize={7} fill="var(--text-faint)">
               {fmtK(maxVal * f)}
             </text>
           </g>
         )
       })}
-      <line x1={padL} x2={W - padR} y1={padT + chartH} y2={padT + chartH} stroke={t.border} strokeWidth={1} />
+      <line x1={padL} x2={W - padR} y1={padT + chartH} y2={padT + chartH} stroke="var(--border)" strokeWidth={1} />
       {data.map((d, i) => {
         const cx = padL + groupW * i + groupW / 2
         const b1h = d.pool > 0 ? Math.max(2, (d.pool / maxVal) * chartH) : 0
@@ -110,23 +103,21 @@ function TrendChart({ data, t, font }: { data: WeekTrend[]; t: any; font: string
         return (
           <g key={i}>
             <rect x={cx - barW - 1} y={padT + chartH - b1h} width={barW} height={b1h} rx={2}
-              fill={t.accent} opacity={b1h > 0 ? 0.85 : 0} />
+              fill="var(--accent)" opacity={b1h > 0 ? 0.85 : 0} />
             <rect x={cx + 1} y={padT + chartH - b2h} width={barW} height={b2h} rx={2}
               fill="#7EB8F7" opacity={b2h > 0 ? 0.85 : 0} />
-            <text x={cx} y={H - 4} textAnchor="middle" fontSize={8} fill={t.texteSecondaire}
+            <text x={cx} y={H - 4} textAnchor="middle" fontSize={8} fill="var(--text-secondary)"
               fontFamily={font}>{d.label}</text>
           </g>
         )
       })}
-      <rect x={padL} y={3} width={7} height={7} rx={1} fill={t.accent} opacity={0.85} />
-      <text x={padL + 10} y={9} fontSize={7} fill={t.texteSecondaire}>Pool</text>
+      <rect x={padL} y={3} width={7} height={7} rx={1} fill="var(--accent)" opacity={0.85} />
+      <text x={padL + 10} y={9} fontSize={7} fill="var(--text-secondary)">Pool</text>
       <rect x={padL + 38} y={3} width={7} height={7} rx={1} fill="#7EB8F7" opacity={0.85} />
-      <text x={padL + 48} y={9} fontSize={7} fill={t.texteSecondaire}>Salaire</text>
+      <text x={padL + 48} y={9} fontSize={7} fill="var(--text-secondary)">Salaire</text>
     </svg>
   )
 }
-
-// ── Component ─────────────────────────────────────────────────────────────────
 
 export default function FinancesPage() {
   const { profile, restaurantId: ctxRid, isManager, loading } = useAuth()
@@ -317,13 +308,8 @@ export default function FinancesPage() {
     URL.revokeObjectURL(url)
   }
 
-  if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#080808', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ color: '#C9A84C', fontSize: 12, letterSpacing: '0.2em' }}>CHARGEMENT...</div>
-    </div>
-  )
+  if (loading) return <div className="loading-screen"><div className="loading-dot">CHARGEMENT...</div></div>
 
-  const t = getTheme(profile?.theme)
   const lang = (profile?.lang || 'fr') as 'fr' | 'en'
   const font = profile?.font_family || 'Georgia, serif'
   const R = ROLE_LBL[lang]
@@ -337,82 +323,66 @@ export default function FinancesPage() {
     .reduce((s, v) => s + v.montant_total, 0)
   const nbServices = weekPoolShifts.length
 
-  const sectionTitle: React.CSSProperties = {
-    fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase',
-    color: t.texteSecondaire, marginBottom: 12,
-  }
-
   return (
     <AppShell profile={profile} restaurant="Le Carré">
-      <main style={{ padding: '16px', paddingBottom: 88 }}>
+      <main className="page-content page-wrapper" style={{ paddingBottom: 88 }}>
 
         {/* Title + week navigation */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 300, margin: 0 }}>
-            {lang === 'fr' ? 'Finances' : 'Finances'}
-          </h1>
+        <div className="page-header">
+          <h1 className="page-title">{lang === 'fr' ? 'Finances' : 'Finances'}</h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <button onClick={() => setWeekOffset(w => w - 1)} style={{
-              background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 8,
-              color: t.texteSecondaire, width: 30, height: 30, cursor: 'pointer',
-              fontSize: 14, fontFamily: font, lineHeight: 1,
-            }}>←</button>
-            <div style={{ fontSize: 11, color: t.texteSecondaire, textAlign: 'center', minWidth: 106 }}>
+            <button onClick={() => setWeekOffset(w => w - 1)} className="btn btn-ghost" style={{ width: 30, height: 30, padding: 0 }}>←</button>
+            <div style={{ fontSize: 11, color: 'var(--text-secondary)', textAlign: 'center', minWidth: 106 }}>
               {fmtWeekLabel(monday, lang)}
             </div>
             <button
               onClick={() => setWeekOffset(w => w + 1)}
               disabled={weekOffset >= 0}
-              style={{
-                background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 8,
-                color: t.texteSecondaire, width: 30, height: 30,
-                cursor: weekOffset >= 0 ? 'default' : 'pointer',
-                opacity: weekOffset >= 0 ? 0.3 : 1, fontSize: 14, fontFamily: font, lineHeight: 1,
-              }}>→</button>
+              className="btn btn-ghost"
+              style={{ width: 30, height: 30, padding: 0 }}
+            >→</button>
           </div>
         </div>
 
         {/* KPI cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+        <div className="kpi-grid" style={{ gridTemplateColumns: '1fr 1fr', marginBottom: 20 }}>
           {([
-            { label: lang === 'fr' ? 'Pool pourboires' : 'Tip pool',        value: fmt$(totalPool),      color: t.accent,   sub: `${nbServices} service${nbServices !== 1 ? 's' : ''}` },
-            { label: lang === 'fr' ? 'Masse salariale' : 'Labor cost',      value: fmt$(totalSalaire),   color: '#7EB8F7',  sub: '' },
-            { label: lang === 'fr' ? 'Virements effectués' : 'Paid out',    value: fmt$(totalVirements), color: '#72BA80',  sub: '' },
+            { label: lang === 'fr' ? 'Pool pourboires' : 'Tip pool',        value: fmt$(totalPool),      color: 'var(--accent)',  sub: `${nbServices} service${nbServices !== 1 ? 's' : ''}` },
+            { label: lang === 'fr' ? 'Masse salariale' : 'Labor cost',      value: fmt$(totalSalaire),   color: '#7EB8F7',        sub: '' },
+            { label: lang === 'fr' ? 'Virements effectués' : 'Paid out',    value: fmt$(totalVirements), color: 'var(--success)', sub: '' },
             { label: lang === 'fr' ? 'Total employés' : 'Total employees',  value: String(empSummaries.length), color: '#E0A850', sub: '' },
           ] as { label: string; value: string; color: string; sub: string }[]).map(({ label, value, color, sub }) => (
-            <div key={label} style={{ background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 12, padding: '14px 16px' }}>
-              <div style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 6 }}>{label}</div>
-              <div style={{ fontSize: 20, fontWeight: 300, color, fontFamily: "'Courier New', monospace" }}>{value}</div>
-              {sub ? <div style={{ fontSize: 10, color: t.texteFaible, marginTop: 2 }}>{sub}</div> : null}
+            <div key={label} className="kpi-card">
+              <div className="kpi-label">{label}</div>
+              <div className="kpi-value" style={{ color, fontFamily: "'Courier New', monospace" }}>{value}</div>
+              {sub ? <div className="kpi-sub">{sub}</div> : null}
             </div>
           ))}
         </div>
 
         {/* 4-week trend chart */}
-        <div style={{ background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 14, padding: '14px 16px', marginBottom: 20 }}>
-          <div style={sectionTitle}>{lang === 'fr' ? 'Tendance 4 semaines' : '4-week trend'}</div>
-          <TrendChart data={trendData} t={t} font={font} />
+        <div className="card" style={{ padding: '14px 16px', marginBottom: 20 }}>
+          <div style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 12 }}>
+            {lang === 'fr' ? 'Tendance 4 semaines' : '4-week trend'}
+          </div>
+          <TrendChart data={trendData} font={font} />
         </div>
 
         {/* Per-employee table */}
         <div style={{ marginBottom: 20 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <div style={sectionTitle}>
+            <div style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
               {lang === 'fr' ? `Employés (${empSummaries.length})` : `Employees (${empSummaries.length})`}
             </div>
             {empSummaries.length > 0 && (
-              <button onClick={exportCSV} style={{
-                background: 'none', border: `1px solid ${t.border}`, borderRadius: 8,
-                color: t.texteSecondaire, padding: '4px 10px', fontSize: 10,
-                cursor: 'pointer', letterSpacing: '0.08em', fontFamily: font,
-              }}>
+              <button onClick={exportCSV} className="btn btn-ghost" style={{ fontSize: 10, letterSpacing: '0.08em' }}>
                 {lang === 'fr' ? 'CSV' : 'CSV'} ↓
               </button>
             )}
           </div>
 
           {empSummaries.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '24px 0', color: t.texteFaible, fontSize: 13 }}>
+            <div style={{ textAlign: 'center', padding: '24px 0', color: 'var(--text-faint)', fontSize: 'var(--fz-sm)' }}>
               {lang === 'fr' ? 'Aucune donnée pour cette semaine' : 'No data for this week'}
             </div>
           ) : (
@@ -420,7 +390,7 @@ export default function FinancesPage() {
               {empSummaries.map(emp => {
                 const isOpen = expandedRows.has(emp.userId)
                 const role0 = emp.roles[0] || ''
-                const roleColor = ROLE_COLORS[role0] || t.texteSecondaire
+                const roleColor = ROLE_COLORS[role0] || 'var(--text-secondary)'
                 const roleLbl = R[role0] || role0
                 return (
                   <div key={emp.userId}>
@@ -433,27 +403,27 @@ export default function FinancesPage() {
                       style={{
                         display: 'flex', alignItems: 'center', gap: 10,
                         padding: '12px 14px',
-                        background: t.surface1,
-                        border: `1px solid ${isOpen ? t.borderAccent : t.border}`,
+                        background: 'var(--surface1)',
+                        border: `1px solid ${isOpen ? 'var(--border-accent)' : 'var(--border)'}`,
                         borderRadius: isOpen ? '10px 10px 0 0' : 10,
                         cursor: 'pointer',
                       }}
                     >
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, color: t.texte, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{emp.nom}</div>
+                        <div style={{ fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{emp.nom}</div>
                         <div style={{ fontSize: 10, color: roleColor, marginTop: 1 }}>{roleLbl}</div>
                       </div>
                       <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexShrink: 0 }}>
                         <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: 9, color: t.texteFaible, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                          <div style={{ fontSize: 9, color: 'var(--text-faint)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                             {lang === 'fr' ? 'Hrs' : 'Hrs'}
                           </div>
-                          <div style={{ fontSize: 12, color: t.texte, fontFamily: "'Courier New', monospace" }}>
+                          <div style={{ fontSize: 12, fontFamily: "'Courier New', monospace" }}>
                             {emp.heures.toFixed(1)}
                           </div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: 9, color: t.texteFaible, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                          <div style={{ fontSize: 9, color: 'var(--text-faint)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                             {lang === 'fr' ? 'Sal.' : 'Sal.'}
                           </div>
                           <div style={{ fontSize: 12, color: '#7EB8F7', fontFamily: "'Courier New', monospace" }}>
@@ -461,22 +431,22 @@ export default function FinancesPage() {
                           </div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: 9, color: t.texteFaible, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                          <div style={{ fontSize: 9, color: 'var(--text-faint)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                             {lang === 'fr' ? 'Pourb.' : 'Tips'}
                           </div>
-                          <div style={{ fontSize: 12, color: t.accent, fontFamily: "'Courier New', monospace" }}>
+                          <div style={{ fontSize: 12, color: 'var(--accent)', fontFamily: "'Courier New', monospace" }}>
                             {fmt$(emp.pourboires)}
                           </div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: 9, color: t.texteFaible, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                          <div style={{ fontSize: 9, color: 'var(--text-faint)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                             Total
                           </div>
-                          <div style={{ fontSize: 13, color: '#72BA80', fontFamily: "'Courier New', monospace", fontWeight: 500 }}>
+                          <div style={{ fontSize: 13, color: 'var(--success)', fontFamily: "'Courier New', monospace", fontWeight: 500 }}>
                             {fmt$(emp.total)}
                           </div>
                         </div>
-                        <div style={{ fontSize: 10, color: t.texteFaible, paddingBottom: 2 }}>
+                        <div style={{ fontSize: 10, color: 'var(--text-faint)', paddingBottom: 2 }}>
                           {isOpen ? '▲' : '▼'}
                         </div>
                       </div>
@@ -484,12 +454,12 @@ export default function FinancesPage() {
 
                     {isOpen && (
                       <div style={{
-                        background: t.surface2,
-                        border: `1px solid ${t.borderAccent}`, borderTop: 'none',
+                        background: 'var(--surface2)',
+                        border: '1px solid var(--border-accent)', borderTop: 'none',
                         borderRadius: '0 0 10px 10px', padding: '10px 14px',
                       }}>
                         {emp.details.length === 0 ? (
-                          <div style={{ fontSize: 11, color: t.texteFaible, textAlign: 'center', padding: '8px 0' }}>
+                          <div style={{ fontSize: 11, color: 'var(--text-faint)', textAlign: 'center', padding: '8px 0' }}>
                             {lang === 'fr' ? 'Aucun détail' : 'No details'}
                           </div>
                         ) : (
@@ -500,22 +470,22 @@ export default function FinancesPage() {
                               .map((d, idx) => {
                                 const dt = new Date(d.date + 'T00:00:00')
                                 const dateLbl = `${dt.getDate()} ${MOIS[dt.getMonth()]}`
-                                const svcColor = d.service === 'midi' ? '#F4A261' : d.service === 'soir' ? '#7EB8F7' : t.texteFaible
+                                const svcColor = d.service === 'midi' ? '#F4A261' : d.service === 'soir' ? '#7EB8F7' : '#9CA3AF'
                                 const svcLbl = d.service === 'midi' ? (lang === 'fr' ? 'Midi' : 'Lunch')
                                   : d.service === 'soir' ? (lang === 'fr' ? 'Soir' : 'Dinner')
                                   : d.service
                                 return (
                                   <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
-                                    <div style={{ fontSize: 11, color: t.texteSecondaire, minWidth: 48 }}>{dateLbl}</div>
+                                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', minWidth: 48 }}>{dateLbl}</div>
                                     <div style={{
                                       fontSize: 9, color: svcColor, padding: '1px 6px',
                                       background: `${svcColor}18`, borderRadius: 4, minWidth: 36, textAlign: 'center',
                                     }}>{svcLbl}</div>
                                     <div style={{ flex: 1 }} />
-                                    <div style={{ fontSize: 11, color: t.texte, fontFamily: "'Courier New', monospace" }}>
+                                    <div style={{ fontSize: 11, fontFamily: "'Courier New', monospace" }}>
                                       {d.heures.toFixed(2)}h
                                     </div>
-                                    <div style={{ fontSize: 11, color: t.accent, fontFamily: "'Courier New', monospace", minWidth: 56, textAlign: 'right' }}>
+                                    <div style={{ fontSize: 11, color: 'var(--accent)', fontFamily: "'Courier New', monospace", minWidth: 56, textAlign: 'right' }}>
                                       {d.tips > 0 ? fmt$(d.tips) : '—'}
                                     </div>
                                   </div>
@@ -523,7 +493,7 @@ export default function FinancesPage() {
                               })}
                           </div>
                         )}
-                        <div style={{ borderTop: `1px solid ${t.border}`, marginTop: 8, paddingTop: 6, fontSize: 10, color: t.texteFaible }}>
+                        <div style={{ borderTop: '1px solid var(--border)', marginTop: 8, paddingTop: 6, fontSize: 10, color: 'var(--text-faint)' }}>
                           {lang === 'fr' ? 'Taux' : 'Rate'}: {fmt$(emp.tauxHoraire)}/h
                         </div>
                       </div>
@@ -537,11 +507,11 @@ export default function FinancesPage() {
 
         {/* Virements */}
         <div style={{ marginBottom: 20 }}>
-          <div style={sectionTitle}>
+          <div style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 12 }}>
             {lang === 'fr' ? `Virements (${virements.length})` : `Payments (${virements.length})`}
           </div>
           {virements.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '20px 0', color: t.texteFaible, fontSize: 13 }}>
+            <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text-faint)', fontSize: 'var(--fz-sm)' }}>
               {lang === 'fr' ? 'Aucun virement pour cette semaine' : 'No payments for this week'}
             </div>
           ) : (
@@ -551,24 +521,23 @@ export default function FinancesPage() {
                 const isEffectue = v.statut === 'effectue'
                 const isSaving = savingVirement === v.id
                 return (
-                  <div key={v.id} style={{
-                    background: t.surface1,
-                    border: `1px solid ${isEffectue ? '#72BA8044' : t.border}`,
-                    borderRadius: 10, padding: '12px 14px',
+                  <div key={v.id} className="card" style={{
+                    padding: '12px 14px',
+                    borderLeft: `3px solid ${isEffectue ? 'var(--success)' : 'var(--border)'}`,
                   }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, color: t.texte, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <div style={{ fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {emp?.nom || '—'}
                         </div>
-                        <div style={{ fontSize: 10, color: t.texteSecondaire, marginTop: 2 }}>
+                        <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 2 }}>
                           {lang === 'fr' ? 'Sal.' : 'Sal.'} {fmt$(v.montant_salaire)}
                           {' + '}
                           {lang === 'fr' ? 'Pourb.' : 'Tips'} {fmt$(v.montant_pourboires)}
                         </div>
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
-                        <div style={{ fontSize: 16, fontWeight: 300, color: '#72BA80', fontFamily: "'Courier New', monospace" }}>
+                        <div style={{ fontSize: 16, fontWeight: 300, color: 'var(--success)', fontFamily: "'Courier New', monospace" }}>
                           {fmt$(v.montant_total)}
                         </div>
                         <button
@@ -580,7 +549,7 @@ export default function FinancesPage() {
                           style={{
                             width: 36, height: 20, borderRadius: 10, border: 'none',
                             cursor: isSaving ? 'default' : 'pointer',
-                            background: isEffectue ? '#72BA80' : t.surface2,
+                            background: isEffectue ? 'var(--success)' : 'var(--surface2)',
                             position: 'relative', opacity: isSaving ? 0.5 : 1,
                             transition: 'background 0.2s', flexShrink: 0,
                           }}
@@ -589,14 +558,14 @@ export default function FinancesPage() {
                             position: 'absolute', top: 3,
                             left: isEffectue ? 18 : 2,
                             width: 14, height: 14, borderRadius: '50%',
-                            background: isEffectue ? '#fff' : t.texteSecondaire,
+                            background: isEffectue ? '#fff' : 'var(--text-secondary)',
                             transition: 'left 0.2s',
                           }} />
                         </button>
                       </div>
                     </div>
                     {isEffectue && v.effectue_le && (
-                      <div style={{ fontSize: 10, color: '#72BA80', marginTop: 6 }}>
+                      <div style={{ fontSize: 10, color: 'var(--success)', marginTop: 6 }}>
                         ✓ {lang === 'fr' ? 'Effectué le' : 'Paid on'}{' '}
                         {new Date(v.effectue_le).toLocaleDateString(lang === 'fr' ? 'fr-CA' : 'en-CA')}
                       </div>
@@ -611,29 +580,28 @@ export default function FinancesPage() {
         {/* Cotes versées — 8 weeks history */}
         {cotesData.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <div style={sectionTitle}>
+            <div style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 12 }}>
               {lang === 'fr' ? 'Cotes versées — 8 semaines' : 'Deductions paid out — 8 weeks'}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
               {cotesData.map((row, i) => (
-                <div key={i} style={{
-                  background: t.surface1, border: `1px solid ${t.border}`,
-                  borderRadius: 10, padding: '10px 14px',
+                <div key={i} className="card" style={{
+                  padding: '10px 14px',
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 }}>
                   <div>
-                    <div style={{ fontSize: 12, color: t.texte }}>{row.label}</div>
-                    <div style={{ fontSize: 10, color: t.texteFaible, marginTop: 1 }}>
+                    <div style={{ fontSize: 12 }}>{row.label}</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 1 }}>
                       {row.nbServices} {lang === 'fr' ? 'service(s)' : 'service(s)'}
                       {' · '}
                       {lang === 'fr' ? 'distribué' : 'distributed'}: {fmt$(row.distribue)}
                     </div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: 15, color: '#E07070', fontFamily: "'Courier New', monospace" }}>
+                    <div style={{ fontSize: 15, color: 'var(--danger)', fontFamily: "'Courier New', monospace" }}>
                       {fmt$(row.cotes)}
                     </div>
-                    <div style={{ fontSize: 10, color: t.texteFaible }}>
+                    <div style={{ fontSize: 10, color: 'var(--text-faint)' }}>
                       / {fmt$(row.poolTotal)}
                     </div>
                   </div>
@@ -644,7 +612,6 @@ export default function FinancesPage() {
         )}
 
       </main>
-
     </AppShell>
   )
 }

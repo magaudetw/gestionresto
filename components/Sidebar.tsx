@@ -3,12 +3,12 @@ import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/lib/auth-context'
-import type { Theme } from '@/lib/themes'
-
 const SB_TEXT        = 'var(--sidebar-text)'
 const SB_TEXT_MUTED  = 'var(--sidebar-text-muted)'
 const SB_TEXT_FAINT  = 'var(--sidebar-text-faint)'
 const SB_BORDER      = 'var(--sidebar-border)'
+const SB_ACTIVE_BG   = 'var(--sidebar-active-bg)'
+const SB_ACTIVE_TEXT = 'var(--sidebar-active-text)'
 
 const NAV_GERANT = [
   { href: '/dashboard',     icon: '⬡', label: { fr: 'Tableau de bord', en: 'Dashboard'   }},
@@ -31,10 +31,10 @@ const NAV_EMPLOYE = [
 
 interface SidebarProps {
   profile: any
-  theme: Theme
+  theme?: any
 }
 
-export default function Sidebar({ profile, theme: t }: SidebarProps) {
+export default function Sidebar({ profile }: SidebarProps) {
   const pathname  = usePathname()
   const router    = useRouter()
   const roles: string[] = Array.isArray(profile?.roles) ? profile.roles : []
@@ -151,7 +151,7 @@ export default function Sidebar({ profile, theme: t }: SidebarProps) {
             <button
               key={item.href}
               onClick={() => router.push(item.href)}
-              className={active ? 'nav-item-active' : undefined}
+              className={active ? 'nav-item nav-item-active' : 'nav-item'}
               title={collapsed ? item.label[lang] : undefined}
               style={{
                 display: 'flex', alignItems: 'center',
@@ -159,14 +159,14 @@ export default function Sidebar({ profile, theme: t }: SidebarProps) {
                 gap: collapsed ? 0 : 10,
                 padding: collapsed ? '10px 8px' : '9px 12px',
                 borderRadius: 'var(--radius-sm)',
-                background: active ? `${t.accent}28` : 'transparent',
+                background: active ? SB_ACTIVE_BG : 'transparent',
                 border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left',
                 position: 'relative', transition: 'background var(--transition)',
               }}
             >
               <span style={{
                 fontSize: 16, lineHeight: 1, flexShrink: 0, position: 'relative',
-                color: active ? t.accentClair : SB_TEXT_MUTED,
+                color: active ? SB_ACTIVE_TEXT : SB_TEXT_MUTED,
                 transition: 'color var(--transition)',
               }}>
                 {item.icon}
@@ -225,9 +225,9 @@ export default function Sidebar({ profile, theme: t }: SidebarProps) {
               title={profile?.nom || ''}
               style={{
                 width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-                background: `${t.accent}30`, border: `1px solid ${t.accent}55`,
+                background: SB_ACTIVE_BG, border: `1px solid ${SB_BORDER}`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 13, color: t.accentClair, fontWeight: 600,
+                fontSize: 13, color: SB_ACTIVE_TEXT, fontWeight: 600,
               }}
             >
               {(profile?.nom || '?')[0].toUpperCase()}
@@ -242,9 +242,9 @@ export default function Sidebar({ profile, theme: t }: SidebarProps) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <div style={{
               width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-              background: `${t.accent}30`, border: `1px solid ${t.accent}55`,
+              background: SB_ACTIVE_BG, border: `1px solid ${SB_BORDER}`,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 13, color: t.accentClair, fontWeight: 600,
+              fontSize: 13, color: SB_ACTIVE_TEXT, fontWeight: 600,
             }}>
               {(profile?.nom || '?')[0].toUpperCase()}
             </div>
