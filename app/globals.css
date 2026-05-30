@@ -31,7 +31,27 @@
   --info:     #3B82F6;
 
   /* ── Font size ───────────────────────────────────────────────────────────── */
-  --font-size-base: 14px;
+  --font-size-base: 15px;
+
+  /* Type scale — all --fz-* values scale with --font-size-base */
+  --fz-7:  calc(var(--font-size-base) * 0.467);
+  --fz-8:  calc(var(--font-size-base) * 0.533);
+  --fz-9:  calc(var(--font-size-base) * 0.600);
+  --fz-10: calc(var(--font-size-base) * 0.667);
+  --fz-11: calc(var(--font-size-base) * 0.733);
+  --fz-12: calc(var(--font-size-base) * 0.800);
+  --fz-13: calc(var(--font-size-base) * 0.867);
+  --fz-14: calc(var(--font-size-base) * 0.933);
+  --fz-15: var(--font-size-base);
+  --fz-16: calc(var(--font-size-base) * 1.067);
+  --fz-18: calc(var(--font-size-base) * 1.200);
+  --fz-20: calc(var(--font-size-base) * 1.333);
+  --fz-22: calc(var(--font-size-base) * 1.467);
+  --fz-24: calc(var(--font-size-base) * 1.600);
+  --fz-28: calc(var(--font-size-base) * 1.867);
+  --fz-32: calc(var(--font-size-base) * 2.133);
+  --fz-34: calc(var(--font-size-base) * 2.267);
+  --fz-38: calc(var(--font-size-base) * 2.533);
 
   /* ── Lumière defaults ────────────────────────────────────────────────────── */
   --bg:                  #F8F9FA;

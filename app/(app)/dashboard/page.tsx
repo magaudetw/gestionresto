@@ -98,7 +98,7 @@ export default function DashboardPage() {
 
   if (loading) return (
     <div style={{ minHeight: '100vh', background: '#F8F9FA', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ color: '#9CA3AF', fontSize: 12, letterSpacing: '0.2em' }}>CHARGEMENT…</div>
+      <div style={{ color: '#9CA3AF', fontSize: 'var(--fz-12)', letterSpacing: '0.2em' }}>CHARGEMENT…</div>
     </div>
   )
 
@@ -116,7 +116,6 @@ export default function DashboardPage() {
     return `${d.getDate()} ${MOIS[d.getMonth()]} ${d.getFullYear()}`
   }
 
-  // Shared card style
   const card = (extra?: object) => ({
     background: t.surface1,
     border: `1px solid ${t.border}`,
@@ -129,18 +128,17 @@ export default function DashboardPage() {
     <AppShell profile={profile} restaurant="Le Carré">
       <main className="page-content" style={{ paddingBottom: 88 }}>
 
-        {/* Content max-width wrapper */}
         <div style={{ maxWidth: 1100, margin: '0 auto', padding: '32px 24px 0' }}>
 
           {/* Welcome header */}
           <div style={{ marginBottom: 32 }}>
-            <p style={{ fontSize: 12, color: t.texteSecondaire, marginBottom: 6, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+            <p style={{ fontSize: 'var(--fz-12)', color: t.texteSecondaire, marginBottom: 6, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
               {lang === 'fr' ? 'Bon retour' : 'Welcome back'}
             </p>
-            <h1 className="font-title" style={{ fontSize: 38, fontWeight: 300, marginBottom: 4, color: t.texte, letterSpacing: '0.01em' }}>
+            <h1 className="font-title" style={{ fontSize: 'var(--fz-38)', fontWeight: 300, marginBottom: 4, color: t.texte, letterSpacing: '0.01em' }}>
               {prenom}
             </h1>
-            <div style={{ fontSize: 13, color: t.texteFaible }}>{todayLabel}</div>
+            <div style={{ fontSize: 'var(--fz-13)', color: t.texteFaible }}>{todayLabel}</div>
           </div>
 
           {/* ─── MANAGER VIEW ─── */}
@@ -152,13 +150,13 @@ export default function DashboardPage() {
                 {/* Today's schedule card */}
                 <div style={{ ...card(), padding: '20px 22px', marginBottom: 16 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                    <span style={{ fontSize: 18 }}>📅</span>
-                    <span style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: t.accent, fontWeight: 600 }}>
+                    <span style={{ fontSize: 'var(--fz-18)' }}>📅</span>
+                    <span style={{ fontSize: 'var(--fz-11)', letterSpacing: '0.1em', textTransform: 'uppercase', color: t.accent, fontWeight: 600 }}>
                       {lang === 'fr' ? "Aujourd'hui" : 'Today'}
                     </span>
                   </div>
                   {todayShifts.length === 0 ? (
-                    <div style={{ fontSize: 13, color: t.texteFaible, fontStyle: 'italic' }}>
+                    <div style={{ fontSize: 'var(--fz-13)', color: t.texteFaible, fontStyle: 'italic' }}>
                       {lang === 'fr' ? 'Aucun shift prévu' : 'No shifts scheduled'}
                     </div>
                   ) : (
@@ -167,11 +165,11 @@ export default function DashboardPage() {
                         const st = s.shift_types
                         const couleur = st?.couleur || t.accent
                         return (
-                          <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', background: t.surface2, borderRadius: 8 }}>
+                          <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', background: t.surface2, borderRadius: 8, minHeight: 44 }}>
                             <div style={{ width: 3, height: 28, borderRadius: 2, background: couleur, flexShrink: 0 }} />
-                            <span style={{ fontSize: 13, color: t.texte, fontWeight: 500, flex: 1 }}>{(s as any).profiles?.nom || '—'}</span>
-                            <span style={{ fontSize: 11, color: t.texteSecondaire }}>{st?.nom}</span>
-                            <span style={{ fontSize: 11, color: t.texteFaible, fontFamily: "'Courier New', monospace" }}>{st?.debut}–{st?.fin}</span>
+                            <span style={{ fontSize: 'var(--fz-13)', color: t.texte, fontWeight: 500, flex: 1 }}>{(s as any).profiles?.nom || '—'}</span>
+                            <span style={{ fontSize: 'var(--fz-11)', color: t.texteSecondaire }}>{st?.nom}</span>
+                            <span style={{ fontSize: 'var(--fz-11)', color: t.texteFaible, fontFamily: "'Courier New', monospace" }}>{st?.debut}–{st?.fin}</span>
                           </div>
                         )
                       })}
@@ -185,19 +183,19 @@ export default function DashboardPage() {
                   {/* Échanges */}
                   <button onClick={() => router.push('/horaire')} style={{
                     ...card(),
-                    padding: '18px 20px', cursor: 'pointer', textAlign: 'left', fontFamily: font,
+                    padding: '20px 20px 18px', cursor: 'pointer', textAlign: 'left', fontFamily: font,
                     borderTop: `3px solid ${pendingEchanges > 0 ? '#F59E0B' : t.border}`,
-                    transition: 'box-shadow 0.15s',
+                    transition: 'box-shadow 0.15s', minHeight: 112,
                   }}>
-                    <div style={{ fontSize: 22, marginBottom: 8 }}>🔄</div>
-                    <div style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 4 }}>
+                    <div style={{ fontSize: 'var(--fz-22)', marginBottom: 10 }}>🔄</div>
+                    <div style={{ fontSize: 'var(--fz-10)', letterSpacing: '0.08em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 6 }}>
                       {lang === 'fr' ? 'Échanges' : 'Swaps'}
                     </div>
-                    <div style={{ fontSize: 28, fontWeight: 300, color: pendingEchanges > 0 ? '#F59E0B' : t.texte, lineHeight: 1 }}>
+                    <div style={{ fontSize: 'var(--fz-28)', fontWeight: 300, color: pendingEchanges > 0 ? '#F59E0B' : t.texte, lineHeight: 1 }}>
                       {pendingEchanges}
                     </div>
                     {pendingEchanges > 0 && (
-                      <div style={{ fontSize: 10, color: '#F59E0B', marginTop: 4 }}>
+                      <div style={{ fontSize: 'var(--fz-10)', color: '#F59E0B', marginTop: 4 }}>
                         {lang === 'fr' ? 'en attente' : 'pending'}
                       </div>
                     )}
@@ -206,40 +204,40 @@ export default function DashboardPage() {
                   {/* Employés actifs */}
                   <button onClick={() => router.push('/equipe')} style={{
                     ...card(),
-                    padding: '18px 20px', cursor: 'pointer', textAlign: 'left', fontFamily: font,
-                    borderTop: `3px solid #10B981`,
+                    padding: '20px 20px 18px', cursor: 'pointer', textAlign: 'left', fontFamily: font,
+                    borderTop: `3px solid #10B981`, minHeight: 112,
                   }}>
-                    <div style={{ fontSize: 22, marginBottom: 8 }}>👥</div>
-                    <div style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 4 }}>
+                    <div style={{ fontSize: 'var(--fz-22)', marginBottom: 10 }}>👥</div>
+                    <div style={{ fontSize: 'var(--fz-10)', letterSpacing: '0.08em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 6 }}>
                       {lang === 'fr' ? 'Employés actifs' : 'Active staff'}
                     </div>
-                    <div style={{ fontSize: 28, fontWeight: 300, color: '#10B981', lineHeight: 1 }}>{activeCount}</div>
+                    <div style={{ fontSize: 'var(--fz-28)', fontWeight: 300, color: '#10B981', lineHeight: 1 }}>{activeCount}</div>
                   </button>
 
                   {/* Heures semaine */}
                   <div style={{
                     ...card(),
-                    padding: '18px 20px',
-                    borderTop: `3px solid #3B82F6`,
+                    padding: '20px 20px 18px',
+                    borderTop: `3px solid #3B82F6`, minHeight: 112,
                   }}>
-                    <div style={{ fontSize: 22, marginBottom: 8 }}>⏱️</div>
-                    <div style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 4 }}>
+                    <div style={{ fontSize: 'var(--fz-22)', marginBottom: 10 }}>⏱️</div>
+                    <div style={{ fontSize: 'var(--fz-10)', letterSpacing: '0.08em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 6 }}>
                       {lang === 'fr' ? 'Heures semaine' : 'Week hours'}
                     </div>
-                    <div style={{ fontSize: 28, fontWeight: 300, color: '#3B82F6', lineHeight: 1 }}>{weekHeures}<span style={{ fontSize: 14 }}>h</span></div>
+                    <div style={{ fontSize: 'var(--fz-28)', fontWeight: 300, color: '#3B82F6', lineHeight: 1 }}>{weekHeures}<span style={{ fontSize: 'var(--fz-14)' }}>h</span></div>
                   </div>
 
                   {/* Dernier import */}
                   <button onClick={() => router.push('/import')} style={{
                     ...card(),
-                    padding: '18px 20px', cursor: 'pointer', textAlign: 'left', fontFamily: font,
-                    borderTop: `3px solid ${t.border}`,
+                    padding: '20px 20px 18px', cursor: 'pointer', textAlign: 'left', fontFamily: font,
+                    borderTop: `3px solid ${t.border}`, minHeight: 112,
                   }}>
-                    <div style={{ fontSize: 22, marginBottom: 8 }}>📂</div>
-                    <div style={{ fontSize: 10, letterSpacing: '0.08em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 4 }}>
+                    <div style={{ fontSize: 'var(--fz-22)', marginBottom: 10 }}>📂</div>
+                    <div style={{ fontSize: 'var(--fz-10)', letterSpacing: '0.08em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 6 }}>
                       {lang === 'fr' ? 'Dernier import' : 'Last import'}
                     </div>
-                    <div style={{ fontSize: 13, fontWeight: 400, color: lastImport ? t.texte : t.texteFaible, lineHeight: 1.4 }}>
+                    <div style={{ fontSize: 'var(--fz-13)', fontWeight: 400, color: lastImport ? t.texte : t.texteFaible, lineHeight: 1.4 }}>
                       {lastImport ? formatTime(lastImport) : (lang === 'fr' ? 'Jamais' : 'Never')}
                     </div>
                   </button>
@@ -254,14 +252,14 @@ export default function DashboardPage() {
                   display: 'flex', flexDirection: 'column', gap: 10,
                   borderTop: `3px solid ${unreadNotifs > 0 ? t.accent : t.border}`,
                 }}>
-                  <div style={{ fontSize: 24 }}>🔔</div>
-                  <div style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: unreadNotifs > 0 ? t.accent : t.texteSecondaire }}>
+                  <div style={{ fontSize: 'var(--fz-24)' }}>🔔</div>
+                  <div style={{ fontSize: 'var(--fz-10)', letterSpacing: '0.1em', textTransform: 'uppercase', color: unreadNotifs > 0 ? t.accent : t.texteSecondaire }}>
                     {lang === 'fr' ? 'Alertes' : 'Alerts'}
                   </div>
-                  <div style={{ fontSize: 34, fontWeight: 300, color: unreadNotifs > 0 ? t.accent : t.texte, lineHeight: 1 }}>
+                  <div style={{ fontSize: 'var(--fz-34)', fontWeight: 300, color: unreadNotifs > 0 ? t.accent : t.texte, lineHeight: 1 }}>
                     {unreadNotifs}
                   </div>
-                  <div style={{ fontSize: 11, color: t.texteSecondaire }}>
+                  <div style={{ fontSize: 'var(--fz-11)', color: t.texteSecondaire }}>
                     {unreadNotifs > 0 ? (lang === 'fr' ? 'non lues' : 'unread') : (lang === 'fr' ? 'Tout lu' : 'All read')}
                   </div>
                 </button>
@@ -272,11 +270,11 @@ export default function DashboardPage() {
                   display: 'flex', flexDirection: 'column', gap: 10,
                   borderTop: `3px solid #10B981`,
                 }}>
-                  <div style={{ fontSize: 24 }}>📋</div>
-                  <div style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: t.texteSecondaire }}>
+                  <div style={{ fontSize: 'var(--fz-24)' }}>📋</div>
+                  <div style={{ fontSize: 'var(--fz-10)', letterSpacing: '0.1em', textTransform: 'uppercase', color: t.texteSecondaire }}>
                     {lang === 'fr' ? 'Horaire' : 'Schedule'}
                   </div>
-                  <div style={{ fontSize: 12, color: t.texteSecondaire, lineHeight: 1.5 }}>
+                  <div style={{ fontSize: 'var(--fz-12)', color: t.texteSecondaire, lineHeight: 1.5 }}>
                     {lang === 'fr' ? 'Gérer les shifts de la semaine' : 'Manage this week\'s shifts'}
                   </div>
                 </button>
@@ -295,21 +293,21 @@ export default function DashboardPage() {
                 borderTop: `3px solid ${nextShift ? t.accent : t.border}`,
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                  <span style={{ fontSize: 18 }}>📅</span>
-                  <span style={{ fontSize: 11, color: t.accent, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
+                  <span style={{ fontSize: 'var(--fz-18)' }}>📅</span>
+                  <span style={{ fontSize: 'var(--fz-11)', color: t.accent, letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
                     {lang === 'fr' ? 'Mon prochain shift' : 'My next shift'}
                   </span>
                 </div>
                 {nextShift ? (
                   <>
-                    <div style={{ fontSize: 16, color: t.texte, marginBottom: 8, fontWeight: 500 }}>
+                    <div style={{ fontSize: 'var(--fz-16)', color: t.texte, marginBottom: 8, fontWeight: 500 }}>
                       {(() => {
                         const d = new Date(nextShift.date + 'T00:00:00')
                         return `${JOURS_FULL[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]}`
                       })()}
                     </div>
                     <span style={{
-                      display: 'inline-flex', padding: '4px 12px', borderRadius: 20, fontSize: 12,
+                      display: 'inline-flex', padding: '4px 12px', borderRadius: 20, fontSize: 'var(--fz-12)',
                       background: `${nextShift.shift_types?.couleur || t.accent}18`,
                       border: `1px solid ${nextShift.shift_types?.couleur || t.accent}44`,
                       color: nextShift.shift_types?.couleur || t.accent,
@@ -318,7 +316,7 @@ export default function DashboardPage() {
                     </span>
                   </>
                 ) : (
-                  <div style={{ fontSize: 13, color: t.texteFaible, fontStyle: 'italic' }}>
+                  <div style={{ fontSize: 'var(--fz-13)', color: t.texteFaible, fontStyle: 'italic' }}>
                     {lang === 'fr' ? 'Aucun shift prévu' : 'No upcoming shifts'}
                   </div>
                 )}
@@ -331,21 +329,21 @@ export default function DashboardPage() {
                 borderTop: `3px solid #10B981`,
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                  <span style={{ fontSize: 18 }}>💰</span>
+                  <span style={{ fontSize: 'var(--fz-18)' }}>💰</span>
                   <div>
-                    <div style={{ fontSize: 11, color: '#10B981', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
+                    <div style={{ fontSize: 'var(--fz-11)', color: '#10B981', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
                       {lang === 'fr' ? 'Paie estimée cette semaine' : 'Estimated pay this week'}
                     </div>
                   </div>
-                  <span style={{ marginLeft: 'auto', fontSize: 9, color: t.texteFaible, border: `1px solid ${t.border}`, borderRadius: 4, padding: '2px 6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                  <span style={{ marginLeft: 'auto', fontSize: 'var(--fz-9)', color: t.texteFaible, border: `1px solid ${t.border}`, borderRadius: 4, padding: '2px 6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                     {lang === 'fr' ? 'Estimation' : 'Estimate'}
                   </span>
                 </div>
-                <div style={{ fontSize: 32, fontWeight: 300, color: '#10B981', fontFamily: "'Courier New', monospace", lineHeight: 1 }}>
+                <div style={{ fontSize: 'var(--fz-32)', fontWeight: 300, color: '#10B981', fontFamily: "'Courier New', monospace", lineHeight: 1 }}>
                   ${(estimatedPay?.total || 0).toFixed(2)}
                 </div>
                 {(estimatedPay?.salaire ?? 0) === 0 && (
-                  <div style={{ fontSize: 11, color: t.texteFaible, marginTop: 8, fontStyle: 'italic' }}>
+                  <div style={{ fontSize: 'var(--fz-11)', color: t.texteFaible, marginTop: 8, fontStyle: 'italic' }}>
                     {lang === 'fr' ? 'En attente des heures importées' : 'Awaiting imported hours'}
                   </div>
                 )}
@@ -360,14 +358,14 @@ export default function DashboardPage() {
                 borderTop: `3px solid ${unreadNotifs > 0 ? t.accent : t.border}`,
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 20 }}>🔔</span>
+                  <span style={{ fontSize: 'var(--fz-20)' }}>🔔</span>
                   <div>
-                    <div style={{ fontSize: 13, color: t.texte, fontWeight: 500 }}>
+                    <div style={{ fontSize: 'var(--fz-13)', color: t.texte, fontWeight: 500 }}>
                       {unreadNotifs > 0
                         ? (lang === 'fr' ? `${unreadNotifs} notification${unreadNotifs > 1 ? 's' : ''} non lue${unreadNotifs > 1 ? 's' : ''}` : `${unreadNotifs} unread`)
                         : (lang === 'fr' ? 'Aucune nouvelle' : 'All caught up')}
                     </div>
-                    <div style={{ fontSize: 11, color: t.texteFaible }}>
+                    <div style={{ fontSize: 'var(--fz-11)', color: t.texteFaible }}>
                       {lang === 'fr' ? 'Alertes' : 'Notifications'}
                     </div>
                   </div>
@@ -376,7 +374,7 @@ export default function DashboardPage() {
                   <div style={{
                     background: t.accent, color: '#fff',
                     borderRadius: 20, minWidth: 26, height: 26, display: 'flex',
-                    alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600,
+                    alignItems: 'center', justifyContent: 'center', fontSize: 'var(--fz-13)', fontWeight: 600,
                   }}>
                     {unreadNotifs}
                   </div>

@@ -126,7 +126,7 @@ export function themeSlug(name: string): string {
 }
 
 export const FONT_SIZES: Record<string, string> = {
-  sm: '12px', md: '14px', lg: '16px', xl: '18px',
+  sm: '13px', md: '15px', lg: '17px', xl: '19px',
 }
 
 export function applyThemeToDocument(
