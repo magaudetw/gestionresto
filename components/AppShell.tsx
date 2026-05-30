@@ -2,7 +2,6 @@
 import Header from './Header'
 import Navigation from './Navigation'
 import Sidebar from './Sidebar'
-import { getTheme } from '@/lib/themes'
 import { useAuth } from '@/lib/auth-context'
 
 interface AppShellProps {
@@ -12,7 +11,6 @@ interface AppShellProps {
 }
 
 export default function AppShell({ profile, children }: AppShellProps) {
-  const t = getTheme(profile?.theme)
   const role = profile?.roles?.[0] || 'employe'
   const lang = (profile?.lang || 'fr') as 'fr' | 'en'
   const font = profile?.font_family || 'var(--font-body)'
@@ -28,7 +26,7 @@ export default function AppShell({ profile, children }: AppShellProps) {
 
       {/* Desktop sidebar — hidden on mobile */}
       <div className="hidden md:block">
-        <Sidebar profile={{ ...profile, restaurant_name: restaurantName }} theme={t} />
+        <Sidebar profile={{ ...profile, restaurant_name: restaurantName }} />
       </div>
 
       {/* Content — margin tracks sidebar width via CSS var */}

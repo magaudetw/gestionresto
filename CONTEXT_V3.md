@@ -183,7 +183,7 @@ Ces variables sont définies par thème et changent automatiquement :
 
 ```css
 --nav-h: 64px          /* hauteur barre mobile */
---sidebar-w: 220px     /* largeur sidebar (desktop, ouverte) */
+--sidebar-w: 240px     /* largeur sidebar (desktop, ouverte) */
 --sidebar-collapsed-w: 52px
 ```
 
@@ -292,7 +292,7 @@ Voir `supabase/audit_v3.sql` pour le SQL complet (CREATE TABLE IF NOT EXISTS + c
 
 ## 5. Thèmes
 
-12 thèmes définis dans `lib/themes.ts` et dans `app/globals.css`.
+13 thèmes définis dans `lib/themes.ts` et dans `app/globals.css`.
 
 ### Thèmes clairs (4)
 
@@ -303,18 +303,19 @@ Voir `supabase/audit_v3.sql` pour le SQL complet (CREATE TABLE IF NOT EXISTS + c
 | Brume | #5B7FA6 (bleu ardoise) | #F0F4F8 |
 | Craie | #4A4A4A (gris charbon) | #F5F5F0 |
 
-### Thèmes sombres (8)
+### Thèmes sombres (9)
 
-| Nom | Accent | Fond |
-|---|---|---|
-| Or noir | #C9A84C (or) | #080808 |
-| Minuit | #58A6FF (bleu GitHub) | #0D1117 |
-| Bordeaux | #9B2335 (bordeaux) | #0F0A0A |
-| Forêt | #4A9B5F (vert) | #0A0F0A |
-| Ardoise | #6B8CAE (bleu ardoise) | #0F1115 |
-| Cuivre | #B87333 (cuivre) | #0F0C08 |
-| Améthyste | #8B5CF6 (violet) | #0D0A12 |
-| Océan | #0EA5E9 (cyan) | #080D12 |
+| Nom | Accent | Fond | Notes |
+|---|---|---|---|
+| Or noir | #C9A84C (or) | #080808 | |
+| Minuit | #58A6FF (bleu GitHub) | #0D1117 | |
+| Bordeaux | #9B2335 (bordeaux) | #0F0A0A | |
+| Forêt | #4A9B5F (vert) | #0A0F0A | |
+| Ardoise | #6B8CAE (bleu ardoise) | #0F1115 | |
+| Cuivre | #B87333 (cuivre) | #0F0C08 | |
+| Améthyste | #8B5CF6 (violet) | #0D0A12 | |
+| Océan | #0EA5E9 (cyan) | #080D12 | |
+| **Professionnel** | #5B8DEF (bleu modern) | #F7F8FA (clair) | Hybride : contenu clair + sidebar sombre #1B2340. Défaut nouveaux utilisateurs. |
 
 ### Application du thème
 

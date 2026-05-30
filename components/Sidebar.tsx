@@ -207,7 +207,7 @@ export default function Sidebar({ profile }: SidebarProps) {
         style={{
           padding: collapsed ? '8px' : '8px 18px',
           background: 'transparent', border: 'none',
-          borderTop: `1px solid ${SB_BORDER}22`,
+          borderTop: `1px solid ${SB_BORDER}`,
           cursor: 'pointer', color: SB_TEXT_FAINT, fontSize: 15, lineHeight: 1,
           display: 'flex', alignItems: 'center',
           justifyContent: collapsed ? 'center' : 'flex-end',

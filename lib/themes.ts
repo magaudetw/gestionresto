@@ -110,11 +110,11 @@ export const THEMES: Record<ThemeName, Theme> = {
     sidebarBg:'#0F1520', sidebarActiveText:'#38BDF8', isDark:true,
   },
   'Professionnel': {
-    fond:'#111827', surface1:'#1F2937', surface2:'#283144', surface3:'#374151',
+    fond:'#F7F8FA', surface1:'#FFFFFF', surface2:'#EFF2F7', surface3:'#E4E9F2',
     accent:'#5B8DEF', accentClair:'#7BAAF7', accentSombre:'#3B6DD8',
-    texte:'#F9FAFB', texteSecondaire:'rgba(249,250,251,0.60)', texteFaible:'rgba(249,250,251,0.22)',
-    border:'rgba(249,250,251,0.09)', borderAccent:'rgba(91,141,239,0.32)',
-    sidebarBg:'#1B2340', sidebarActiveText:'#7BAAF7', isDark:true,
+    texte:'#1A2540', texteSecondaire:'#4A5568', texteFaible:'#C8D0D8',
+    border:'#E2E8F0', borderAccent:'rgba(91,141,239,0.30)',
+    sidebarBg:'#1B2340', sidebarActiveText:'#7BAAF7', isDark:false,
   },
 }
 

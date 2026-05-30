@@ -72,6 +72,7 @@ export default function ReglagesPage() {
   const [saving, setSaving]       = useState(false)
   const [saved, setSaved]         = useState(false)
   const [saveError, setSaveError] = useState(false)
+  const [activeTab, setActiveTab] = useState<'compte' | 'apparence' | 'shifts' | 'couverture' | 'cotes' | 'roles'>('compte')
 
   const [selectedTheme, setSelectedTheme] = useState<ThemeName>('Lumière')
   const [selectedLang, setSelectedLang] = useState<'fr' | 'en'>('fr')
@@ -464,7 +465,7 @@ export default function ReglagesPage() {
     'Lumière': '#F8F9FA', 'Ivoire': '#FAF7F2', 'Brume': '#F0F4F8', 'Craie': '#F5F5F0',
     'Or noir': '#080808', 'Minuit': '#0D1117', 'Bordeaux': '#0F0A0A',
     'Forêt': '#0A0F0A', 'Ardoise': '#0F1115', 'Cuivre': '#0F0C08',
-    'Améthyste': '#0D0A12', 'Océan': '#080D12', 'Professionnel': '#111827',
+    'Améthyste': '#0D0A12', 'Océan': '#080D12', 'Professionnel': '#F7F8FA',
   }
 
   const btnCounter = {
@@ -476,10 +477,34 @@ export default function ReglagesPage() {
   return (
     <AppShell profile={profile} restaurant="Le Carré">
       <main style={{ padding: '16px', paddingBottom: 100 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 300, marginBottom: 24 }}>{T.reglages}</h1>
+        <h1 style={{ fontSize: 24, fontWeight: 300, marginBottom: 16 }}>{T.reglages}</h1>
+
+        {/* ── TABS ── */}
+        <div className="tabs" style={{ marginBottom: 24, overflowX: 'auto' }}>
+          <button className={`tab-btn${activeTab === 'compte' ? ' active' : ''}`} onClick={() => setActiveTab('compte')}>
+            {lang === 'fr' ? 'Compte' : 'Account'}
+          </button>
+          <button className={`tab-btn${activeTab === 'apparence' ? ' active' : ''}`} onClick={() => setActiveTab('apparence')}>
+            {lang === 'fr' ? 'Apparence' : 'Appearance'}
+          </button>
+          {isGerant && <>
+            <button className={`tab-btn${activeTab === 'shifts' ? ' active' : ''}`} onClick={() => setActiveTab('shifts')}>Shifts</button>
+            <button className={`tab-btn${activeTab === 'couverture' ? ' active' : ''}`} onClick={() => setActiveTab('couverture')}>
+              {lang === 'fr' ? 'Couverture' : 'Coverage'}
+            </button>
+            <button className={`tab-btn${activeTab === 'cotes' ? ' active' : ''}`} onClick={() => setActiveTab('cotes')}>
+              {lang === 'fr' ? 'Cotes' : 'Deductions'}
+            </button>
+          </>}
+          {isAdmin && (
+            <button className={`tab-btn${activeTab === 'roles' ? ' active' : ''}`} onClick={() => setActiveTab('roles')}>
+              {lang === 'fr' ? 'Rôles' : 'Roles'}
+            </button>
+          )}
+        </div>
 
         {/* ── COMPTE ── */}
-        <div style={{ marginBottom: 28 }}>
+        {activeTab === 'compte' && <div style={{ marginBottom: 28 }}>
           <div style={{ fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 12 }}>
             {T.compte}
           </div>
@@ -513,209 +538,222 @@ export default function ReglagesPage() {
               </div>
             )}
           </div>
-        </div>
-
-        {/* ── APPARENCE ── */}
-        <div style={{ marginBottom: 28 }}>
-          <div style={{ fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 12 }}>
-            {T.apparence}
-          </div>
-
-          <div style={{ background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 14, padding: '14px 16px', marginBottom: 10 }}>
-            <div style={{ fontSize: 12, color: t.texteSecondaire, marginBottom: 10 }}>{T.theme}</div>
-
-            {/* Thèmes clairs */}
-            <div style={{ fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.texteFaible, marginBottom: 6 }}>
-              {lang === 'fr' ? 'Clairs' : 'Light'}
+          {/* ── LANGUE ── */}
+          <div style={{ marginBottom: 28 }}>
+            <div style={{ fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 12 }}>
+              {T.langue}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 12 }}>
-              {LIGHT_THEMES.map(name => {
-                const isSelected = selectedTheme === name
-                return (
-                  <button key={name} onClick={() => setSelectedTheme(name)} title={name} style={{
-                    background: THEME_BKGS[name],
-                    border: `2px solid ${isSelected ? THEME_SWATCHES[name] : '#E0DDD8'}`,
-                    borderRadius: 10, height: 48, cursor: 'pointer',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
-                    position: 'relative', overflow: 'hidden',
-                  }}>
-                    <div style={{ width: 14, height: 14, borderRadius: '50%', background: THEME_SWATCHES[name] }} />
-                    <span style={{ fontSize: 8, color: '#374151', letterSpacing: '0.04em', maxWidth: 52, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center' }}>
-                      {name}
-                    </span>
-                    {isSelected && <div style={{ position: 'absolute', top: 3, right: 3, width: 7, height: 7, borderRadius: '50%', background: THEME_SWATCHES[name] }} />}
-                  </button>
-                )
-              })}
-            </div>
-
-            {/* Thèmes sombres */}
-            <div style={{ fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.texteFaible, marginBottom: 6 }}>
-              {lang === 'fr' ? 'Sombres' : 'Dark'}
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
-              {DARK_THEMES.map(name => {
-                const isSelected = selectedTheme === name
-                return (
-                  <button key={name} onClick={() => setSelectedTheme(name)} title={name} style={{
-                    background: THEME_BKGS[name],
-                    border: `2px solid ${isSelected ? THEME_SWATCHES[name] : 'transparent'}`,
-                    borderRadius: 10, height: 48, cursor: 'pointer',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
-                    position: 'relative', overflow: 'hidden',
-                  }}>
-                    <div style={{ width: 14, height: 14, borderRadius: '50%', background: THEME_SWATCHES[name] }} />
-                    <span style={{ fontSize: 8, color: THEME_SWATCHES[name], letterSpacing: '0.04em', maxWidth: 52, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center' }}>
-                      {name}
-                    </span>
-                    {isSelected && <div style={{ position: 'absolute', top: 3, right: 3, width: 7, height: 7, borderRadius: '50%', background: THEME_SWATCHES[name] }} />}
-                  </button>
-                )
-              })}
-            </div>
-
-            <div style={{ marginTop: 10, fontSize: 12, color: t.accent, textAlign: 'center', letterSpacing: '0.06em' }}>
-              {selectedTheme}
+            <div style={{ display: 'flex', background: t.surface1, borderRadius: 12, padding: 4, border: `1px solid ${t.border}` }}>
+              {(['fr', 'en'] as const).map(l => (
+                <button
+                  key={l}
+                  onClick={() => setSelectedLang(l)}
+                  style={{
+                    flex: 1, padding: '10px', borderRadius: 9, border: 'none', cursor: 'pointer',
+                    background: selectedLang === l ? t.accent : 'transparent',
+                    color: selectedLang === l ? (t.isDark ? '#080808' : '#fff') : t.texteSecondaire,
+                    fontSize: 13, letterSpacing: '0.06em', fontFamily: font, fontWeight: selectedLang === l ? 600 : 400,
+                  }}
+                >
+                  {l === 'fr' ? '🇫🇷  Français' : '🇬🇧  English'}
+                </button>
+              ))}
             </div>
           </div>
 
-          <div style={{ background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 14, padding: '14px 16px' }}>
-            <div style={{ fontSize: 12, color: t.texteSecondaire, marginBottom: 12 }}>{T.police}</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {FONTS.map(f => {
-                const isSelected = selectedFont === f.value
-                return (
-                  <button
-                    key={f.label}
-                    onClick={() => setSelectedFont(f.value)}
-                    style={{
-                      background: isSelected ? `${t.accent}18` : t.surface2,
-                      border: `1px solid ${isSelected ? t.borderAccent : t.border}`,
-                      borderRadius: 10, padding: '10px 14px',
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      cursor: 'pointer', fontFamily: font,
-                    }}
-                  >
-                    <span style={{ fontSize: 14, color: t.texte, fontFamily: f.value }}>{f.label}</span>
-                    <span style={{ fontSize: 12, color: t.texteSecondaire, fontFamily: f.value, fontStyle: 'italic' }}>Aa Bb Cc</span>
-                  </button>
-                )
-              })}
+          {/* ── SÉCURITÉ ── */}
+          <div style={{ marginBottom: 32 }}>
+            <div style={{ fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 12 }}>
+              {T.securite}
             </div>
+            <button
+              onClick={async () => {
+                const { data: { user } } = await supabase.auth.getUser()
+                if (!user?.email) return
+                await supabase.auth.resetPasswordForEmail(user.email)
+                alert(lang === 'fr' ? 'Email envoyé !' : 'Email sent!')
+              }}
+              style={{
+                width: '100%', background: t.surface1, border: `1px solid ${t.border}`,
+                color: t.texte, borderRadius: 12, padding: '13px 16px',
+                cursor: 'pointer', fontSize: 13, textAlign: 'left', fontFamily: font,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              }}
+            >
+              <span>{T.motDePasse}</span>
+              <span style={{ color: t.texteSecondaire, fontSize: 16 }}>›</span>
+            </button>
           </div>
-        </div>
 
-        {/* ── TAILLE DE POLICE ── */}
-        <div style={{ marginBottom: 28 }}>
-          <div style={{ fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 12 }}>
-            {lang === 'fr' ? 'TAILLE DU TEXTE' : 'TEXT SIZE'}
-          </div>
-          <div style={{ display: 'flex', background: t.surface1, borderRadius: 12, padding: 4, border: `1px solid ${t.border}`, gap: 4, marginBottom: 10 }}>
-            {([
-              { key: 'sm', fr: 'Petit',  en: 'Small',  px: '12px' },
-              { key: 'md', fr: 'Normal', en: 'Normal', px: '14px' },
-              { key: 'lg', fr: 'Grand',  en: 'Large',  px: '16px' },
-              { key: 'xl', fr: 'XL',     en: 'XL',     px: '18px' },
-            ] as const).map(sz => (
-              <button
-                key={sz.key}
-                onClick={() => {
-                  setSelectedFontSize(sz.key)
-                  const px = FONT_SIZES[sz.key]
-                  document.documentElement.style.setProperty('--font-size-base', px)
-                  document.documentElement.style.fontSize = px
-                }}
-                style={{
-                  flex: 1, padding: '9px 4px', borderRadius: 9, border: 'none', cursor: 'pointer',
-                  background: selectedFontSize === sz.key ? t.accent : 'transparent',
-                  color: selectedFontSize === sz.key ? (t.isDark ? '#080808' : '#fff') : t.texteSecondaire,
-                  fontSize: sz.px, fontFamily: font, fontWeight: selectedFontSize === sz.key ? 600 : 400,
-                  transition: 'all 0.15s',
-                }}
-              >
-                {sz[lang]}
-              </button>
-            ))}
-          </div>
-          {/* Live preview */}
-          <div style={{ background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 10, padding: '12px 14px' }}>
-            <div style={{ fontSize: '1rem', color: t.texte, fontFamily: font, lineHeight: 1.5 }}>
-              {lang === 'fr' ? 'L\'aperçu du texte change en temps réel.' : 'Text preview updates in real time.'}
-            </div>
-            <div style={{ fontSize: '0.85rem', color: t.texteSecondaire, fontFamily: font, marginTop: 4 }}>
-              {lang === 'fr' ? 'Taille actuelle : ' : 'Current size: '}{FONT_SIZES[selectedFontSize]}
-            </div>
-          </div>
-        </div>
-
-        {/* ── LANGUE ── */}
-        <div style={{ marginBottom: 28 }}>
-          <div style={{ fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 12 }}>
-            {T.langue}
-          </div>
-          <div style={{ display: 'flex', background: t.surface1, borderRadius: 12, padding: 4, border: `1px solid ${t.border}` }}>
-            {(['fr', 'en'] as const).map(l => (
-              <button
-                key={l}
-                onClick={() => setSelectedLang(l)}
-                style={{
-                  flex: 1, padding: '10px', borderRadius: 9, border: 'none', cursor: 'pointer',
-                  background: selectedLang === l ? t.accent : 'transparent',
-                  color: selectedLang === l ? (t.isDark ? '#080808' : '#fff') : t.texteSecondaire,
-                  fontSize: 13, letterSpacing: '0.06em', fontFamily: font, fontWeight: selectedLang === l ? 600 : 400,
-                }}
-              >
-                {l === 'fr' ? '🇫🇷  Français' : '🇬🇧  English'}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* ── SÉCURITÉ ── */}
-        <div style={{ marginBottom: 32 }}>
-          <div style={{ fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 12 }}>
-            {T.securite}
-          </div>
           <button
-            onClick={async () => {
-              const { data: { user } } = await supabase.auth.getUser()
-              if (!user?.email) return
-              await supabase.auth.resetPasswordForEmail(user.email)
-              alert(lang === 'fr' ? 'Email envoyé !' : 'Email sent!')
-            }}
+            onClick={handleSave}
+            disabled={saving}
             style={{
-              width: '100%', background: t.surface1, border: `1px solid ${t.border}`,
-              color: t.texte, borderRadius: 12, padding: '13px 16px',
-              cursor: 'pointer', fontSize: 13, textAlign: 'left', fontFamily: font,
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              width: '100%', padding: '14px',
+              background: saveError ? 'var(--danger)' : saved ? 'var(--success)' : t.accent,
+              border: 'none', borderRadius: 12, cursor: saving ? 'wait' : 'pointer',
+              color: t.isDark ? '#080808' : '#fff',
+              fontSize: 14, letterSpacing: '0.08em', fontFamily: font, fontWeight: 600,
+              transition: 'background 0.3s', marginBottom: 36,
             }}
           >
-            <span>{T.motDePasse}</span>
-            <span style={{ color: t.texteSecondaire, fontSize: 16 }}>›</span>
+            {saveError ? T.erreurSauvegarde : saved ? T.sauvegarde : saving ? '...' : T.sauvegarder}
           </button>
-        </div>
+        </div>}
 
-        {/* Save personal settings */}
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          style={{
-            width: '100%', padding: '14px',
-            background: saveError ? '#E07070' : saved ? '#72BA80' : t.accent,
-            border: 'none', borderRadius: 12, cursor: saving ? 'wait' : 'pointer',
-            color: t.isDark ? '#080808' : '#fff',
-            fontSize: 14, letterSpacing: '0.08em', fontFamily: font, fontWeight: 600,
-            transition: 'background 0.3s', marginBottom: 36,
-          }}
-        >
-          {saveError ? T.erreurSauvegarde : saved ? T.sauvegarde : saving ? '...' : T.sauvegarder}
-        </button>
+        {/* ── APPARENCE ── */}
+        {activeTab === 'apparence' && <>
+          <div style={{ marginBottom: 28 }}>
+            <div style={{ fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 12 }}>
+              {T.apparence}
+            </div>
 
-        {/* ── GÉRANT SECTIONS ── */}
-        {isGerant && (
-          <>
-            {/* ── TYPES DE SHIFTS ── */}
-            <div style={{ marginBottom: 28 }}>
+            <div style={{ background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 14, padding: '14px 16px', marginBottom: 10 }}>
+              <div style={{ fontSize: 12, color: t.texteSecondaire, marginBottom: 10 }}>{T.theme}</div>
+
+              {/* Thèmes clairs */}
+              <div style={{ fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.texteFaible, marginBottom: 6 }}>
+                {lang === 'fr' ? 'Clairs' : 'Light'}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 12 }}>
+                {LIGHT_THEMES.map(name => {
+                  const isSelected = selectedTheme === name
+                  return (
+                    <button key={name} onClick={() => setSelectedTheme(name)} title={name} style={{
+                      background: THEME_BKGS[name],
+                      border: `2px solid ${isSelected ? THEME_SWATCHES[name] : '#E0DDD8'}`,
+                      borderRadius: 10, height: 48, cursor: 'pointer',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
+                      position: 'relative', overflow: 'hidden',
+                    }}>
+                      <div style={{ width: 14, height: 14, borderRadius: '50%', background: THEME_SWATCHES[name] }} />
+                      <span style={{ fontSize: 8, color: '#374151', letterSpacing: '0.04em', maxWidth: 52, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center' }}>
+                        {name}
+                      </span>
+                      {isSelected && <div style={{ position: 'absolute', top: 3, right: 3, width: 7, height: 7, borderRadius: '50%', background: THEME_SWATCHES[name] }} />}
+                    </button>
+                  )
+                })}
+              </div>
+
+              {/* Thèmes sombres */}
+              <div style={{ fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.texteFaible, marginBottom: 6 }}>
+                {lang === 'fr' ? 'Sombres' : 'Dark'}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+                {DARK_THEMES.map(name => {
+                  const isSelected = selectedTheme === name
+                  return (
+                    <button key={name} onClick={() => setSelectedTheme(name)} title={name} style={{
+                      background: THEME_BKGS[name],
+                      border: `2px solid ${isSelected ? THEME_SWATCHES[name] : 'transparent'}`,
+                      borderRadius: 10, height: 48, cursor: 'pointer',
+                      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 3,
+                      position: 'relative', overflow: 'hidden',
+                    }}>
+                      <div style={{ width: 14, height: 14, borderRadius: '50%', background: THEME_SWATCHES[name] }} />
+                      <span style={{ fontSize: 8, color: THEME_SWATCHES[name], letterSpacing: '0.04em', maxWidth: 52, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center' }}>
+                        {name}
+                      </span>
+                      {isSelected && <div style={{ position: 'absolute', top: 3, right: 3, width: 7, height: 7, borderRadius: '50%', background: THEME_SWATCHES[name] }} />}
+                    </button>
+                  )
+                })}
+              </div>
+
+              <div style={{ marginTop: 10, fontSize: 12, color: t.accent, textAlign: 'center', letterSpacing: '0.06em' }}>
+                {selectedTheme}
+              </div>
+            </div>
+
+            <div style={{ background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 14, padding: '14px 16px' }}>
+              <div style={{ fontSize: 12, color: t.texteSecondaire, marginBottom: 12 }}>{T.police}</div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                {FONTS.map(f => {
+                  const isSelected = selectedFont === f.value
+                  return (
+                    <button
+                      key={f.label}
+                      onClick={() => setSelectedFont(f.value)}
+                      style={{
+                        background: isSelected ? `${t.accent}18` : t.surface2,
+                        border: `1px solid ${isSelected ? t.borderAccent : t.border}`,
+                        borderRadius: 10, padding: '10px 14px',
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        cursor: 'pointer', fontFamily: font,
+                      }}
+                    >
+                      <span style={{ fontSize: 14, color: t.texte, fontFamily: f.value }}>{f.label}</span>
+                      <span style={{ fontSize: 12, color: t.texteSecondaire, fontFamily: f.value, fontStyle: 'italic' }}>Aa Bb Cc</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* ── TAILLE DE POLICE ── */}
+          <div style={{ marginBottom: 28 }}>
+            <div style={{ fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 12 }}>
+              {lang === 'fr' ? 'TAILLE DU TEXTE' : 'TEXT SIZE'}
+            </div>
+            <div style={{ display: 'flex', background: t.surface1, borderRadius: 12, padding: 4, border: `1px solid ${t.border}`, gap: 4, marginBottom: 10 }}>
+              {([
+                { key: 'sm', fr: 'Petit',  en: 'Small',  px: '12px' },
+                { key: 'md', fr: 'Normal', en: 'Normal', px: '14px' },
+                { key: 'lg', fr: 'Grand',  en: 'Large',  px: '16px' },
+                { key: 'xl', fr: 'XL',     en: 'XL',     px: '18px' },
+              ] as const).map(sz => (
+                <button
+                  key={sz.key}
+                  onClick={() => {
+                    setSelectedFontSize(sz.key)
+                    const px = FONT_SIZES[sz.key]
+                    document.documentElement.style.setProperty('--font-size-base', px)
+                    document.documentElement.style.fontSize = px
+                  }}
+                  style={{
+                    flex: 1, padding: '9px 4px', borderRadius: 9, border: 'none', cursor: 'pointer',
+                    background: selectedFontSize === sz.key ? t.accent : 'transparent',
+                    color: selectedFontSize === sz.key ? (t.isDark ? '#080808' : '#fff') : t.texteSecondaire,
+                    fontSize: sz.px, fontFamily: font, fontWeight: selectedFontSize === sz.key ? 600 : 400,
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {sz[lang]}
+                </button>
+              ))}
+            </div>
+            {/* Live preview */}
+            <div style={{ background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 10, padding: '12px 14px' }}>
+              <div style={{ fontSize: '1rem', color: t.texte, fontFamily: font, lineHeight: 1.5 }}>
+                {lang === 'fr' ? 'L\'aperçu du texte change en temps réel.' : 'Text preview updates in real time.'}
+              </div>
+              <div style={{ fontSize: '0.85rem', color: t.texteSecondaire, fontFamily: font, marginTop: 4 }}>
+                {lang === 'fr' ? 'Taille actuelle : ' : 'Current size: '}{FONT_SIZES[selectedFontSize]}
+              </div>
+            </div>
+          </div>
+
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            style={{
+              width: '100%', padding: '14px',
+              background: saveError ? 'var(--danger)' : saved ? 'var(--success)' : t.accent,
+              border: 'none', borderRadius: 12, cursor: saving ? 'wait' : 'pointer',
+              color: t.isDark ? '#080808' : '#fff',
+              fontSize: 14, letterSpacing: '0.08em', fontFamily: font, fontWeight: 600,
+              transition: 'background 0.3s', marginBottom: 36,
+            }}
+          >
+            {saveError ? T.erreurSauvegarde : saved ? T.sauvegarde : saving ? '...' : T.sauvegarder}
+          </button>
+        </>}
+
+        {/* ── SHIFTS TAB ── */}
+        {isGerant && activeTab === 'shifts' && (
+          <div style={{ marginBottom: 28 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                 <div style={{ fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: t.texteSecondaire }}>
                   {T.typesShifts}
@@ -762,10 +800,12 @@ export default function ReglagesPage() {
                   ))
                 )}
               </div>
-            </div>
+          </div>
+        )}
 
-            {/* ── COUVERTURE MINIMALE ── */}
-            <div style={{ marginBottom: 28 }}>
+        {/* ── COUVERTURE TAB ── */}
+        {isGerant && activeTab === 'couverture' && (
+          <div style={{ marginBottom: 28 }}>
               <div style={{ fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 12 }}>
                 {T.couvertureMin}
               </div>
@@ -837,8 +877,8 @@ export default function ReglagesPage() {
                 disabled={savingCouverture}
                 style={{
                   width: '100%', marginTop: 10, padding: '12px',
-                  background: savedCouverture ? '#72BA80' : t.surface1,
-                  border: `1px solid ${savedCouverture ? '#72BA80' : t.border}`,
+                  background: savedCouverture ? 'var(--success)' : t.surface1,
+                  border: `1px solid ${savedCouverture ? 'var(--success)' : t.border}`,
                   borderRadius: 12, cursor: savingCouverture ? 'wait' : 'pointer',
                   color: savedCouverture ? '#fff' : t.texte,
                   fontSize: 13, letterSpacing: '0.06em', fontFamily: font, fontWeight: 500,
@@ -847,10 +887,12 @@ export default function ReglagesPage() {
               >
                 {savedCouverture ? T.savedCouv : savingCouverture ? '...' : T.sauvegarderCouv}
               </button>
-            </div>
+          </div>
+        )}
 
-            {/* ── COTES ── */}
-            <div style={{ marginBottom: 28 }}>
+        {/* ── COTES TAB ── */}
+        {isGerant && activeTab === 'cotes' && (
+          <div style={{ marginBottom: 28 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                 <div style={{ fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: t.texteSecondaire }}>
                   {T.cotesSect}
@@ -905,11 +947,12 @@ export default function ReglagesPage() {
                   ))
                 )}
               </div>
-            </div>
+          </div>
+        )}
 
-            {/* ── ADMIN — TYPES DE RÔLES ── */}
-            {isAdmin && (
-              <div style={{ marginBottom: 28 }}>
+        {/* ── ROLES TAB ── */}
+        {isAdmin && activeTab === 'roles' && (
+          <div style={{ marginBottom: 28 }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: t.texteSecondaire }}>
@@ -981,9 +1024,7 @@ export default function ReglagesPage() {
                     ))
                   )}
                 </div>
-              </div>
-            )}
-          </>
+          </div>
         )}
       </main>
 

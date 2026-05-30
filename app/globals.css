@@ -587,29 +587,29 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   THÈME PROFESSIONNEL — Défaut pour les nouveaux utilisateurs
-   Sidebar navy #1B2340, fond #111827, accent bleu professionnel
+   THÈME PROFESSIONNEL — Hybrid : contenu clair + sidebar navy sombre
+   Fond #F7F8FA, surface blanche, sidebar #1B2340 — style Linear/Notion
    ═══════════════════════════════════════════════════════════════════════════ */
 
 [data-theme="professionnel"] {
-  --bg:                  #111827;
-  --surface1:            #1F2937;
-  --surface2:            #283144;
-  --surface3:            #374151;
-  --text:                #F9FAFB;
-  --text-secondary:      rgba(249,250,251,0.60);
-  --text-muted:          rgba(249,250,251,0.40);
-  --text-faint:          rgba(249,250,251,0.22);
-  --text-inverse:        #111827;
+  --bg:                  #F7F8FA;
+  --surface1:            #FFFFFF;
+  --surface2:            #EFF2F7;
+  --surface3:            #E4E9F2;
+  --text:                #1A2540;
+  --text-secondary:      #4A5568;
+  --text-muted:          #8896A8;
+  --text-faint:          #C8D0D8;
+  --text-inverse:        #FFFFFF;
   --accent:              #5B8DEF;
   --accent-light:        #7BAAF7;
   --accent-dark:         #3B6DD8;
-  --accent-hover:        #7BAAF7;
+  --accent-hover:        #3B6DD8;
   --accent-text:         #FFFFFF;
-  --accent-subtle:       rgba(91,141,239,0.14);
-  --border:              rgba(249,250,251,0.09);
-  --border-strong:       rgba(249,250,251,0.18);
-  --border-accent:       rgba(91,141,239,0.32);
+  --accent-subtle:       rgba(91,141,239,0.10);
+  --border:              #E2E8F0;
+  --border-strong:       #C8D4E0;
+  --border-accent:       rgba(91,141,239,0.30);
   --sidebar-bg:          #1B2340;
   --sidebar-text:        rgba(249,250,251,0.90);
   --sidebar-text-muted:  rgba(249,250,251,0.50);
@@ -618,15 +618,15 @@
   --sidebar-active-bg:   rgba(91,141,239,0.18);
   --sidebar-active-text: #7BAAF7;
   --sidebar-bg-hover:    rgba(91,141,239,0.10);
-  --shadow-card:         0 2px 16px rgba(0,0,0,0.4);
-  --danger:              #E07070;
-  --danger-subtle:       rgba(224,112,112,0.12);
-  --success:             #72BA80;
-  --success-subtle:      rgba(114,186,128,0.12);
-  --warning:             #E0A850;
-  --warning-subtle:      rgba(224,168,80,0.12);
-  --info:                #7EB8F7;
-  --info-subtle:         rgba(126,184,247,0.12);
+  --shadow-card:         0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.08);
+  --danger:              #EF4444;
+  --danger-subtle:       rgba(239,68,68,0.10);
+  --success:             #10B981;
+  --success-subtle:      rgba(16,185,129,0.10);
+  --warning:             #F59E0B;
+  --warning-subtle:      rgba(245,158,11,0.10);
+  --info:                #3B82F6;
+  --info-subtle:         rgba(59,130,246,0.10);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════

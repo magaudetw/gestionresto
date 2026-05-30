@@ -629,7 +629,7 @@ export default function HorairePage() {
                 {tab === 'horaire' ? (lang === 'fr' ? 'Horaire' : 'Schedule') : (lang === 'fr' ? 'Échanges' : 'Swaps')}
                 {badge > 0 && (
                   <span style={{
-                    background: '#E07070', color: '#fff', borderRadius: '50%',
+                    background: 'var(--danger)', color: '#fff', borderRadius: '50%',
                     minWidth: 16, height: 16, fontSize: 9, fontWeight: 700,
                     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px',
                   }}>
@@ -699,7 +699,7 @@ export default function HorairePage() {
                           <div key={dateStr} style={{ padding: '5px 2px', textAlign: 'center', borderLeft: '1px solid var(--border)' }}>
                             <div style={{ fontSize: 'var(--fz-9)', letterSpacing: '0.06em', textTransform: 'uppercase', color: isToday ? 'var(--accent)' : 'var(--text-secondary)' }}>{JOUR_SHORT[JOURS[di]][lang]}</div>
                             <div style={{ fontSize: 'var(--fz-9)', color: 'var(--text-faint)' }}>{day.getDate()}</div>
-                            {couverture.length > 0 && <div style={{ fontSize: 'var(--fz-8)', color: covOk ? '#72BA80' : '#E07070', marginTop: 1 }}>{covOk ? '✓' : '✗'}</div>}
+                            {couverture.length > 0 && <div style={{ fontSize: 'var(--fz-8)', color: covOk ? 'var(--success)' : 'var(--danger)', marginTop: 1 }}>{covOk ? '✓' : '✗'}</div>}
                           </div>
                         )
                       })}
@@ -752,8 +752,8 @@ export default function HorairePage() {
                           const cov = getCoverage(di)
                           return (
                             <div key={di} style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                              <div style={{ fontSize: 9, color: cov.midi.ok ? '#72BA80' : '#E07070', fontFamily: "'Courier New', monospace" }}>{cov.midi.need > 0 ? `${cov.midi.have}/${cov.midi.need}` : '–'}</div>
-                              <div style={{ fontSize: 9, color: cov.soir.ok ? '#72BA80' : '#E07070', fontFamily: "'Courier New', monospace" }}>
+                              <div style={{ fontSize: 9, color: cov.midi.ok ? 'var(--success)' : 'var(--danger)', fontFamily: "'Courier New', monospace" }}>{cov.midi.need > 0 ? `${cov.midi.have}/${cov.midi.need}` : '–'}</div>
+                              <div style={{ fontSize: 9, color: cov.soir.ok ? 'var(--success)' : 'var(--danger)', fontFamily: "'Courier New', monospace" }}>
                                 {cov.soir.need > 0 ? `${cov.soir.have}/${cov.soir.need}` : '–'}
                                 {!cov.soir.barOk && <span style={{ fontSize: 8 }}> 🍸</span>}
                               </div>
