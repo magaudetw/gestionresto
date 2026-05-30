@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   restaurant_ids  uuid[]    DEFAULT '{}',
   lang            text      DEFAULT 'fr',
   theme           text      DEFAULT 'Or noir',
-  font_family     text      DEFAULT 'var(--font-body)',
+  font_family     text      DEFAULT 'var(--font-dm-sans), DM Sans, sans-serif',
   font_size       text      DEFAULT 'md',
   actif           boolean   DEFAULT true,
   dispos_base     jsonb,
@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 );
 
 -- Colonnes manquantes sur profiles
-ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS font_family  text DEFAULT 'var(--font-body)';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS font_family  text DEFAULT 'var(--font-dm-sans), DM Sans, sans-serif';
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS font_size    text DEFAULT 'md';
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS dispos_base  jsonb;
 
