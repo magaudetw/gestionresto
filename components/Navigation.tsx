@@ -41,9 +41,11 @@ export default function Navigation({ role, lang }: { role: string; lang: string 
     <nav style={{
       position: 'fixed', bottom: 0, left: '50%', transform: 'translateX(-50%)',
       width: '100%', maxWidth: 480,
+      height: 'var(--nav-h)',
       background: 'var(--surface1)',
       borderTop: '1px solid var(--border)',
-      display: 'flex', alignItems: 'stretch', zIndex: 50,
+      display: 'flex', alignItems: 'stretch',
+      zIndex: 'var(--z-nav-mobile)' as any,
       paddingBottom: 'env(safe-area-inset-bottom, 0px)',
     }}>
       {nav.map(item => {
@@ -54,11 +56,11 @@ export default function Navigation({ role, lang }: { role: string; lang: string 
             style={{
               flex: 1, background: 'none', border: 'none', cursor: 'pointer',
               display: 'flex', flexDirection: 'column', alignItems: 'center',
-              justifyContent: 'center', gap: 3, padding: '10px 2px',
+              justifyContent: 'center', gap: 3, padding: '8px 2px',
               position: 'relative', transition: 'opacity var(--transition)',
             }}>
             <span style={{
-              fontSize: 17, lineHeight: 1, position: 'relative',
+              fontSize: 'var(--fz-lg)', lineHeight: 1, position: 'relative',
               color: active ? 'var(--accent)' : 'var(--text-faint)',
               transition: 'color var(--transition)',
             }}>
@@ -67,7 +69,7 @@ export default function Navigation({ role, lang }: { role: string; lang: string 
                 <span style={{
                   position: 'absolute', top: -4, right: -6,
                   background: 'var(--danger)', borderRadius: '50%',
-                  minWidth: 14, height: 14, fontSize: 8, fontWeight: 700,
+                  minWidth: 14, height: 14, fontSize: 'var(--fz-8)', fontWeight: 700,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
                   color: '#fff', padding: '0 3px', lineHeight: 1,
                 }}>
@@ -76,7 +78,7 @@ export default function Navigation({ role, lang }: { role: string; lang: string 
               )}
             </span>
             <span style={{
-              fontSize: 9, letterSpacing: '0.08em', textTransform: 'uppercase',
+              fontSize: 'var(--fz-9)', letterSpacing: '0.08em', textTransform: 'uppercase',
               fontFamily: 'var(--font-body)',
               color: active ? 'var(--accent)' : 'var(--text-faint)',
               transition: 'color var(--transition)',

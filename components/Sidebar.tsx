@@ -97,9 +97,9 @@ export default function Sidebar({ profile, theme: t }: SidebarProps) {
       }}>
         <div style={{
           width: 34, height: 34, borderRadius: 9, flexShrink: 0,
-          background: 'linear-gradient(135deg, #C9A84C, #E8C96A)',
+          background: 'linear-gradient(135deg, var(--accent), var(--accent-light))',
           display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17,
-          boxShadow: '0 0 24px rgba(201,168,76,0.20)',
+          boxShadow: 'var(--shadow-accent)',
         }}>🍽️</div>
         {!collapsed && (
           <div style={{ minWidth: 0, overflow: 'hidden' }}>
@@ -173,7 +173,7 @@ export default function Sidebar({ profile, theme: t }: SidebarProps) {
                 {badge > 0 && (
                   <span style={{
                     position: 'absolute', top: -3, right: -5,
-                    background: '#E07070', borderRadius: '50%',
+                    background: 'var(--danger)', borderRadius: '50%',
                     minWidth: 13, height: 13, fontSize: 7, fontWeight: 700,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     color: '#fff', padding: '0 2px', lineHeight: 1,
