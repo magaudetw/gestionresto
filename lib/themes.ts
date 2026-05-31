@@ -142,8 +142,8 @@ export function applyThemeToDocument(
   fontSize?: string | null,
 ) {
   if (typeof document === 'undefined') return
-  const t = getTheme(themeName)
-  const name = (themeName ?? 'Lumière') as ThemeName
+  const name = (themeName ?? 'Professionnel') as ThemeName
+  const t = getTheme(name)
   const slug = themeSlug(name)
   document.documentElement.setAttribute('data-theme', slug)
   document.documentElement.setAttribute('data-font', fontFamily ?? '')

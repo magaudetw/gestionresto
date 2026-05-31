@@ -50,7 +50,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(false)
 
     if (p) {
-      applyThemeToDocument(p.theme, p.font_family, p.font_size)
+      applyThemeToDocument(p.theme || 'Professionnel', p.font_family, p.font_size)
 
       // Fetch restaurant names (table may not exist yet — handle gracefully)
       const ids: string[] = Array.isArray(p.restaurant_ids) ? p.restaurant_ids : []

@@ -642,8 +642,8 @@ html {
 }
 
 body {
-  background:   var(--bg, #F8F9FA);
-  color:        var(--text, #111827);
+  background:   var(--bg, #F8F9FA) !important;
+  color:        var(--text, #111827) !important;
   font-family:  var(--font-body);
   font-size:    1rem;
   min-height:   100dvh;

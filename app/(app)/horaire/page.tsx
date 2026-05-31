@@ -709,7 +709,7 @@ export default function HorairePage() {
                       const rowBg = ei % 2 === 1 ? 'var(--surface2)' : 'var(--surface1)'
                       return (
                       <div key={emp.id} style={{ display: 'grid', gridTemplateColumns: '76px repeat(6, 1fr)', borderBottom: ei < employees.length - 1 ? '1px solid var(--border)' : 'none', background: rowBg }}>
-                        <div style={{ padding: '0 8px', fontSize: 'var(--fz-13)', fontWeight: 700, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', minHeight: 60, position: 'sticky', left: 0, background: rowBg, zIndex: 1 }}>
+                        <div style={{ padding: '0 8px', fontSize: 'var(--fz-sm)', fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', minHeight: 60, position: 'sticky', left: 0, background: rowBg, zIndex: 1 }}>
                           {emp.nom.split(' ')[0]}
                         </div>
                         {days.map((day, di) => {
