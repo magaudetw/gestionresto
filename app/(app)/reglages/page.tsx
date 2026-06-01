@@ -113,19 +113,8 @@ export default function ReglagesPage() {
   useEffect(() => {
     if (!isGerant || !restaurantId) return
     async function loadManagerData() {
-      const { data: shifts } = await supabase
-        .from('shift_types').select('*').eq('restaurant_id', restaurantId).order('debut')
-      setShiftTypes(shifts || [])
-
-      const { data: cov } = await supabase
-        .from('couverture_minimale').select('*').eq('restaurant_id', restaurantId)
-      const covMap: Record<string, number> = {}
-      for (const c of (cov || [])) {
-        if (c.role && c.service && c.jour) {
-          covMap[`${c.role}_${c.service}_${c.jour}`] = c.minimum ?? 0
-        }
-      }
-      setCouverture(covMap)
+      await loadShiftTypes()
+      await loadCouverture()
 
       const { data: cotesD } = await supabase
         .from('cotes').select('*').eq('restaurant_id', restaurantId).order('nom')
@@ -178,13 +167,14 @@ export default function ReglagesPage() {
   async function loadShiftTypes() {
     if (!restaurantId) return
     const { data: { session } } = await supabase.auth.getSession()
-    if (!session) return
+    if (!session?.access_token) { console.error('[loadShiftTypes] pas de session'); return }
     const res = await fetch(
       `/api/manage-shifts-config?restaurant_id=${restaurantId}`,
       { headers: { Authorization: `Bearer ${session.access_token}` } }
     )
     if (!res.ok) { console.error('[loadShiftTypes] error:', res.status); return }
     const json = await res.json()
+    console.log('[loadShiftTypes] résultat:', json)
     setShiftTypes(json.shifts || [])
   }
 
