@@ -470,15 +470,15 @@ export default function HorairePage() {
     const dayShifts = shiftsByDate[dateStr] || []
     const midiShifts = dayShifts.filter((s: any) => inferService(s.shift_types?.debut) === 'midi')
     const soirShifts = dayShifts.filter((s: any) => inferService(s.shift_types?.debut) === 'soir')
-    const covMidi = couverture.find((c: any) => c.jour === jourKey && c.service === 'midi')
-    const covSoir = couverture.find((c: any) => c.jour === jourKey && c.service === 'soir')
-    const needMidi = covMidi?.nb_personnes || 0
-    const needSoir = covSoir?.nb_personnes || 0
-    const barRequired = covSoir?.bar_requis || false
-    const hasBar = soirShifts.some((s: any) => employeeMap[s.user_id]?.roles?.includes('bar'))
+    const needMidi = couverture
+      .filter((c: any) => c.jour === jourKey && c.service === 'midi')
+      .reduce((s: number, c: any) => s + (c.minimum ?? 0), 0)
+    const needSoir = couverture
+      .filter((c: any) => c.jour === jourKey && c.service === 'soir')
+      .reduce((s: number, c: any) => s + (c.minimum ?? 0), 0)
     return {
       midi: { ok: needMidi === 0 || midiShifts.length >= needMidi, have: midiShifts.length, need: needMidi },
-      soir: { ok: (needSoir === 0 || soirShifts.length >= needSoir) && (!barRequired || hasBar), have: soirShifts.length, need: needSoir, barOk: !barRequired || hasBar },
+      soir: { ok: needSoir === 0 || soirShifts.length >= needSoir, have: soirShifts.length, need: needSoir },
     }
   }
 
@@ -492,8 +492,6 @@ export default function HorairePage() {
         alerts.push(lang === 'fr' ? `${js} Midi : ${cov.midi.have}/${cov.midi.need}` : `${js} Lunch: ${cov.midi.have}/${cov.midi.need}`)
       if (cov.soir.need > 0 && cov.soir.have < cov.soir.need)
         alerts.push(lang === 'fr' ? `${js} Soir : ${cov.soir.have}/${cov.soir.need}` : `${js} Evening: ${cov.soir.have}/${cov.soir.need}`)
-      if (!cov.soir.barOk)
-        alerts.push(lang === 'fr' ? `${js} Soir : aucun barman` : `${js} Evening: no bartender`)
     }
     shifts.forEach((s: any) => { empShiftCount[s.user_id] = (empShiftCount[s.user_id] || 0) + 1 })
     const withoutShift = employees.filter((e: any) => !empShiftCount[e.id])
@@ -758,7 +756,6 @@ export default function HorairePage() {
                               <div style={{ fontSize: 9, color: cov.midi.ok ? 'var(--success)' : 'var(--danger)', fontFamily: "'Courier New', monospace" }}>{cov.midi.need > 0 ? `${cov.midi.have}/${cov.midi.need}` : '–'}</div>
                               <div style={{ fontSize: 9, color: cov.soir.ok ? 'var(--success)' : 'var(--danger)', fontFamily: "'Courier New', monospace" }}>
                                 {cov.soir.need > 0 ? `${cov.soir.have}/${cov.soir.need}` : '–'}
-                                {!cov.soir.barOk && <span style={{ fontSize: 8 }}> 🍸</span>}
                               </div>
                             </div>
                           )
