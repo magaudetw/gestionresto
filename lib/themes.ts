@@ -11,6 +11,7 @@ export interface Theme {
   accent: string
   accentClair: string
   accentSombre: string
+  accentCoral?: string
   texte: string
   texteSecondaire: string
   texteFaible: string
@@ -19,6 +20,7 @@ export interface Theme {
   sidebarBg: string
   sidebarActiveText: string
   isDark: boolean
+  sidebarIsDark?: boolean
 }
 
 export const THEMES: Record<ThemeName, Theme> = {
@@ -110,11 +112,12 @@ export const THEMES: Record<ThemeName, Theme> = {
     sidebarBg:'#0F1520', sidebarActiveText:'#38BDF8', isDark:true,
   },
   'Professionnel': {
-    fond:'#F4F6F9', surface1:'#FFFFFF', surface2:'#EFF2F7', surface3:'#E4E9F2',
-    accent:'#5B8DEF', accentClair:'#7BAAF7', accentSombre:'#3B6DD8',
+    fond:'#F5F7FA', surface1:'#FFFFFF', surface2:'#EFF2F7', surface3:'#E4E9F2',
+    accent:'#0B6B73', accentClair:'#0E8A94', accentSombre:'#084F57',
+    accentCoral:'#E8855A',
     texte:'#1A2540', texteSecondaire:'#4A5568', texteFaible:'#C8D0D8',
-    border:'#E2E8F0', borderAccent:'rgba(91,141,239,0.30)',
-    sidebarBg:'#1B2340', sidebarActiveText:'#7BAAF7', isDark:false,
+    border:'#E2E8F0', borderAccent:'rgba(11,107,115,0.30)',
+    sidebarBg:'#0B3D42', sidebarActiveText:'#4DD9E8', isDark:false, sidebarIsDark:true,
   },
 }
 
@@ -167,10 +170,14 @@ export function applyThemeToDocument(
   root.style.setProperty('--border',           t.border)
   root.style.setProperty('--border-accent',    t.borderAccent)
   root.style.setProperty('--sidebar-bg',       t.sidebarBg)
-  root.style.setProperty('--sidebar-text',     t.isDark
+  root.style.setProperty('--sidebar-text',     (t.sidebarIsDark ?? t.isDark)
     ? 'rgba(255,255,255,0.70)'
     : 'rgba(0,0,0,0.60)')
   root.style.setProperty('--sidebar-text-active', t.sidebarActiveText)
+  root.style.setProperty('--accent-coral',     t.accentCoral ?? '#E8855A')
+  root.style.setProperty('--sidebar-active-bg','rgba(255,255,255,0.15)')
+  root.style.setProperty('--sidebar-hover-bg', 'rgba(255,255,255,0.08)')
+  root.style.setProperty('--sidebar-indicator','#4DD9E8')
 
   // États
   root.style.setProperty('--success',          '#10B981')
