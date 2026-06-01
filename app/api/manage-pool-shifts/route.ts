@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, updates })
   }
 
-  // ── Delete a brouillon pool shift ──────────────────────────────────────────
+  // ── Delete an ouvert pool shift ───────────────────────────────────────────
   if (action === 'delete') {
     const { pool_shift_id } = payload
     if (!pool_shift_id) return err('pool_shift_id required', 400)

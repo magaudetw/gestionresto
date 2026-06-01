@@ -259,7 +259,7 @@ export default function PourbioiresPage() {
       date: selDate,
       service: selService,
       pool_total: total,
-      statut: 'valide',
+      statut: 'calcule',
     }
     if (psId) {
       await supabase.from('pool_shifts').update(psPayload).eq('id', psId)
