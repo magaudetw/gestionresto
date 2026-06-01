@@ -155,18 +155,20 @@ export default function HorairePage() {
     setShifts(shiftsData || [])
 
     if (isManager && restaurantId) {
-      const [empsRes, stRes, disposRes, covRes] = await Promise.all([
+      const { data: { session } } = await supabase.auth.getSession()
+      const authHeader = session?.access_token ? `Bearer ${session.access_token}` : ''
+      const [empsRes, stJson, disposRes, covJson] = await Promise.all([
         supabase.from('profiles').select('id,nom,roles,taux_horaire,dispos_base')
           .contains('restaurant_ids', [restaurantId]).eq('actif', true).order('nom'),
-        supabase.from('shift_types').select('*').eq('restaurant_id', restaurantId),
+        fetch(`/api/manage-shifts-config?restaurant_id=${restaurantId}`, { headers: { Authorization: authHeader } }).then(r => r.json()),
         supabase.from('dispos_hebdo').select('*').eq('restaurant_id', restaurantId).eq('semaine_du', mondayISO),
-        supabase.from('couverture_minimale').select('*').eq('restaurant_id', restaurantId),
+        fetch(`/api/manage-couverture?restaurant_id=${restaurantId}`, { headers: { Authorization: authHeader } }).then(r => r.json()),
       ])
       const emps = empsRes.data || []
       setAllEmployees(emps)
-      setShiftTypes(stRes.data || [])
+      setShiftTypes(stJson.shifts || [])
       setDisposHebdo(disposRes.data || [])
-      setCouverture(covRes.data || [])
+      setCouverture(covJson.couverture || [])
       const map: Record<string, any> = {}
       emps.forEach((e: any) => { map[e.id] = e })
       setEmployeeMap(map)
