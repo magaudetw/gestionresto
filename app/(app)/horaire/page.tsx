@@ -27,11 +27,11 @@ const MOIS_FR = ['jan','fév','mar','avr','mai','juin','juil','août','sep','oct
 const MOIS_EN = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
 const STATUT_CFG: Record<string, { icon: string; color: string; fr: string; en: string }> = {
-  en_attente: { icon: '⏳', color: '#E0A850', fr: 'En attente',  en: 'Pending'  },
-  accepte:    { icon: '✓',  color: '#7EB8F7', fr: 'Accepté',    en: 'Accepted' },
-  refuse:     { icon: '✗',  color: '#E07070', fr: 'Refusé',     en: 'Declined' },
-  approuve:   { icon: '✓✓', color: '#72BA80', fr: 'Approuvé',   en: 'Approved' },
-  rejete:     { icon: '✗',  color: '#E07070', fr: 'Rejeté',     en: 'Rejected' },
+  en_attente: { icon: '⏳', color: 'var(--warning)', fr: 'En attente',  en: 'Pending'  },
+  accepte:    { icon: '✓',  color: 'var(--info)',    fr: 'Accepté',     en: 'Accepted' },
+  refuse:     { icon: '✗',  color: 'var(--danger)',  fr: 'Refusé',      en: 'Declined' },
+  approuve:   { icon: '✓✓', color: 'var(--success)', fr: 'Approuvé',   en: 'Approved' },
+  rejete:     { icon: '✗',  color: 'var(--danger)',  fr: 'Rejeté',      en: 'Rejected' },
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -460,9 +460,8 @@ export default function HorairePage() {
   function cellBg(empId: string, jourKey: Jour): string | undefined {
     const { source, available } = getEmpDispoInfo(empId, jourKey)
     if (source === 'unknown') return undefined
-    if (source === 'hebdo') return available ? 'rgba(114,186,128,0.10)' : 'rgba(224,112,112,0.10)'
-    // base fallback
-    return available ? 'rgba(224,168,80,0.10)' : 'rgba(224,112,112,0.06)'
+    if (source === 'hebdo') return available ? 'var(--success-subtle)' : 'var(--danger-subtle)'
+    return available ? 'var(--warning-subtle)' : 'color-mix(in srgb, var(--danger) 6%, transparent)'
   }
 
   function getCoverage(dayIdx: number) {
@@ -533,7 +532,7 @@ export default function HorairePage() {
 
     return (
       <div style={{
-        background: 'var(--surface1)', border: `1px solid ${e.statut === 'accepte' ? `${cfg.color}44` : 'var(--border)'}`,
+        background: 'var(--surface1)', border: `1px solid ${e.statut === 'accepte' ? 'color-mix(in srgb, var(--info) 35%, transparent)' : 'var(--border)'}`,
         borderRadius: 12, padding: '12px 14px', marginBottom: 8,
       }}>
         {/* Header */}
@@ -578,8 +577,10 @@ export default function HorairePage() {
         {/* Actions */}
         {canRespond && (
           <button onClick={() => { setRespondModal({ echange: e }); setRespondAccept(null); setRespondComment('') }} style={{
-            width: '100%', padding: '8px', background: `${cfg.color}18`, border: `1px solid ${cfg.color}44`,
-            borderRadius: 8, color: cfg.color, cursor: 'pointer', fontSize: 12, fontFamily: font,
+            width: '100%', padding: '8px',
+            background: 'var(--warning-subtle)',
+            border: 'color-mix(in srgb, var(--warning) 40%, transparent) 1px solid',
+            borderRadius: 8, color: 'var(--warning)', cursor: 'pointer', fontSize: 12, fontFamily: font,
           }}>
             {lang === 'fr' ? '↩ Répondre à cette demande' : '↩ Respond to this request'}
           </button>
@@ -594,8 +595,10 @@ export default function HorairePage() {
         )}
         {canApprove && (
           <button onClick={() => { setApproveModal({ echange: e }); setApproveReject(null); setApproveComment('') }} style={{
-            width: '100%', padding: '8px', background: `${cfg.color}18`, border: `1px solid ${cfg.color}55`,
-            borderRadius: 8, color: cfg.color, cursor: 'pointer', fontSize: 12, fontFamily: font, fontWeight: 600,
+            width: '100%', padding: '8px',
+            background: 'var(--info-subtle)',
+            border: '1px solid color-mix(in srgb, var(--info) 40%, transparent)',
+            borderRadius: 8, color: 'var(--info)', cursor: 'pointer', fontSize: 12, fontFamily: font, fontWeight: 600,
           }}>
             {lang === 'fr' ? '↩ Statuer sur cet échange' : '↩ Review this swap'}
           </button>
@@ -727,7 +730,7 @@ export default function HorairePage() {
                                 <div style={{ width: '100%', borderRadius: 5, padding: '4px 4px 4px 6px', background: `${st?.couleur || 'var(--accent)'}22`, borderLeft: `3px solid ${st?.couleur || 'var(--accent)'}`, position: 'relative', display: 'flex', flexDirection: 'column', gap: 2 }}>
                                   <div style={{ fontSize: 'var(--fz-10)', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>{(st?.nom || '?').split(' ')[0]}</div>
                                   {st?.debut && <div style={{ fontSize: 'var(--fz-9)', color: 'var(--text-faint)' }}>{st.debut.slice(0,5)}–{(st.fin || '').slice(0,5)}</div>}
-                                  {shift.statut === 'brouillon' && <div style={{ position: 'absolute', top: 2, right: 2, width: 5, height: 5, borderRadius: '50%', background: '#E0A850' }} />}
+                                  {shift.statut === 'brouillon' && <div style={{ position: 'absolute', top: 2, right: 2, width: 5, height: 5, borderRadius: '50%', background: 'var(--warning)' }} />}
                                 </div>
                               ) : (
                                 <span style={{ fontSize: 'var(--fz-16)', color: 'var(--text-faint)', opacity: 0.25 }}>+</span>
@@ -745,8 +748,8 @@ export default function HorairePage() {
                     <div style={{ background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 10px', marginBottom: 12 }}>
                       <div style={{ display: 'grid', gridTemplateColumns: '76px repeat(6, 1fr)' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, justifyContent: 'center' }}>
-                          <span style={{ fontSize: 8, color: '#F4A261', letterSpacing: '0.06em' }}>MIDI</span>
-                          <span style={{ fontSize: 8, color: '#7EB8F7', letterSpacing: '0.06em' }}>SOIR</span>
+                          <span style={{ fontSize: 8, color: 'var(--warning)', letterSpacing: '0.06em' }}>MIDI</span>
+                          <span style={{ fontSize: 8, color: 'var(--info)', letterSpacing: '0.06em' }}>SOIR</span>
                         </div>
                         {days.map((_, di) => {
                           const cov = getCoverage(di)
@@ -837,8 +840,8 @@ export default function HorairePage() {
                   {/* À approuver */}
                   {echanges.filter((e: any) => e.statut === 'accepte').length > 0 && (
                     <div style={{ marginBottom: 20 }}>
-                      <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#7EB8F7', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ background: '#7EB8F7', borderRadius: '50%', width: 6, height: 6, display: 'inline-block' }} />
+                      <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--info)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ background: 'var(--info)', borderRadius: '50%', width: 6, height: 6, display: 'inline-block' }} />
                         {lang === 'fr' ? 'À approuver' : 'Awaiting approval'} ({echanges.filter((e: any) => e.statut === 'accepte').length})
                       </div>
                       {echanges.filter((e: any) => e.statut === 'accepte').map((e: any) => (
@@ -850,7 +853,7 @@ export default function HorairePage() {
                   {/* En attente collègue */}
                   {echanges.filter((e: any) => e.statut === 'en_attente').length > 0 && (
                     <div style={{ marginBottom: 20 }}>
-                      <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#E0A850', marginBottom: 10 }}>
+                      <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--warning)', marginBottom: 10 }}>
                         ⏳ {lang === 'fr' ? 'En attente collègue' : 'Awaiting colleague'} ({echanges.filter((e: any) => e.statut === 'en_attente').length})
                       </div>
                       {echanges.filter((e: any) => e.statut === 'en_attente').map((e: any) => (
@@ -884,7 +887,7 @@ export default function HorairePage() {
                   {/* Action requise */}
                   {myPendingReceived.length > 0 && (
                     <div style={{ marginBottom: 20 }}>
-                      <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#E0A850', marginBottom: 10 }}>
+                      <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--warning)', marginBottom: 10 }}>
                         ⚡ {lang === 'fr' ? 'À répondre' : 'Action required'} ({myPendingReceived.length})
                       </div>
                       {myPendingReceived.map((e: any) => <EchangeCard key={e.id} e={e} />)}
@@ -894,7 +897,7 @@ export default function HorairePage() {
                   {/* Envoyés en attente */}
                   {myActiveSent.length > 0 && (
                     <div style={{ marginBottom: 20 }}>
-                      <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#E0A850', marginBottom: 10 }}>
+                      <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--warning)', marginBottom: 10 }}>
                         ⏳ {lang === 'fr' ? 'Demandes envoyées' : 'Sent requests'} ({myActiveSent.length})
                       </div>
                       {myActiveSent.map((e: any) => <EchangeCard key={e.id} e={e} />)}
@@ -904,7 +907,7 @@ export default function HorairePage() {
                   {/* En cours (accepté, attente gérant) */}
                   {myInProgress.length > 0 && (
                     <div style={{ marginBottom: 20 }}>
-                      <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: '#7EB8F7', marginBottom: 10 }}>
+                      <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--info)', marginBottom: 10 }}>
                         ✓ {lang === 'fr' ? 'En attente gérant' : 'Awaiting manager'} ({myInProgress.length})
                       </div>
                       {myInProgress.map((e: any) => <EchangeCard key={e.id} e={e} />)}
@@ -948,7 +951,7 @@ export default function HorairePage() {
                 <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{JOUR_LONG[cellModal.jourKey][lang]} · {cellModal.date}</div>
               </div>
               {cellModal.shiftId && (
-                <button onClick={() => deleteShift(cellModal.shiftId!)} disabled={saving} style={{ background: 'rgba(224,112,112,0.15)', border: '1px solid rgba(224,112,112,0.3)', borderRadius: 8, padding: '6px 12px', color: '#E07070', cursor: 'pointer', fontSize: 11, fontFamily: font }}>
+                <button onClick={() => deleteShift(cellModal.shiftId!)} disabled={saving} style={{ background: 'var(--danger-subtle)', border: '1px solid color-mix(in srgb, var(--danger) 35%, transparent)', borderRadius: 8, padding: '6px 12px', color: 'var(--danger)', cursor: 'pointer', fontSize: 11, fontFamily: font }}>
                   {lang === 'fr' ? 'Supprimer' : 'Delete'}
                 </button>
               )}
@@ -957,8 +960,8 @@ export default function HorairePage() {
               const { source, available } = getEmpDispoInfo(cellModal.empId, cellModal.jourKey)
               const note = lang === 'fr' ? ' (indicatif)' : ' (informational)'
               if (source === 'unknown') return <div style={{ fontSize: 10, color: 'var(--text-faint)', marginBottom: 10, fontStyle: 'italic' }}>· {lang === 'fr' ? 'Dispos non soumises cette semaine' : 'No availability form this week'}{note}</div>
-              if (source === 'base' && available) return <div style={{ fontSize: 10, color: '#E0A850', marginBottom: 10 }}>~ {lang === 'fr' ? 'Dispo habituelle — pas de fiche hebdo' : 'Usual availability — no weekly form'}{note}</div>
-              if (!available) return <div style={{ fontSize: 10, color: '#E07070', marginBottom: 10 }}>· {lang === 'fr' ? 'Non disponible selon ses dispos' : 'Marked unavailable'}{note}</div>
+              if (source === 'base' && available) return <div style={{ fontSize: 10, color: 'var(--warning)', marginBottom: 10 }}>~ {lang === 'fr' ? 'Dispo habituelle — pas de fiche hebdo' : 'Usual availability — no weekly form'}{note}</div>
+              if (!available) return <div style={{ fontSize: 10, color: 'var(--danger)', marginBottom: 10 }}>· {lang === 'fr' ? 'Non disponible selon ses dispos' : 'Marked unavailable'}{note}</div>
               return null
             })()}
             {shiftTypes.length === 0 && (
@@ -998,12 +1001,12 @@ export default function HorairePage() {
               <h3 style={{ fontSize: 16, fontWeight: 300, margin: '0 0 4px', color: 'var(--text)' }}>📢 {lang === 'fr' ? "Publier l'horaire" : 'Publish schedule'}</h3>
               <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16 }}>{weekLabel}</div>
               {alerts.length > 0 ? (
-                <div style={{ background: 'rgba(224,160,80,0.08)', border: '1px solid rgba(224,160,80,0.25)', borderRadius: 10, padding: '10px 12px', marginBottom: 16 }}>
-                  <div style={{ fontSize: 11, color: '#E0A850', marginBottom: 8 }}>⚠ {lang === 'fr' ? `${alerts.length} alerte(s)` : `${alerts.length} alert(s)`}</div>
-                  {alerts.map((a, i) => <div key={i} style={{ fontSize: 11, color: '#E0A850', paddingTop: i > 0 ? 5 : 0, marginTop: i > 0 ? 5 : 0, borderTop: i > 0 ? '1px solid rgba(224,160,80,0.15)' : 'none' }}>· {a}</div>)}
+                <div style={{ background: 'var(--warning-subtle)', border: '1px solid color-mix(in srgb, var(--warning) 35%, transparent)', borderRadius: 10, padding: '10px 12px', marginBottom: 16 }}>
+                  <div style={{ fontSize: 11, color: 'var(--warning)', marginBottom: 8 }}>⚠ {lang === 'fr' ? `${alerts.length} alerte(s)` : `${alerts.length} alert(s)`}</div>
+                  {alerts.map((a, i) => <div key={i} style={{ fontSize: 11, color: 'var(--warning)', paddingTop: i > 0 ? 5 : 0, marginTop: i > 0 ? 5 : 0, borderTop: i > 0 ? '1px solid color-mix(in srgb, var(--warning) 20%, transparent)' : 'none' }}>· {a}</div>)}
                 </div>
               ) : (
-                <div style={{ background: 'rgba(114,186,128,0.1)', border: '1px solid rgba(114,186,128,0.3)', borderRadius: 10, padding: '10px 12px', marginBottom: 16, fontSize: 12, color: '#72BA80' }}>✓ {lang === 'fr' ? 'Aucune alerte — horaire complet' : 'No alerts — schedule complete'}</div>
+                <div style={{ background: 'var(--success-subtle)', border: '1px solid color-mix(in srgb, var(--success) 35%, transparent)', borderRadius: 10, padding: '10px 12px', marginBottom: 16, fontSize: 12, color: 'var(--success)' }}>✓ {lang === 'fr' ? 'Aucune alerte — horaire complet' : 'No alerts — schedule complete'}</div>
               )}
               <div style={{ fontSize: 11, color: 'var(--text-faint)', marginBottom: 16 }}>{lang === 'fr' ? `${brouillonCount} shift(s) publiés, employés notifiés.` : `${brouillonCount} shift(s) published, employees notified.`}</div>
               <div style={{ display: 'flex', gap: 8 }}>
@@ -1107,10 +1110,10 @@ export default function HorairePage() {
 
             {/* Choice */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-              <button onClick={() => setRespondAccept(true)} style={{ flex: 1, padding: '12px', borderRadius: 10, cursor: 'pointer', fontFamily: font, fontSize: 13, background: respondAccept === true ? 'rgba(114,186,128,0.2)' : 'var(--surface2)', border: `1px solid ${respondAccept === true ? 'rgba(114,186,128,0.6)' : 'var(--border)'}`, color: respondAccept === true ? '#72BA80' : 'var(--text-secondary)' }}>
+              <button onClick={() => setRespondAccept(true)} style={{ flex: 1, padding: '12px', borderRadius: 10, cursor: 'pointer', fontFamily: font, fontSize: 13, background: respondAccept === true ? 'var(--success-subtle)' : 'var(--surface2)', border: `1px solid ${respondAccept === true ? 'color-mix(in srgb, var(--success) 50%, transparent)' : 'var(--border)'}`, color: respondAccept === true ? 'var(--success)' : 'var(--text-secondary)' }}>
                 ✓ {lang === 'fr' ? 'Accepter' : 'Accept'}
               </button>
-              <button onClick={() => setRespondAccept(false)} style={{ flex: 1, padding: '12px', borderRadius: 10, cursor: 'pointer', fontFamily: font, fontSize: 13, background: respondAccept === false ? 'rgba(224,112,112,0.2)' : 'var(--surface2)', border: `1px solid ${respondAccept === false ? 'rgba(224,112,112,0.6)' : 'var(--border)'}`, color: respondAccept === false ? '#E07070' : 'var(--text-secondary)' }}>
+              <button onClick={() => setRespondAccept(false)} style={{ flex: 1, padding: '12px', borderRadius: 10, cursor: 'pointer', fontFamily: font, fontSize: 13, background: respondAccept === false ? 'var(--danger-subtle)' : 'var(--surface2)', border: `1px solid ${respondAccept === false ? 'color-mix(in srgb, var(--danger) 50%, transparent)' : 'var(--border)'}`, color: respondAccept === false ? 'var(--danger)' : 'var(--text-secondary)' }}>
                 ✗ {lang === 'fr' ? 'Refuser' : 'Decline'}
               </button>
             </div>
@@ -1134,7 +1137,7 @@ export default function HorairePage() {
               <button
                 onClick={() => respondAccept !== null && respondExchange(respondAccept)}
                 disabled={saving || respondAccept === null}
-                style={{ flex: 2, padding: '12px', background: respondAccept === false ? '#E07070' : respondAccept === true ? '#72BA80' : 'var(--accent)', border: 'none', borderRadius: 10, color: '#fff', cursor: respondAccept === null ? 'default' : 'pointer', fontSize: 13, fontFamily: font, fontWeight: 600, opacity: respondAccept === null ? 0.4 : 1 }}>
+                style={{ flex: 2, padding: '12px', background: respondAccept === false ? 'var(--danger)' : respondAccept === true ? 'var(--success)' : 'var(--accent)', border: 'none', borderRadius: 10, color: '#fff', cursor: respondAccept === null ? 'default' : 'pointer', fontSize: 13, fontFamily: font, fontWeight: 600, opacity: respondAccept === null ? 0.4 : 1 }}>
                 {saving ? '...' : respondAccept === false ? (lang === 'fr' ? 'Confirmer le refus' : 'Confirm decline') : respondAccept === true ? (lang === 'fr' ? 'Confirmer l\'acceptation' : 'Confirm acceptance') : (lang === 'fr' ? 'Choisir' : 'Choose')}
               </button>
             </div>
@@ -1180,7 +1183,7 @@ export default function HorairePage() {
             {(() => {
               const check = checkExchangeCoverage(approveModal.echange)
               return (
-                <div style={{ background: check === 'ok' ? 'rgba(114,186,128,0.1)' : 'rgba(224,160,80,0.1)', border: `1px solid ${check === 'ok' ? 'rgba(114,186,128,0.3)' : 'rgba(224,160,80,0.3)'}`, borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 11, color: check === 'ok' ? '#72BA80' : '#E0A850' }}>
+                <div style={{ background: check === 'ok' ? 'var(--success-subtle)' : 'var(--warning-subtle)', border: `1px solid ${check === 'ok' ? 'color-mix(in srgb, var(--success) 35%, transparent)' : 'color-mix(in srgb, var(--warning) 35%, transparent)'}`, borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 11, color: check === 'ok' ? 'var(--success)' : 'var(--warning)' }}>
                   {check === 'ok'
                     ? (lang === 'fr' ? '✓ Couverture des rôles compatible' : '✓ Role coverage compatible')
                     : (lang === 'fr' ? '⚠ Rôles différents — vérifier la couverture' : '⚠ Different roles — verify coverage')}
@@ -1190,10 +1193,10 @@ export default function HorairePage() {
 
             {/* Choice */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-              <button onClick={() => setApproveReject(false)} style={{ flex: 1, padding: '12px', borderRadius: 10, cursor: 'pointer', fontFamily: font, fontSize: 13, background: approveReject === false ? 'rgba(114,186,128,0.2)' : 'var(--surface2)', border: `1px solid ${approveReject === false ? 'rgba(114,186,128,0.6)' : 'var(--border)'}`, color: approveReject === false ? '#72BA80' : 'var(--text-secondary)' }}>
+              <button onClick={() => setApproveReject(false)} style={{ flex: 1, padding: '12px', borderRadius: 10, cursor: 'pointer', fontFamily: font, fontSize: 13, background: approveReject === false ? 'var(--success-subtle)' : 'var(--surface2)', border: `1px solid ${approveReject === false ? 'color-mix(in srgb, var(--success) 50%, transparent)' : 'var(--border)'}`, color: approveReject === false ? 'var(--success)' : 'var(--text-secondary)' }}>
                 ✓ {lang === 'fr' ? 'Approuver' : 'Approve'}
               </button>
-              <button onClick={() => setApproveReject(true)} style={{ flex: 1, padding: '12px', borderRadius: 10, cursor: 'pointer', fontFamily: font, fontSize: 13, background: approveReject === true ? 'rgba(224,112,112,0.2)' : 'var(--surface2)', border: `1px solid ${approveReject === true ? 'rgba(224,112,112,0.6)' : 'var(--border)'}`, color: approveReject === true ? '#E07070' : 'var(--text-secondary)' }}>
+              <button onClick={() => setApproveReject(true)} style={{ flex: 1, padding: '12px', borderRadius: 10, cursor: 'pointer', fontFamily: font, fontSize: 13, background: approveReject === true ? 'var(--danger-subtle)' : 'var(--surface2)', border: `1px solid ${approveReject === true ? 'color-mix(in srgb, var(--danger) 50%, transparent)' : 'var(--border)'}`, color: approveReject === true ? 'var(--danger)' : 'var(--text-secondary)' }}>
                 ✗ {lang === 'fr' ? 'Rejeter' : 'Reject'}
               </button>
             </div>
@@ -1217,7 +1220,7 @@ export default function HorairePage() {
               <button
                 onClick={() => approveReject !== null && approveExchange(!approveReject)}
                 disabled={saving || approveReject === null}
-                style={{ flex: 2, padding: '12px', background: approveReject === true ? '#E07070' : approveReject === false ? '#72BA80' : 'var(--accent)', border: 'none', borderRadius: 10, color: '#fff', cursor: approveReject === null ? 'default' : 'pointer', fontSize: 13, fontFamily: font, fontWeight: 600, opacity: approveReject === null ? 0.4 : 1 }}>
+                style={{ flex: 2, padding: '12px', background: approveReject === true ? 'var(--danger)' : approveReject === false ? 'var(--success)' : 'var(--accent)', border: 'none', borderRadius: 10, color: '#fff', cursor: approveReject === null ? 'default' : 'pointer', fontSize: 13, fontFamily: font, fontWeight: 600, opacity: approveReject === null ? 0.4 : 1 }}>
                 {saving ? '...' : approveReject === true ? (lang === 'fr' ? 'Confirmer le rejet' : 'Confirm rejection') : approveReject === false ? (lang === 'fr' ? 'Confirmer l\'approbation' : 'Confirm approval') : (lang === 'fr' ? 'Choisir' : 'Choose')}
               </button>
             </div>
