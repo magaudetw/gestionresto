@@ -3,6 +3,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import AppShell from '@/components/AppShell'
+import KpiCard from '@/components/KpiCard'
+import ShiftPill from '@/components/ShiftPill'
 import { useAuth } from '@/lib/auth-context'
 
 const MOIS_FR = ['jan','fév','mar','avr','mai','juin','juil','août','sep','oct','nov','déc']
@@ -116,14 +118,13 @@ export default function DashboardPage() {
         <div className="page-wrapper">
 
           {/* Welcome header */}
-          <div style={{ marginBottom: 32 }}>
-            <p style={{ fontSize: 'var(--fz-12)', color: 'var(--text-secondary)', marginBottom: 6, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              {lang === 'fr' ? 'Bon retour' : 'Welcome back'}
-            </p>
-            <h1 className="font-title" style={{ fontSize: 'var(--fz-38)', fontWeight: 300, marginBottom: 4, letterSpacing: '0.01em' }}>
-              {prenom}
-            </h1>
-            <div style={{ fontSize: 'var(--fz-13)', color: 'var(--text-muted)' }}>{todayLabel}</div>
+          <div style={{ marginBottom: 28 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
+              <h1 style={{ fontSize: 'var(--fz-2xl)', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>
+                {lang === 'fr' ? `Bonjour, ${prenom}` : `Hello, ${prenom}`}
+              </h1>
+            </div>
+            <div style={{ fontSize: 'var(--fz-sm)', color: 'var(--text-muted)' }}>{todayLabel}</div>
           </div>
 
           {/* ─── MANAGER VIEW ─── */}
@@ -133,119 +134,105 @@ export default function DashboardPage() {
               {/* Left column */}
               <div>
                 {/* Today's schedule card */}
-                <div className="card" style={{ padding: '20px 22px', marginBottom: 16 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                    <span style={{ fontSize: 'var(--fz-18)' }}>📅</span>
-                    <span style={{ fontSize: 'var(--fz-11)', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--accent)', fontWeight: 600 }}>
-                      {lang === 'fr' ? "Aujourd'hui" : 'Today'}
+                <div className="card" style={{ marginBottom: 16 }}>
+                  <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 16 }}>📅</span>
+                    <span className="label-uppercase" style={{ color: 'var(--accent)' }}>
+                      {lang === 'fr' ? "Aujourd'hui" : 'Today'} — {todayShifts.length} shift{todayShifts.length !== 1 ? 's' : ''}
                     </span>
                   </div>
-                  {todayShifts.length === 0 ? (
-                    <div style={{ fontSize: 'var(--fz-13)', color: 'var(--text-faint)', fontStyle: 'italic' }}>
-                      {lang === 'fr' ? 'Aucun shift prévu' : 'No shifts scheduled'}
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {todayShifts.map((s: any) => {
-                        const st = s.shift_types
-                        const couleur = st?.couleur || 'var(--accent)'
-                        return (
-                          <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', background: 'var(--surface2)', borderRadius: 8, minHeight: 44 }}>
-                            <div style={{ width: 3, height: 28, borderRadius: 2, background: couleur, flexShrink: 0 }} />
-                            <span style={{ fontSize: 'var(--fz-13)', fontWeight: 500, flex: 1 }}>{(s as any).profiles?.nom || '—'}</span>
-                            <span style={{ fontSize: 'var(--fz-11)', color: 'var(--text-secondary)' }}>{st?.nom}</span>
-                            <span style={{ fontSize: 'var(--fz-11)', color: 'var(--text-muted)', fontFamily: "'Courier New', monospace" }}>{st?.debut}–{st?.fin}</span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  )}
+                  <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {todayShifts.length === 0 ? (
+                      <p style={{ fontSize: 'var(--fz-sm)', color: 'var(--text-faint)', fontStyle: 'italic' }}>
+                        {lang === 'fr' ? 'Aucun shift prévu' : 'No shifts scheduled'}
+                      </p>
+                    ) : todayShifts.map((s: any) => {
+                      const st = s.shift_types
+                      const couleur = st?.couleur
+                      return (
+                        <div key={s.id} style={{
+                          display: 'flex', alignItems: 'center', gap: 10,
+                          padding: '8px 10px', background: 'var(--surface2)',
+                          borderRadius: 'var(--radius-sm)',
+                        }}>
+                          {couleur && (
+                            <div style={{ width: 3, height: 24, borderRadius: 2, background: couleur, flexShrink: 0 }} />
+                          )}
+                          <span style={{ fontSize: 'var(--fz-sm)', fontWeight: 500, flex: 1 }}>
+                            {(s as any).profiles?.nom || '—'}
+                          </span>
+                          {st?.nom && (
+                            <span style={{ fontSize: 'var(--fz-xs)', color: 'var(--text-secondary)' }}>{st.nom}</span>
+                          )}
+                          {st && (
+                            <ShiftPill debut={st.debut} fin={st.fin}
+                              color={couleur} bg={couleur ? `${couleur}18` : undefined}
+                              compact />
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
 
                 {/* KPI grid */}
                 <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(2, 1fr)' }}>
-
-                  {/* Échanges */}
-                  <button onClick={() => router.push('/horaire')} className="kpi-card" style={{
-                    cursor: 'pointer', textAlign: 'left', fontFamily: font,
-                    borderTop: `3px solid ${pendingEchanges > 0 ? 'var(--warning)' : 'var(--border)'}`,
-                  }}>
-                    <div style={{ width: 40, height: 40, borderRadius: '50%', marginBottom: 12, background: 'var(--warning-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--fz-lg)' }}>🔄</div>
-                    <div className="kpi-label">{lang === 'fr' ? 'Échanges' : 'Swaps'}</div>
-                    <div className="kpi-value" style={{ color: pendingEchanges > 0 ? 'var(--warning)' : 'var(--text)' }}>
-                      {pendingEchanges}
-                    </div>
-                    {pendingEchanges > 0 && (
-                      <div className="kpi-sub" style={{ color: 'var(--warning)' }}>
-                        {lang === 'fr' ? 'en attente' : 'pending'}
-                      </div>
-                    )}
+                  <button onClick={() => router.push('/horaire')} style={{ all: 'unset', cursor: 'pointer', display: 'block' }}>
+                    <KpiCard
+                      label={lang === 'fr' ? 'Échanges en attente' : 'Pending swaps'}
+                      value={pendingEchanges}
+                      icon="🔄"
+                      iconBg="var(--warning-subtle)" iconColor="var(--warning)"
+                      sub={pendingEchanges > 0 ? (lang === 'fr' ? 'à approuver' : 'to approve') : undefined}
+                    />
                   </button>
-
-                  {/* Employés actifs */}
-                  <button onClick={() => router.push('/equipe')} className="kpi-card" style={{
-                    cursor: 'pointer', textAlign: 'left', fontFamily: font,
-                    borderTop: '3px solid var(--success)',
-                  }}>
-                    <div style={{ width: 40, height: 40, borderRadius: '50%', marginBottom: 12, background: 'var(--success-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--fz-lg)' }}>👥</div>
-                    <div className="kpi-label">{lang === 'fr' ? 'Employés actifs' : 'Active staff'}</div>
-                    <div className="kpi-value" style={{ color: 'var(--success)' }}>{activeCount}</div>
+                  <button onClick={() => router.push('/equipe')} style={{ all: 'unset', cursor: 'pointer', display: 'block' }}>
+                    <KpiCard
+                      label={lang === 'fr' ? 'Employés actifs' : 'Active staff'}
+                      value={activeCount}
+                      icon="👥"
+                      iconBg="var(--success-subtle)" iconColor="var(--success)"
+                    />
                   </button>
-
-                  {/* Heures semaine */}
-                  <div className="kpi-card" style={{ borderTop: '3px solid var(--info)' }}>
-                    <div style={{ width: 40, height: 40, borderRadius: '50%', marginBottom: 12, background: 'var(--info-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--fz-lg)' }}>⏱️</div>
-                    <div className="kpi-label">{lang === 'fr' ? 'Heures semaine' : 'Week hours'}</div>
-                    <div className="kpi-value" style={{ color: 'var(--info)' }}>
-                      {weekHeures}<span style={{ fontSize: 'var(--fz-14)' }}>h</span>
-                    </div>
-                  </div>
-
-                  {/* Dernier import */}
-                  <button onClick={() => router.push('/import')} className="kpi-card" style={{
-                    cursor: 'pointer', textAlign: 'left', fontFamily: font,
-                    borderTop: '3px solid var(--border)',
-                  }}>
-                    <div style={{ width: 40, height: 40, borderRadius: '50%', marginBottom: 12, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--fz-lg)' }}>📂</div>
-                    <div className="kpi-label">{lang === 'fr' ? 'Dernier import' : 'Last import'}</div>
-                    <div style={{ fontSize: 'var(--fz-13)', fontWeight: 400, color: lastImport ? 'var(--text)' : 'var(--text-faint)', lineHeight: 1.4, marginTop: 8 }}>
-                      {lastImport ? formatTime(lastImport) : (lang === 'fr' ? 'Jamais' : 'Never')}
-                    </div>
+                  <KpiCard
+                    label={lang === 'fr' ? 'Heures semaine' : 'Week hours'}
+                    value={`${weekHeures}h`}
+                    icon="⏱️"
+                    iconBg="var(--info-subtle)" iconColor="var(--info)"
+                  />
+                  <button onClick={() => router.push('/import')} style={{ all: 'unset', cursor: 'pointer', display: 'block' }}>
+                    <KpiCard
+                      label={lang === 'fr' ? 'Dernier import' : 'Last import'}
+                      value={lastImport ? formatTime(lastImport) : (lang === 'fr' ? 'Jamais' : 'Never')}
+                      icon="📂"
+                      iconBg="var(--surface2)" iconColor="var(--text-muted)"
+                    />
                   </button>
-
                 </div>
               </div>
 
               {/* Right column — desktop only */}
               <div className="hidden md:flex flex-col gap-4">
-                <button onClick={() => router.push('/notifications')} className="card" style={{
-                  padding: '22px 24px', cursor: 'pointer', textAlign: 'left', fontFamily: font,
-                  display: 'flex', flexDirection: 'column', gap: 10,
-                  borderTop: `3px solid ${unreadNotifs > 0 ? 'var(--accent)' : 'var(--border)'}`,
-                }}>
-                  <div style={{ fontSize: 'var(--fz-24)' }}>🔔</div>
-                  <div style={{ fontSize: 'var(--fz-10)', letterSpacing: '0.1em', textTransform: 'uppercase', color: unreadNotifs > 0 ? 'var(--accent)' : 'var(--text-secondary)' }}>
-                    {lang === 'fr' ? 'Alertes' : 'Alerts'}
-                  </div>
-                  <div className="kpi-value" style={{ color: unreadNotifs > 0 ? 'var(--accent)' : 'var(--text)' }}>
-                    {unreadNotifs}
-                  </div>
-                  <div style={{ fontSize: 'var(--fz-11)', color: 'var(--text-secondary)' }}>
-                    {unreadNotifs > 0 ? (lang === 'fr' ? 'non lues' : 'unread') : (lang === 'fr' ? 'Tout lu' : 'All read')}
-                  </div>
+                <button onClick={() => router.push('/notifications')} style={{ all: 'unset', cursor: 'pointer', display: 'block' }}>
+                  <KpiCard
+                    label={lang === 'fr' ? 'Alertes' : 'Alerts'}
+                    value={unreadNotifs}
+                    icon="🔔"
+                    iconBg={unreadNotifs > 0 ? 'var(--accent-subtle)' : 'var(--surface2)'}
+                    iconColor={unreadNotifs > 0 ? 'var(--accent)' : 'var(--text-muted)'}
+                    sub={unreadNotifs > 0 ? (lang === 'fr' ? 'non lues' : 'unread') : (lang === 'fr' ? 'Tout lu' : 'All read')}
+                  />
                 </button>
-
                 <button onClick={() => router.push('/horaire')} className="card" style={{
-                  padding: '22px 24px', cursor: 'pointer', textAlign: 'left', fontFamily: font,
-                  display: 'flex', flexDirection: 'column', gap: 10,
-                  borderTop: '3px solid var(--success)',
+                  all: 'unset', cursor: 'pointer', display: 'block',
                 }}>
-                  <div style={{ fontSize: 'var(--fz-24)' }}>📋</div>
-                  <div style={{ fontSize: 'var(--fz-10)', letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>
-                    {lang === 'fr' ? 'Horaire' : 'Schedule'}
-                  </div>
-                  <div style={{ fontSize: 'var(--fz-12)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                    {lang === 'fr' ? 'Gérer les shifts de la semaine' : "Manage this week's shifts"}
+                  <div className="card" style={{ padding: '20px 22px' }}>
+                    <div className="label-uppercase" style={{ marginBottom: 10 }}>
+                      {lang === 'fr' ? 'Horaire' : 'Schedule'}
+                    </div>
+                    <p style={{ fontSize: 'var(--fz-sm)', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                      {lang === 'fr' ? 'Gérer les shifts de la semaine' : "Manage this week's shifts"}
+                    </p>
                   </div>
                 </button>
               </div>
@@ -257,95 +244,83 @@ export default function DashboardPage() {
           {!isManager && (
             <div style={{ maxWidth: 540 }}>
               {/* Next shift */}
-              <div className="card" style={{
-                padding: '20px 22px', marginBottom: 14,
-                borderTop: `3px solid ${nextShift ? 'var(--accent)' : 'var(--border)'}`,
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                  <span style={{ fontSize: 'var(--fz-18)' }}>📅</span>
-                  <span style={{ fontSize: 'var(--fz-11)', color: 'var(--accent)', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
+              <div className="card" style={{ marginBottom: 14 }}>
+                <div className="card-header" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 16 }}>📅</span>
+                  <span className="label-uppercase" style={{ color: 'var(--accent)' }}>
                     {lang === 'fr' ? 'Mon prochain shift' : 'My next shift'}
                   </span>
                 </div>
-                {nextShift ? (
-                  <>
-                    <div style={{ fontSize: 'var(--fz-16)', fontWeight: 500, marginBottom: 8 }}>
-                      {(() => {
-                        const d = new Date(nextShift.date + 'T00:00:00')
-                        return `${JOURS_FULL[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]}`
-                      })()}
+                <div className="card-body">
+                  {nextShift ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      <div style={{ fontSize: 'var(--fz-md)', fontWeight: 500 }}>
+                        {(() => {
+                          const d = new Date(nextShift.date + 'T00:00:00')
+                          return `${JOURS_FULL[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]}`
+                        })()}
+                      </div>
+                      <ShiftPill
+                        debut={nextShift.shift_types?.debut || ''}
+                        fin={nextShift.shift_types?.fin || ''}
+                        poste={nextShift.shift_types?.nom}
+                        color={nextShift.shift_types?.couleur}
+                        bg={nextShift.shift_types?.couleur ? `${nextShift.shift_types.couleur}18` : undefined}
+                      />
                     </div>
-                    <span style={{
-                      display: 'inline-flex', padding: '4px 12px', borderRadius: 20, fontSize: 'var(--fz-12)',
-                      background: nextShift.shift_types?.couleur ? `${nextShift.shift_types.couleur}18` : 'var(--accent-subtle)',
-                      border: `1px solid ${nextShift.shift_types?.couleur ? `${nextShift.shift_types.couleur}44` : 'var(--border-accent)'}`,
-                      color: nextShift.shift_types?.couleur || 'var(--accent)',
-                    }}>
-                      {nextShift.shift_types?.nom} · {nextShift.shift_types?.debut}
-                    </span>
-                  </>
-                ) : (
-                  <div style={{ fontSize: 'var(--fz-13)', color: 'var(--text-faint)', fontStyle: 'italic' }}>
-                    {lang === 'fr' ? 'Aucun shift prévu' : 'No upcoming shifts'}
-                  </div>
-                )}
+                  ) : (
+                    <p style={{ fontSize: 'var(--fz-sm)', color: 'var(--text-faint)', fontStyle: 'italic' }}>
+                      {lang === 'fr' ? 'Aucun shift prévu' : 'No upcoming shifts'}
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Estimated pay */}
-              <div className="card" style={{
-                padding: '20px 22px', marginBottom: 14,
-                borderTop: '3px solid var(--success)',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                  <span style={{ fontSize: 'var(--fz-18)' }}>💰</span>
-                  <div>
-                    <div style={{ fontSize: 'var(--fz-11)', color: 'var(--success)', letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 600 }}>
-                      {lang === 'fr' ? 'Paie estimée cette semaine' : 'Estimated pay this week'}
-                    </div>
+              <div className="card" style={{ marginBottom: 14 }}>
+                <div className="card-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 16 }}>💰</span>
+                    <span className="label-uppercase" style={{ color: 'var(--success)' }}>
+                      {lang === 'fr' ? 'Paie estimée — semaine' : 'Estimated pay — week'}
+                    </span>
                   </div>
-                  <span style={{ marginLeft: 'auto', fontSize: 'var(--fz-9)', color: 'var(--text-faint)', border: '1px solid var(--border)', borderRadius: 4, padding: '2px 6px', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                  <span className="badge badge-accent" style={{ fontSize: 'var(--fz-xs)', letterSpacing: '0.04em' }}>
                     {lang === 'fr' ? 'Estimation' : 'Estimate'}
                   </span>
                 </div>
-                <div style={{ fontSize: 'var(--fz-32)', fontWeight: 300, color: 'var(--success)', fontFamily: "'Courier New', monospace", lineHeight: 1 }}>
-                  ${(estimatedPay?.total || 0).toFixed(2)}
-                </div>
-                {(estimatedPay?.salaire ?? 0) === 0 && (
-                  <div style={{ fontSize: 'var(--fz-11)', color: 'var(--text-faint)', marginTop: 8, fontStyle: 'italic' }}>
-                    {lang === 'fr' ? 'En attente des heures importées' : 'Awaiting imported hours'}
+                <div className="card-body">
+                  <div style={{ fontSize: 'var(--fz-3xl)', fontWeight: 700, color: 'var(--success)', letterSpacing: '-0.02em', lineHeight: 1 }}>
+                    ${(estimatedPay?.total || 0).toFixed(2)}
                   </div>
-                )}
+                  {(estimatedPay?.salaire ?? 0) === 0 && (
+                    <p style={{ fontSize: 'var(--fz-xs)', color: 'var(--text-faint)', marginTop: 8, fontStyle: 'italic' }}>
+                      {lang === 'fr' ? 'En attente des heures importées' : 'Awaiting imported hours'}
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Notifications */}
-              <button onClick={() => router.push('/notifications')} className="card" style={{
-                width: '100%',
-                padding: '16px 20px', cursor: 'pointer', textAlign: 'left', fontFamily: font,
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                borderTop: `3px solid ${unreadNotifs > 0 ? 'var(--accent)' : 'var(--border)'}`,
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontSize: 'var(--fz-20)' }}>🔔</span>
-                  <div>
-                    <div style={{ fontSize: 'var(--fz-13)', fontWeight: 500 }}>
-                      {unreadNotifs > 0
-                        ? (lang === 'fr' ? `${unreadNotifs} notification${unreadNotifs > 1 ? 's' : ''} non lue${unreadNotifs > 1 ? 's' : ''}` : `${unreadNotifs} unread`)
-                        : (lang === 'fr' ? 'Aucune nouvelle' : 'All caught up')}
-                    </div>
-                    <div style={{ fontSize: 'var(--fz-11)', color: 'var(--text-faint)' }}>
-                      {lang === 'fr' ? 'Alertes' : 'Notifications'}
+              <button onClick={() => router.push('/notifications')} style={{ all: 'unset', cursor: 'pointer', display: 'block', width: '100%' }}>
+                <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <span style={{ fontSize: 18 }}>🔔</span>
+                    <div>
+                      <div style={{ fontSize: 'var(--fz-sm)', fontWeight: 500, color: 'var(--text)' }}>
+                        {unreadNotifs > 0
+                          ? (lang === 'fr' ? `${unreadNotifs} notification${unreadNotifs > 1 ? 's' : ''} non lue${unreadNotifs > 1 ? 's' : ''}` : `${unreadNotifs} unread`)
+                          : (lang === 'fr' ? 'Aucune nouvelle' : 'All caught up')}
+                      </div>
+                      <div style={{ fontSize: 'var(--fz-xs)', color: 'var(--text-muted)' }}>
+                        {lang === 'fr' ? 'Alertes' : 'Notifications'}
+                      </div>
                     </div>
                   </div>
+                  {unreadNotifs > 0 && (
+                    <span className="badge badge-accent">{unreadNotifs}</span>
+                  )}
                 </div>
-                {unreadNotifs > 0 && (
-                  <div style={{
-                    background: 'var(--accent)', color: 'var(--accent-text)',
-                    borderRadius: 20, minWidth: 26, height: 26, display: 'flex',
-                    alignItems: 'center', justifyContent: 'center', fontSize: 'var(--fz-13)', fontWeight: 600,
-                  }}>
-                    {unreadNotifs}
-                  </div>
-                )}
               </button>
             </div>
           )}
