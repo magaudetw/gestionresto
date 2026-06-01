@@ -176,7 +176,7 @@ export default function Topbar({ profile }: { profile: any }) {
             style={{
               width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
               background: dropOpen ? 'var(--accent)' : 'var(--accent-subtle)',
-              color: dropOpen ? '#fff' : 'var(--accent)',
+              color: dropOpen ? 'var(--accent-text)' : 'var(--accent)',
               border: 'none', cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 'var(--fz-sm)', fontWeight: 700,

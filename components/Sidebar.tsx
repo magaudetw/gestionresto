@@ -116,7 +116,7 @@ export default function Sidebar({ profile }: SidebarProps) {
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
             <div style={{
               width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-              background: 'rgba(77,217,232,0.20)',
+              background: 'var(--sidebar-active-bg)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 16,
             }}>🍽️</div>
@@ -141,7 +141,7 @@ export default function Sidebar({ profile }: SidebarProps) {
         {collapsed && (
           <div style={{
             width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-            background: 'rgba(77,217,232,0.20)',
+            background: 'var(--sidebar-active-bg)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: 16,
           }}>🍽️</div>
