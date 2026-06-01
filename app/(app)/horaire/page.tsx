@@ -34,6 +34,13 @@ const STATUT_CFG: Record<string, { icon: string; color: string; fr: string; en: 
   rejete:     { icon: '✗',  color: 'var(--danger)',  fr: 'Rejeté',      en: 'Rejected' },
 }
 
+const ROLE_LABELS_COV: Record<string, { fr: string; en: string }> = {
+  gerant:  { fr: 'Gérant',  en: 'Manager' },
+  serveur: { fr: 'Serveur', en: 'Server'  },
+  bar:     { fr: 'Bar',     en: 'Bar'     },
+  busboy:  { fr: 'Busboy',  en: 'Busboy'  },
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function isoDate(d: Date) { return d.toISOString().split('T')[0] }
@@ -800,28 +807,50 @@ export default function HorairePage() {
                     })}
                   </div>
 
-                  {/* Coverage bar */}
-                  {couverture.length > 0 && (
-                    <div style={{ background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 10px', marginBottom: 12 }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '140px repeat(6, 1fr)' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, justifyContent: 'center' }}>
-                          <span style={{ fontSize: 9, color: 'var(--text-faint)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>MIDI</span>
-                          <span style={{ fontSize: 9, color: 'var(--text-faint)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>SOIR</span>
+                  {/* Coverage panel — by role */}
+                  {couverture.length > 0 && (() => {
+                    const allCovRows = [...new Map(
+                      couverture
+                        .filter((c: any) => (c.minimum ?? 0) > 0 && c.role)
+                        .map((c: any) => [`${c.service}|${c.role}`, { service: c.service as string, role: c.role as string }])
+                    ).values()].sort((a, b) =>
+                      a.service !== b.service ? (a.service === 'midi' ? -1 : 1) : a.role.localeCompare(b.role)
+                    )
+                    if (allCovRows.length === 0) return null
+                    return (
+                      <div style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', marginBottom: 12 }}>
+                        <div style={{ fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-secondary)', padding: '5px 10px', background: 'var(--surface2)', borderBottom: '1px solid var(--border)' }}>
+                          {lang === 'fr' ? 'COUVERTURE' : 'COVERAGE'}
                         </div>
-                        {days.map((_, di) => {
-                          const cov = getCoverage(di)
-                          return (
-                            <div key={di} style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                              <div style={{ fontSize: 9, color: covColor(cov.midi.have, cov.midi.need), fontFamily: "'Courier New', monospace" }}>{cov.midi.need > 0 ? `${cov.midi.have}/${cov.midi.need}` : '—'}</div>
-                              <div style={{ fontSize: 9, color: covColor(cov.soir.have, cov.soir.need), fontFamily: "'Courier New', monospace" }}>
-                                {cov.soir.need > 0 ? `${cov.soir.have}/${cov.soir.need}` : '—'}
-                              </div>
-                            </div>
-                          )
-                        })}
+                        <div style={{ display: 'grid', gridTemplateColumns: '140px repeat(6, 1fr)', background: 'var(--surface1)' }}>
+                          {allCovRows.flatMap(({ service, role }, ri) => [
+                            <div key={`lbl-${ri}`} style={{ padding: '3px 8px', borderTop: ri > 0 ? '1px solid var(--border)' : 'none', display: 'flex', alignItems: 'center' }}>
+                              <span style={{ fontSize: 9, color: 'var(--text-faint)', letterSpacing: '0.04em' }}>
+                                {ROLE_LABELS_COV[role]?.[lang] || role}
+                                {' '}{service === 'midi' ? (lang === 'fr' ? '·M' : '·L') : '·S'}
+                              </span>
+                            </div>,
+                            ...days.map((day, di) => {
+                              const dateStr = isoDate(day)
+                              const jourKey = JOURS[di]
+                              const dayShifts = shiftsByDate[dateStr] || []
+                              const have = dayShifts.filter((s: any) =>
+                                inferService(s.shift_types?.debut) === service && s.shift_types?.role === role
+                              ).length
+                              const need = couverture.find((c: any) => c.jour === jourKey && c.service === service && c.role === role)?.minimum ?? 0
+                              return (
+                                <div key={`${ri}-${di}`} style={{ padding: '3px 2px', textAlign: 'center', borderLeft: '1px solid var(--border)', borderTop: ri > 0 ? '1px solid var(--border)' : 'none' }}>
+                                  <span style={{ fontSize: 9, color: covColor(have, need), fontFamily: "'Courier New', monospace" }}>
+                                    {need > 0 ? `${have}/${need}` : '—'}
+                                  </span>
+                                </div>
+                              )
+                            })
+                          ])}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    )
+                  })()}
                 </>
               )}
 
