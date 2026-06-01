@@ -213,7 +213,13 @@ export default function ReglagesPage() {
         setShiftSaveError(json.error || (lang === 'fr' ? 'Erreur lors de la sauvegarde' : 'Save failed'))
         return
       }
-      await loadShiftTypes()
+      if (json.data) {
+        if (shiftModal.id) {
+          setShiftTypes(prev => prev.map(s => s.id === json.data.id ? json.data : s))
+        } else {
+          setShiftTypes(prev => [...prev, json.data].sort((a, b) => a.debut.localeCompare(b.debut)))
+        }
+      }
       setShiftModal(null)
       setConfirmDeleteShift(null)
     } catch (e) {

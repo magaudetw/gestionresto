@@ -39,14 +39,15 @@ export async function POST(req: NextRequest) {
     const { id, restaurant_id, nom, debut, fin, couleur } = payload
     if (!nom || !debut || !fin) return err('Champs manquants', 400)
     if (id) {
-      const { error } = await admin.from('shift_types').update({ nom, debut, fin, couleur }).eq('id', id)
+      const { data, error } = await admin.from('shift_types').update({ nom, debut, fin, couleur }).eq('id', id).select().single()
       if (error) { console.error('[shifts-config] update:', error.message); return err(error.message, 500) }
+      return NextResponse.json({ ok: true, data })
     } else {
       if (!restaurant_id) return err('restaurant_id manquant', 400)
-      const { error } = await admin.from('shift_types').insert({ restaurant_id, nom, debut, fin, couleur })
+      const { data, error } = await admin.from('shift_types').insert({ restaurant_id, nom, debut, fin, couleur }).select().single()
       if (error) { console.error('[shifts-config] insert:', error.message); return err(error.message, 500) }
+      return NextResponse.json({ ok: true, data })
     }
-    return NextResponse.json({ ok: true })
   }
 
   if (action === 'delete') {
