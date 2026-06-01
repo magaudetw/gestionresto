@@ -348,9 +348,9 @@ export default function FinancesPage() {
         <div className="kpi-grid" style={{ gridTemplateColumns: '1fr 1fr', marginBottom: 20 }}>
           {([
             { label: lang === 'fr' ? 'Pool pourboires' : 'Tip pool',        value: fmt$(totalPool),      color: 'var(--accent)',  sub: `${nbServices} service${nbServices !== 1 ? 's' : ''}` },
-            { label: lang === 'fr' ? 'Masse salariale' : 'Labor cost',      value: fmt$(totalSalaire),   color: '#7EB8F7',        sub: '' },
+            { label: lang === 'fr' ? 'Masse salariale' : 'Labor cost',      value: fmt$(totalSalaire),   color: 'var(--info)',    sub: '' },
             { label: lang === 'fr' ? 'Virements effectués' : 'Paid out',    value: fmt$(totalVirements), color: 'var(--success)', sub: '' },
-            { label: lang === 'fr' ? 'Total employés' : 'Total employees',  value: String(empSummaries.length), color: '#E0A850', sub: '' },
+            { label: lang === 'fr' ? 'Total employés' : 'Total employees',  value: String(empSummaries.length), color: 'var(--warning)', sub: '' },
           ] as { label: string; value: string; color: string; sub: string }[]).map(({ label, value, color, sub }) => (
             <div key={label} className="kpi-card">
               <div className="kpi-label">{label}</div>
@@ -426,7 +426,7 @@ export default function FinancesPage() {
                           <div style={{ fontSize: 9, color: 'var(--text-faint)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                             {lang === 'fr' ? 'Sal.' : 'Sal.'}
                           </div>
-                          <div style={{ fontSize: 12, color: '#7EB8F7', fontFamily: "'Courier New', monospace" }}>
+                          <div style={{ fontSize: 12, color: 'var(--info)', fontFamily: "'Courier New', monospace" }}>
                             {fmt$(emp.salaire)}
                           </div>
                         </div>

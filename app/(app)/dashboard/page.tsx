@@ -170,7 +170,7 @@ export default function DashboardPage() {
                     cursor: 'pointer', textAlign: 'left', fontFamily: font,
                     borderTop: `3px solid ${pendingEchanges > 0 ? 'var(--warning)' : 'var(--border)'}`,
                   }}>
-                    <div style={{ fontSize: 'var(--fz-22)', marginBottom: 10 }}>🔄</div>
+                    <div style={{ width: 40, height: 40, borderRadius: '50%', marginBottom: 12, background: 'var(--warning-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--fz-lg)' }}>🔄</div>
                     <div className="kpi-label">{lang === 'fr' ? 'Échanges' : 'Swaps'}</div>
                     <div className="kpi-value" style={{ color: pendingEchanges > 0 ? 'var(--warning)' : 'var(--text)' }}>
                       {pendingEchanges}
@@ -187,14 +187,14 @@ export default function DashboardPage() {
                     cursor: 'pointer', textAlign: 'left', fontFamily: font,
                     borderTop: '3px solid var(--success)',
                   }}>
-                    <div style={{ fontSize: 'var(--fz-22)', marginBottom: 10 }}>👥</div>
+                    <div style={{ width: 40, height: 40, borderRadius: '50%', marginBottom: 12, background: 'var(--success-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--fz-lg)' }}>👥</div>
                     <div className="kpi-label">{lang === 'fr' ? 'Employés actifs' : 'Active staff'}</div>
                     <div className="kpi-value" style={{ color: 'var(--success)' }}>{activeCount}</div>
                   </button>
 
                   {/* Heures semaine */}
                   <div className="kpi-card" style={{ borderTop: '3px solid var(--info)' }}>
-                    <div style={{ fontSize: 'var(--fz-22)', marginBottom: 10 }}>⏱️</div>
+                    <div style={{ width: 40, height: 40, borderRadius: '50%', marginBottom: 12, background: 'var(--info-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--fz-lg)' }}>⏱️</div>
                     <div className="kpi-label">{lang === 'fr' ? 'Heures semaine' : 'Week hours'}</div>
                     <div className="kpi-value" style={{ color: 'var(--info)' }}>
                       {weekHeures}<span style={{ fontSize: 'var(--fz-14)' }}>h</span>
@@ -206,7 +206,7 @@ export default function DashboardPage() {
                     cursor: 'pointer', textAlign: 'left', fontFamily: font,
                     borderTop: '3px solid var(--border)',
                   }}>
-                    <div style={{ fontSize: 'var(--fz-22)', marginBottom: 10 }}>📂</div>
+                    <div style={{ width: 40, height: 40, borderRadius: '50%', marginBottom: 12, background: 'var(--surface2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 'var(--fz-lg)' }}>📂</div>
                     <div className="kpi-label">{lang === 'fr' ? 'Dernier import' : 'Last import'}</div>
                     <div style={{ fontSize: 'var(--fz-13)', fontWeight: 400, color: lastImport ? 'var(--text)' : 'var(--text-faint)', lineHeight: 1.4, marginTop: 8 }}>
                       {lastImport ? formatTime(lastImport) : (lang === 'fr' ? 'Jamais' : 'Never')}

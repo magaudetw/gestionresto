@@ -22,10 +22,6 @@ const DEFAULT_ROLE_COLORS: Record<string, string> = {
   admin: '#E07070', gerant: '#C9A84C', bar: '#7EB8F7', serveur: '#82E0AA', busboy: '#C39BD3',
 }
 
-const DEFAULT_COEFF: Record<string, number> = {
-  admin: 1.0, gerant: 1.0, bar: 1.0, serveur: 1.0, busboy: 0.5,
-}
-
 const DEFAULT_SELECTABLE: Role[] = ['gerant', 'bar', 'serveur', 'busboy']
 
 const JOURS: Jour[] = ['lun', 'mar', 'mer', 'jeu', 'ven', 'sam']
@@ -219,9 +215,6 @@ export default function EquipePage() {
   const ROLE_COLORS: Record<string, string> = roleTypesList.length
     ? Object.fromEntries(roleTypesList.map(r => [r.slug, r.couleur]))
     : DEFAULT_ROLE_COLORS
-  const COEFF: Record<string, number> = roleTypesList.length
-    ? Object.fromEntries(roleTypesList.map(r => [r.slug, Number(r.coefficient_pourboire)]))
-    : DEFAULT_COEFF
   const SELECTABLE_ROLES: Role[] = roleTypesList.length
     ? roleTypesList.filter(r => r.slug !== 'admin').map(r => r.slug as Role)
     : DEFAULT_SELECTABLE
@@ -310,8 +303,8 @@ export default function EquipePage() {
           </div>
         ) : (
           <>
-            {/* Desktop table */}
-            <div className="hidden md:block card" style={{ overflow: 'hidden', marginBottom: 10 }}>
+            {/* Table — all screen sizes */}
+            <div className="card" style={{ overflow: 'hidden', overflowX: 'auto', marginBottom: 10 }}>
               <table className="data-table">
                 <thead>
                   <tr>
@@ -395,64 +388,6 @@ export default function EquipePage() {
               </table>
             </div>
 
-            {/* Mobile card list */}
-            <div className="md:hidden" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {filteredEmployes.map(emp => {
-                const primaryRole  = emp.roles?.[0] || 'serveur'
-                const primaryColor = ROLE_COLORS[primaryRole]
-                const coeff = Math.max(...(emp.roles || []).map((r: string) => COEFF[r] || 1.0))
-                const dispos = emp.dispos_base as DisposBase | null
-                return (
-                  <button
-                    key={emp.id}
-                    onClick={() => {
-                      setModal({ id: emp.id, nom: emp.nom || '', email: emp.email || '', password: '', roles: emp.roles || [], taux_horaire: emp.taux_horaire?.toString() || '', restaurant_ids: emp.restaurant_ids || [], actif: emp.actif !== false, dispos_base: emp.dispos_base || { ...EMPTY_DISPOS } })
-                      setSaveError('')
-                    }}
-                    className="card"
-                    style={{ padding: '14px 16px', cursor: 'pointer', textAlign: 'left', width: '100%', fontFamily: font }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ width: 38, height: 38, borderRadius: 10, background: primaryColor || 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, color: '#fff', fontWeight: 700, flexShrink: 0 }}>
-                          {(emp.nom || '?')[0].toUpperCase()}
-                        </div>
-                        <div>
-                          <div style={{ fontSize: 'var(--fz-md)', fontWeight: 400 }}>{emp.nom}</div>
-                          <div style={{ fontSize: 'var(--fz-xs)', color: emp.actif !== false ? 'var(--success)' : 'var(--danger)', marginTop: 2 }}>
-                            ● {emp.actif !== false ? T.actif : T.inactif}
-                          </div>
-                        </div>
-                      </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: 'var(--fz-lg)', color: 'var(--accent)', fontFamily: "'Courier New', monospace" }}>${emp.taux_horaire?.toFixed(2) || '—'}</div>
-                        <div style={{ fontSize: 'var(--fz-xs)', color: 'var(--text-secondary)' }}>{T.taux}</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
-                      {(emp.roles || []).map((r: string) => {
-                        const rc = ROLE_COLORS[r]
-                        return (
-                          <span key={r} style={{ padding: '3px 9px', borderRadius: 20, fontSize: 'var(--fz-xs)', background: rc ? `${rc}1A` : 'var(--accent-subtle)', border: `1px solid ${rc ? `${rc}40` : 'var(--border-accent)'}`, color: rc || 'var(--accent)' }}>
-                            {ROLE_LABELS[r]?.[lang] || r}
-                          </span>
-                        )
-                      })}
-                    </div>
-                    {dispos && (dispos.jours?.length > 0 || dispos.services?.length > 0) && (
-                      <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)', display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                        {(dispos.jours || []).map(j => (
-                          <span key={j} style={{ fontSize: 'var(--fz-xs)', padding: '2px 6px', borderRadius: 6, background: 'var(--accent-subtle)', color: 'var(--text-secondary)' }}>{JOUR_LABELS[j]?.[lang] || j}</span>
-                        ))}
-                        {(dispos.services || []).map(s => (
-                          <span key={s} style={{ fontSize: 'var(--fz-xs)', padding: '2px 6px', borderRadius: 6, background: 'var(--accent-subtle)', color: 'var(--accent)' }}>{SERVICE_LABELS[s]?.[lang] || s}</span>
-                        ))}
-                      </div>
-                    )}
-                  </button>
-                )
-              })}
-            </div>
           </>
         )}
 

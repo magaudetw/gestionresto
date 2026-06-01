@@ -110,7 +110,7 @@ export const THEMES: Record<ThemeName, Theme> = {
     sidebarBg:'#0F1520', sidebarActiveText:'#38BDF8', isDark:true,
   },
   'Professionnel': {
-    fond:'#F7F8FA', surface1:'#FFFFFF', surface2:'#EFF2F7', surface3:'#E4E9F2',
+    fond:'#F4F6F9', surface1:'#FFFFFF', surface2:'#EFF2F7', surface3:'#E4E9F2',
     accent:'#5B8DEF', accentClair:'#7BAAF7', accentSombre:'#3B6DD8',
     texte:'#1A2540', texteSecondaire:'#4A5568', texteFaible:'#C8D0D8',
     border:'#E2E8F0', borderAccent:'rgba(91,141,239,0.30)',
@@ -134,6 +134,7 @@ export function themeSlug(name: string): string {
 
 export const FONT_SIZES: Record<string, string> = {
   sm: '13px', md: '15px', lg: '17px', xl: '19px',
+  petit: '13px', normal: '14px', grand: '16px', 'tres-grand': '18px',
 }
 
 export function applyThemeToDocument(

@@ -2,6 +2,7 @@
 import Header from './Header'
 import Navigation from './Navigation'
 import Sidebar from './Sidebar'
+import Topbar from './Topbar'
 import { useAuth } from '@/lib/auth-context'
 
 interface AppShellProps {
@@ -31,6 +32,10 @@ export default function AppShell({ profile, children }: AppShellProps) {
 
       {/* Content — margin tracks sidebar width via CSS var */}
       <div className="main-offset">
+        {/* Desktop topbar — sticky at top of content area */}
+        <div className="hidden md:block">
+          <Topbar profile={profile} />
+        </div>
         <div className="max-w-[480px] mx-auto md:max-w-none md:mx-0">
           {children}
         </div>
