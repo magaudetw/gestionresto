@@ -42,6 +42,7 @@ export interface ShiftType {
   debut: string
   fin: string
   couleur: string
+  role?: string
 }
 
 export interface HoraireShift {

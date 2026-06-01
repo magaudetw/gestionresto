@@ -36,16 +36,16 @@ export async function POST(req: NextRequest) {
   const { action, payload } = body
 
   if (action === 'upsert') {
-    const { id, restaurant_id, nom, debut, fin, couleur } = payload
+    const { id, restaurant_id, nom, debut, fin, couleur, role } = payload
     if (!nom || !debut || !fin) return err('Champs manquants', 400)
     if (id) {
-      const { data, error } = await admin.from('shift_types').update({ nom, debut, fin, couleur }).eq('id', id).select().single()
+      const { data, error } = await admin.from('shift_types').update({ nom, debut, fin, couleur, role: role || 'tous' }).eq('id', id).select().single()
       if (error) { console.error('[shifts-config] update:', error.message); return err(error.message, 500) }
       console.log('[shifts-config] upsert result:', JSON.stringify(data))
       return NextResponse.json({ ok: true, data })
     } else {
       if (!restaurant_id) return err('restaurant_id manquant', 400)
-      const { data, error } = await admin.from('shift_types').insert({ restaurant_id, nom, debut, fin, couleur }).select().single()
+      const { data, error } = await admin.from('shift_types').insert({ restaurant_id, nom, debut, fin, couleur, role: role || 'tous' }).select().single()
       if (error) { console.error('[shifts-config] insert:', error.message); return err(error.message, 500) }
       console.log('[shifts-config] upsert result:', JSON.stringify(data))
       return NextResponse.json({ ok: true, data })

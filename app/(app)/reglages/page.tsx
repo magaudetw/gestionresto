@@ -36,6 +36,7 @@ interface ShiftModalData {
   debut: string
   fin: string
   couleur: string
+  role?: string
 }
 
 interface RoleTypeModalData {
@@ -206,6 +207,7 @@ export default function ReglagesPage() {
             debut: shiftModal.debut,
             fin: shiftModal.fin,
             couleur: shiftModal.couleur,
+            role: shiftModal.role || 'tous',
           },
         }),
       })
@@ -737,7 +739,7 @@ export default function ReglagesPage() {
                   {T.typesShifts}
                 </div>
                 <button
-                  onClick={() => { setShiftModal({ nom: '', debut: '11:00', fin: '16:00', couleur: SHIFT_COLORS[0] }); setShiftSaveError('') }}
+                  onClick={() => { setShiftModal({ nom: '', debut: '11:00', fin: '16:00', couleur: SHIFT_COLORS[0], role: 'tous' }); setShiftSaveError('') }}
                   style={{
                     background: t.accent, border: 'none', borderRadius: 8, padding: '4px 12px',
                     cursor: 'pointer', color: t.isDark ? '#080808' : '#fff', fontSize: 11, fontFamily: font,
@@ -756,7 +758,7 @@ export default function ReglagesPage() {
                   shiftTypes.map((st, i) => (
                     <button
                       key={st.id}
-                      onClick={() => { setShiftModal({ id: st.id, nom: st.nom, debut: st.debut, fin: st.fin, couleur: st.couleur }); setShiftSaveError('') }}
+                      onClick={() => { setShiftModal({ id: st.id, nom: st.nom, debut: st.debut, fin: st.fin, couleur: st.couleur, role: st.role || 'tous' }); setShiftSaveError('') }}
                       style={{
                         width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontFamily: font,
                         padding: '12px 16px',
@@ -1110,6 +1112,24 @@ export default function ReglagesPage() {
                   {shiftModal.debut || '--:--'}–{shiftModal.fin || '--:--'}
                 </span>
               </div>
+            </div>
+
+            {/* Rôle requis */}
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: t.texteSecondaire, marginBottom: 6, letterSpacing: '0.08em' }}>
+                {lang === 'fr' ? 'RÔLE REQUIS' : 'REQUIRED ROLE'}
+              </div>
+              <select
+                value={shiftModal.role || 'tous'}
+                onChange={e => setShiftModal(m => m ? { ...m, role: e.target.value } : m)}
+                style={{ width: '100%', background: t.surface2, border: `1px solid ${t.border}`, borderRadius: 8, color: t.texte, padding: '10px 12px', fontSize: 13, fontFamily: font, outline: 'none', boxSizing: 'border-box' }}
+              >
+                <option value="tous">{lang === 'fr' ? 'Tous les rôles' : 'All roles'}</option>
+                <option value="gerant">{lang === 'fr' ? 'Gérant seulement' : 'Manager only'}</option>
+                <option value="serveur">{lang === 'fr' ? 'Serveur/Serveuse' : 'Server'}</option>
+                <option value="bar">{lang === 'fr' ? 'Barman/Barmaid' : 'Bartender'}</option>
+                <option value="busboy">Busboy</option>
+              </select>
             </div>
 
             {/* Save error */}

@@ -565,6 +565,13 @@ export default function HorairePage() {
     )
   }
 
+  const shiftsCompatibles = cellModal
+    ? shiftTypes.filter((st: any) =>
+        !st.role || st.role === 'tous' ||
+        (employeeMap[cellModal.empId]?.roles || []).includes(st.role)
+      )
+    : shiftTypes
+
   // ─── Shared UI helper: exchange card ─────────────────────────────────────
   function EchangeCard({ e, isManager: mgr }: { e: any; isManager?: boolean }) {
     const cfg = STATUT_CFG[e.statut] || STATUT_CFG.en_attente
@@ -1021,14 +1028,18 @@ export default function HorairePage() {
               </div>
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
-              {shiftTypes.map((st: any) => (
+              {shiftsCompatibles.map((st: any) => (
                 <button key={st.id} onClick={() => setCellStId(st.id)} style={{ padding: '0 12px 0 0', borderRadius: 10, cursor: 'pointer', textAlign: 'left', fontFamily: font, background: cellStId === st.id ? `${st.couleur}22` : 'var(--surface2)', border: `1px solid ${cellStId === st.id ? st.couleur : 'var(--border)'}`, display: 'flex', alignItems: 'center', gap: 0, overflow: 'hidden' }}>
                   <div style={{ width: 4, alignSelf: 'stretch', background: st.couleur, flexShrink: 0, marginRight: 12 }} />
                   <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: cellStId === st.id ? 600 : 400, flex: 1, padding: '10px 0' }}>{st.nom}</span>
                   <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{st.debut}–{st.fin}</span>
                 </button>
               ))}
-              {shiftTypes.length === 0 && <div style={{ fontSize: 12, color: 'var(--text-faint)', padding: '8px 0' }}>{lang === 'fr' ? 'Aucun type de shift configuré' : 'No shift types configured'}</div>}
+              {shiftTypes.length > 0 && shiftsCompatibles.length === 0 && (
+                <div style={{ fontSize: 12, color: 'var(--text-faint)', padding: '8px 0' }}>
+                  {lang === 'fr' ? 'Aucun shift compatible avec ce rôle' : 'No compatible shift for this role'}
+                </div>
+              )}
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => setCellModal(null)} style={{ flex: 1, padding: '12px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 13, fontFamily: font }}>{lang === 'fr' ? 'Annuler' : 'Cancel'}</button>
