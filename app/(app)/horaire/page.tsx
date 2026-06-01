@@ -502,6 +502,13 @@ export default function HorairePage() {
     }
   }
 
+  function covColor(have: number, need: number): string {
+    if (need === 0) return 'var(--text-faint)'
+    if (have === 0) return 'var(--danger)'
+    if (have < need) return 'var(--warning)'
+    return 'var(--success)'
+  }
+
   function computeAlerts(): string[] {
     const alerts: string[] = []
     const empShiftCount: Record<string, number> = {}
@@ -627,6 +634,8 @@ export default function HorairePage() {
 
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
+    <>
+    <style>{`.schedule-cell-empty:hover{background:var(--accent-subtle)!important}.schedule-cell-empty:hover .cell-plus{opacity:.8!important;color:var(--accent)}`}</style>
     <AppShell profile={profile} restaurant="Le Carré">
       <main className="page-content" style={{ paddingBottom: 96 }}>
 
@@ -698,8 +707,9 @@ export default function HorairePage() {
                   <button onClick={() => router.push('/dispos')} style={{ padding: '9px 12px', background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 11, fontFamily: font, flexShrink: 0 }}>
                     📋 {lang === 'fr' ? 'Dispos' : 'Avail.'}
                   </button>
-                  <button onClick={() => setPublishModal(true)} disabled={brouillonCount === 0} style={{ flex: 1, padding: '9px', borderRadius: 10, fontSize: 11, fontFamily: font, background: brouillonCount > 0 ? 'var(--accent)' : 'var(--surface1)', border: `1px solid ${brouillonCount > 0 ? 'var(--accent)' : 'var(--border)'}`, color: brouillonCount > 0 ? 'var(--accent-text)' : 'var(--text-faint)', cursor: brouillonCount === 0 ? 'default' : 'pointer', fontWeight: brouillonCount > 0 ? 600 : 400 }}>
-                    📢 {lang === 'fr' ? `Publier (${brouillonCount})` : `Publish (${brouillonCount})`}
+                  <button onClick={() => setPublishModal(true)} disabled={brouillonCount === 0} style={{ flex: 1, padding: '9px', borderRadius: 10, fontSize: 11, fontFamily: font, background: brouillonCount > 0 ? 'var(--accent-coral, #e05a3a)' : 'var(--surface1)', border: `1px solid ${brouillonCount > 0 ? 'var(--accent-coral, #e05a3a)' : 'var(--border)'}`, color: brouillonCount > 0 ? '#fff' : 'var(--text-faint)', cursor: brouillonCount === 0 ? 'default' : 'pointer', fontWeight: brouillonCount > 0 ? 600 : 400, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                    📢 {lang === 'fr' ? 'Publier' : 'Publish'}
+                    {brouillonCount > 0 && <span style={{ background: 'var(--danger)', color: '#fff', borderRadius: '50%', minWidth: 18, height: 18, fontSize: 10, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>{brouillonCount}</span>}
                   </button>
                 </div>
               )}
@@ -709,7 +719,7 @@ export default function HorairePage() {
                 <>
                   <div style={{ border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', marginBottom: 10 }}>
                     {/* Header */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '76px repeat(6, 1fr)', borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '140px repeat(6, 1fr)', borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
                       <div style={{ padding: '6px 8px', position: 'sticky', left: 0, background: 'var(--surface2)', zIndex: 2 }} />
                       {days.map((day, di) => {
                         const dateStr = isoDate(day)
@@ -718,8 +728,8 @@ export default function HorairePage() {
                         const covOk = cov.midi.ok && cov.soir.ok
                         return (
                           <div key={dateStr} style={{ padding: '5px 2px', textAlign: 'center', borderLeft: '1px solid var(--border)' }}>
-                            <div style={{ fontSize: 'var(--fz-9)', letterSpacing: '0.06em', textTransform: 'uppercase', color: isToday ? 'var(--accent)' : 'var(--text-secondary)' }}>{JOUR_SHORT[JOURS[di]][lang]}</div>
-                            <div style={{ fontSize: 'var(--fz-9)', color: 'var(--text-faint)' }}>{day.getDate()}</div>
+                            <div style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: isToday ? 'var(--accent)' : 'var(--text)' }}>{JOUR_SHORT[JOURS[di]][lang]}</div>
+                            <div style={{ fontSize: 11, fontWeight: isToday ? 700 : 400, color: isToday ? 'var(--accent)' : 'var(--text-faint)' }}>{day.getDate()}</div>
                             {couverture.length > 0 && <div style={{ fontSize: 'var(--fz-8)', color: covOk ? 'var(--success)' : 'var(--danger)', marginTop: 1 }}>{covOk ? '✓' : '✗'}</div>}
                           </div>
                         )
@@ -729,8 +739,8 @@ export default function HorairePage() {
                     {employees.map((emp: any, ei: number) => {
                       const rowBg = ei % 2 === 1 ? 'var(--surface2)' : 'var(--surface1)'
                       return (
-                      <div key={emp.id} style={{ display: 'grid', gridTemplateColumns: '76px repeat(6, 1fr)', borderBottom: ei < employees.length - 1 ? '1px solid var(--border)' : 'none', background: rowBg }}>
-                        <div style={{ padding: '0 8px', fontSize: 'var(--fz-sm)', fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', minHeight: 60, position: 'sticky', left: 0, background: rowBg, zIndex: 1 }}>
+                      <div key={emp.id} style={{ display: 'grid', gridTemplateColumns: '140px repeat(6, 1fr)', borderBottom: ei < employees.length - 1 ? '1px solid var(--border)' : 'none', background: rowBg }}>
+                        <div style={{ padding: '0 8px', fontSize: 14, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', minHeight: 52, position: 'sticky', left: 0, background: 'var(--surface1)', zIndex: 1 }}>
                           {emp.nom.split(' ')[0]}
                         </div>
                         {days.map((day, di) => {
@@ -743,15 +753,16 @@ export default function HorairePage() {
                           return (
                             <button key={dateStr}
                               onClick={() => { setCellModal({ empId: emp.id, date: dateStr, jourKey, shiftId: shift?.id, shiftTypeId: shift?.shift_type_id }); setCellStId(shift?.shift_type_id || '') }}
-                              style={{ borderTop: 'none', borderRight: 'none', borderBottom: 'none', borderLeft: '1px solid var(--border)', background: bg || (isToday ? 'var(--accent-subtle)' : 'transparent'), cursor: 'pointer', padding: '4px 3px', minHeight: 60, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              className={!shift ? 'schedule-cell-empty' : undefined}
+                              style={{ borderTop: 'none', borderRight: 'none', borderBottom: 'none', borderLeft: '1px solid var(--border)', background: bg || (isToday ? 'var(--accent-subtle)' : 'transparent'), cursor: 'pointer', padding: '3px 2px', minHeight: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               {shift ? (
-                                <div style={{ width: '100%', borderRadius: 5, padding: '4px 4px 4px 6px', background: `${st?.couleur || 'var(--accent)'}22`, borderLeft: `3px solid ${st?.couleur || 'var(--accent)'}`, position: 'relative', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                  <div style={{ fontSize: 'var(--fz-10)', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>{(st?.nom || '?').split(' ')[0]}</div>
-                                  {st?.debut && <div style={{ fontSize: 'var(--fz-9)', color: 'var(--text-faint)' }}>{st.debut.slice(0,5)}–{(st.fin || '').slice(0,5)}</div>}
+                                <div style={{ width: '100%', borderRadius: 8, padding: '5px 6px', background: `${st?.couleur || 'var(--accent)'}26`, borderLeft: `4px solid ${st?.couleur || 'var(--accent)'}`, position: 'relative', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                  <div style={{ fontSize: 12, color: st?.couleur || 'var(--accent)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>{st?.nom || '?'}</div>
+                                  {st?.debut && <div style={{ fontSize: 10, color: 'var(--text-faint)' }}>{st.debut.slice(0,5)}–{(st.fin || '').slice(0,5)}</div>}
                                   {shift.statut === 'brouillon' && <div style={{ position: 'absolute', top: 2, right: 2, width: 5, height: 5, borderRadius: '50%', background: 'var(--warning)' }} />}
                                 </div>
                               ) : (
-                                <span style={{ fontSize: 'var(--fz-16)', color: 'var(--text-faint)', opacity: 0.25 }}>+</span>
+                                <span className="cell-plus" style={{ fontSize: 18, color: 'var(--accent)', opacity: 0.3 }}>+</span>
                               )}
                             </button>
                           )
@@ -764,18 +775,18 @@ export default function HorairePage() {
                   {/* Coverage bar */}
                   {couverture.length > 0 && (
                     <div style={{ background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 10, padding: '8px 10px', marginBottom: 12 }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '76px repeat(6, 1fr)' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '140px repeat(6, 1fr)' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: 3, justifyContent: 'center' }}>
-                          <span style={{ fontSize: 8, color: 'var(--warning)', letterSpacing: '0.06em' }}>MIDI</span>
-                          <span style={{ fontSize: 8, color: 'var(--info)', letterSpacing: '0.06em' }}>SOIR</span>
+                          <span style={{ fontSize: 9, color: 'var(--text-faint)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>MIDI</span>
+                          <span style={{ fontSize: 9, color: 'var(--text-faint)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>SOIR</span>
                         </div>
                         {days.map((_, di) => {
                           const cov = getCoverage(di)
                           return (
                             <div key={di} style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 3 }}>
-                              <div style={{ fontSize: 9, color: cov.midi.ok ? 'var(--success)' : 'var(--danger)', fontFamily: "'Courier New', monospace" }}>{cov.midi.need > 0 ? `${cov.midi.have}/${cov.midi.need}` : '–'}</div>
-                              <div style={{ fontSize: 9, color: cov.soir.ok ? 'var(--success)' : 'var(--danger)', fontFamily: "'Courier New', monospace" }}>
-                                {cov.soir.need > 0 ? `${cov.soir.have}/${cov.soir.need}` : '–'}
+                              <div style={{ fontSize: 9, color: covColor(cov.midi.have, cov.midi.need), fontFamily: "'Courier New', monospace" }}>{cov.midi.need > 0 ? `${cov.midi.have}/${cov.midi.need}` : '—'}</div>
+                              <div style={{ fontSize: 9, color: covColor(cov.soir.have, cov.soir.need), fontFamily: "'Courier New', monospace" }}>
+                                {cov.soir.need > 0 ? `${cov.soir.have}/${cov.soir.need}` : '—'}
                               </div>
                             </div>
                           )
@@ -990,10 +1001,10 @@ export default function HorairePage() {
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
               {shiftTypes.map((st: any) => (
-                <button key={st.id} onClick={() => setCellStId(st.id)} style={{ padding: '10px 14px', borderRadius: 10, cursor: 'pointer', textAlign: 'left', fontFamily: font, background: cellStId === st.id ? `${st.couleur}22` : 'var(--surface2)', border: `1px solid ${cellStId === st.id ? st.couleur : 'var(--border)'}`, display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: st.couleur, flexShrink: 0 }} />
-                  <span style={{ fontSize: 13, color: 'var(--text)' }}>{st.nom}</span>
-                  <span style={{ fontSize: 11, color: 'var(--text-secondary)', marginLeft: 'auto' }}>{st.debut}–{st.fin}</span>
+                <button key={st.id} onClick={() => setCellStId(st.id)} style={{ padding: '0 12px 0 0', borderRadius: 10, cursor: 'pointer', textAlign: 'left', fontFamily: font, background: cellStId === st.id ? `${st.couleur}22` : 'var(--surface2)', border: `1px solid ${cellStId === st.id ? st.couleur : 'var(--border)'}`, display: 'flex', alignItems: 'center', gap: 0, overflow: 'hidden' }}>
+                  <div style={{ width: 4, alignSelf: 'stretch', background: st.couleur, flexShrink: 0, marginRight: 12 }} />
+                  <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: cellStId === st.id ? 600 : 400, flex: 1, padding: '10px 0' }}>{st.nom}</span>
+                  <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{st.debut}–{st.fin}</span>
                 </button>
               ))}
               {shiftTypes.length === 0 && <div style={{ fontSize: 12, color: 'var(--text-faint)', padding: '8px 0' }}>{lang === 'fr' ? 'Aucun type de shift configuré' : 'No shift types configured'}</div>}
@@ -1246,5 +1257,6 @@ export default function HorairePage() {
       )}
 
     </AppShell>
+    </>
   )
 }
