@@ -153,6 +153,35 @@ export default function HorairePage() {
     setShiftTypes(json.shifts || [])
   }
 
+  async function loadWeekShifts() {
+    if (!ctxRestaurantId || !profile || !userId) return
+    const { monday, saturday } = getWeekRange(weekOffset)
+    const mondayISO   = isoDate(monday)
+    const saturdayISO = isoDate(saturday)
+
+    if (isManager) {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) return
+      const res = await fetch(
+        `/api/manage-shifts?restaurant_id=${ctxRestaurantId}&date_start=${mondayISO}&date_end=${saturdayISO}`,
+        { headers: { Authorization: `Bearer ${session.access_token}` } }
+      )
+      if (!res.ok) {
+        console.error('[horaire] loadWeekShifts error:', res.status)
+        return
+      }
+      const json = await res.json()
+      console.log('[horaire] shifts chargés:', json.shifts?.length)
+      setShifts(json.shifts || [])
+    } else {
+      const { data: shiftsData } = await supabase.from('horaire_shifts')
+        .select('*, shift_types(*)')
+        .gte('date', mondayISO).lte('date', saturdayISO)
+        .eq('user_id', userId)
+      setShifts(shiftsData || [])
+    }
+  }
+
   // ─── Load week data ───────────────────────────────────────────────────────
   const loadData = useCallback(async () => {
     if (!profile || !userId) return
@@ -161,15 +190,7 @@ export default function HorairePage() {
     const mondayISO = isoDate(monday)
     const saturdayISO = isoDate(saturday)
 
-    let q = supabase.from('horaire_shifts').select('*, shift_types(*)')
-      .gte('date', mondayISO).lte('date', saturdayISO)
-    if (isManager && restaurantId) {
-      q = q.eq('restaurant_id', restaurantId)
-    } else {
-      q = q.eq('user_id', userId)
-    }
-    const { data: shiftsData } = await q
-    setShifts(shiftsData || [])
+    await loadWeekShifts()
 
     if (isManager && restaurantId) {
       const { data: { session } } = await supabase.auth.getSession()

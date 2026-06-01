@@ -6,6 +6,51 @@ function err(msg: string, status: number) {
   return NextResponse.json({ error: msg }, { status })
 }
 
+export async function GET(req: NextRequest) {
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY)
+    return NextResponse.json({ error: 'Config error' }, { status: 500 })
+
+  const authHeader = req.headers.get('Authorization') ?? ''
+  if (!authHeader.startsWith('Bearer '))
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const SUPA_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
+  const ANON     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  const SRK      = process.env.SUPABASE_SERVICE_ROLE_KEY!
+
+  const userClient = createClient(SUPA_URL, ANON, {
+    global: { headers: { Authorization: authHeader } },
+    auth: { persistSession: false },
+  })
+  const { data: { user }, error: authError } = await userClient.auth.getUser()
+  if (authError || !user)
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const reqUrl        = new URL(req.url)
+  const restaurant_id = reqUrl.searchParams.get('restaurant_id')
+  const date_start    = reqUrl.searchParams.get('date_start')
+  const date_end      = reqUrl.searchParams.get('date_end')
+
+  if (!restaurant_id || !date_start || !date_end)
+    return NextResponse.json({ error: 'Params manquants' }, { status: 400 })
+
+  const admin = createClient(SUPA_URL, SRK, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+
+  const { data, error } = await admin
+    .from('horaire_shifts')
+    .select('*, shift_types(*), profiles(nom, roles)')
+    .eq('restaurant_id', restaurant_id)
+    .gte('date', date_start)
+    .lte('date', date_end)
+
+  if (error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+
+  return NextResponse.json({ shifts: data })
+}
+
 export async function POST(req: NextRequest) {
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY)
     return err('SUPABASE_SERVICE_ROLE_KEY not set', 500)
