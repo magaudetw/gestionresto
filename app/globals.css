@@ -8,7 +8,7 @@
 :root {
   /* ── Typographie ─────────────────────────────────────────────────────────── */
   --font-title: var(--font-cormorant), 'Cormorant Garamond', Georgia, serif;
-  --font-body:  var(--font-dm-sans),   'DM Sans', 'Helvetica Neue', Arial, sans-serif;
+  --font-body:  var(--font-inter), var(--font-dm-sans), 'Inter', 'DM Sans', 'Helvetica Neue', Arial, sans-serif;
   --font-mono:  'Courier New', monospace;
 
   /* ── Layout ──────────────────────────────────────────────────────────────── */
@@ -90,7 +90,7 @@
   --fz-38: calc(var(--font-size-base) * 2.533);
 
   /* ── Thème par défaut : Professionnel ───────────────────────────────────── */
-  --bg:                  #F4F6F9;
+  --bg:                  #F5F7FA;
   --surface1:            #FFFFFF;
   --surface2:            #EFF2F7;
   --surface3:            #E4E9F2;
@@ -99,23 +99,25 @@
   --text-muted:          #8896A8;
   --text-faint:          #C8D0D8;
   --text-inverse:        #FFFFFF;
-  --accent:              #5B8DEF;
-  --accent-light:        #7BAAF7;
-  --accent-dark:         #3B6DD8;
-  --accent-hover:        #3B6DD8;
+  --accent:              #0B6B73;
+  --accent-light:        #0E8A94;
+  --accent-dark:         #084F57;
+  --accent-hover:        #084F57;
   --accent-text:         #FFFFFF;
-  --accent-subtle:       rgba(91,141,239,0.10);
+  --accent-subtle:       rgba(11,107,115,0.10);
+  --accent-coral:        #E8855A;
   --border:              #E2E8F0;
   --border-strong:       #C8D4E0;
-  --border-accent:       rgba(91,141,239,0.30);
-  --sidebar-bg:          #1B2340;
-  --sidebar-text:        rgba(249,250,251,0.90);
-  --sidebar-text-muted:  rgba(249,250,251,0.50);
-  --sidebar-text-faint:  rgba(249,250,251,0.25);
-  --sidebar-border:      rgba(249,250,251,0.08);
-  --sidebar-active-bg:   rgba(91,141,239,0.18);
-  --sidebar-active-text: #7BAAF7;
-  --sidebar-bg-hover:    rgba(91,141,239,0.10);
+  --border-accent:       rgba(11,107,115,0.30);
+  --sidebar-bg:          #0B3D42;
+  --sidebar-text:        rgba(255,255,255,0.85);
+  --sidebar-text-muted:  rgba(255,255,255,0.50);
+  --sidebar-text-faint:  rgba(255,255,255,0.25);
+  --sidebar-border:      rgba(255,255,255,0.08);
+  --sidebar-active-bg:   rgba(255,255,255,0.15);
+  --sidebar-active-text: #4DD9E8;
+  --sidebar-bg-hover:    rgba(255,255,255,0.08);
+  --sidebar-indicator:   #4DD9E8;
   --shadow-card:         0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.08);
   --danger:              #EF4444;
   --danger-subtle:       rgba(239,68,68,0.10);
@@ -604,12 +606,12 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
-   THÈME PROFESSIONNEL — Hybrid : contenu clair + sidebar navy sombre
-   Fond #F7F8FA, surface blanche, sidebar #1B2340 — style Linear/Notion
+   THÈME PROFESSIONNEL — Hybrid : contenu clair + sidebar teal sombre
+   Fond #F5F7FA, surface blanche, sidebar #0B3D42 — style Agendrix
    ═══════════════════════════════════════════════════════════════════════════ */
 
 [data-theme="professionnel"] {
-  --bg:                  #F4F6F9;
+  --bg:                  #F5F7FA;
   --surface1:            #FFFFFF;
   --surface2:            #EFF2F7;
   --surface3:            #E4E9F2;
@@ -618,23 +620,25 @@
   --text-muted:          #8896A8;
   --text-faint:          #C8D0D8;
   --text-inverse:        #FFFFFF;
-  --accent:              #5B8DEF;
-  --accent-light:        #7BAAF7;
-  --accent-dark:         #3B6DD8;
-  --accent-hover:        #3B6DD8;
+  --accent:              #0B6B73;
+  --accent-light:        #0E8A94;
+  --accent-dark:         #084F57;
+  --accent-hover:        #084F57;
   --accent-text:         #FFFFFF;
-  --accent-subtle:       rgba(91,141,239,0.10);
+  --accent-subtle:       rgba(11,107,115,0.10);
+  --accent-coral:        #E8855A;
   --border:              #E2E8F0;
   --border-strong:       #C8D4E0;
-  --border-accent:       rgba(91,141,239,0.30);
-  --sidebar-bg:          #1B2340;
-  --sidebar-text:        rgba(249,250,251,0.90);
-  --sidebar-text-muted:  rgba(249,250,251,0.50);
-  --sidebar-text-faint:  rgba(249,250,251,0.25);
-  --sidebar-border:      rgba(249,250,251,0.08);
-  --sidebar-active-bg:   rgba(91,141,239,0.18);
-  --sidebar-active-text: #7BAAF7;
-  --sidebar-bg-hover:    rgba(91,141,239,0.10);
+  --border-accent:       rgba(11,107,115,0.30);
+  --sidebar-bg:          #0B3D42;
+  --sidebar-text:        rgba(255,255,255,0.85);
+  --sidebar-text-muted:  rgba(255,255,255,0.50);
+  --sidebar-text-faint:  rgba(255,255,255,0.25);
+  --sidebar-border:      rgba(255,255,255,0.08);
+  --sidebar-active-bg:   rgba(255,255,255,0.15);
+  --sidebar-active-text: #4DD9E8;
+  --sidebar-bg-hover:    rgba(255,255,255,0.08);
+  --sidebar-indicator:   #4DD9E8;
   --shadow-card:         0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.08);
   --danger:              #EF4444;
   --danger-subtle:       rgba(239,68,68,0.10);
@@ -1167,7 +1171,7 @@ input:focus, textarea:focus, select:focus {
   left: 0; top: 50%; transform: translateY(-50%);
   width:         3px;
   height:        20px;
-  background:    var(--sidebar-active-text);
+  background:    var(--sidebar-indicator, var(--sidebar-active-text));
   border-radius: 0 2px 2px 0;
 }
 
