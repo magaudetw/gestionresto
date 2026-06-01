@@ -36,24 +36,15 @@ export async function POST(req: NextRequest) {
   const { action, payload } = body
 
   if (action === 'upsert') {
-    const { id, restaurant_id, nom, debut, fin, couleur } = payload
-    if (!nom || !debut || !fin) return err('Champs manquants', 400)
-    if (id) {
-      const { error } = await admin.from('shift_types').update({ nom, debut, fin, couleur }).eq('id', id)
-      if (error) { console.error('[shifts-config] update:', error.message); return err(error.message, 500) }
-    } else {
-      if (!restaurant_id) return err('restaurant_id manquant', 400)
-      const { error } = await admin.from('shift_types').insert({ restaurant_id, nom, debut, fin, couleur })
-      if (error) { console.error('[shifts-config] insert:', error.message); return err(error.message, 500) }
+    const { rows } = payload
+    if (!Array.isArray(rows) || rows.length === 0) return err('rows must be a non-empty array', 400)
+    const { error } = await admin
+      .from('couverture_minimale')
+      .upsert(rows, { onConflict: 'restaurant_id,role,service,jour' })
+    if (error) {
+      console.error('[manage-couverture] upsert error:', error.message)
+      return NextResponse.json({ error: error.message }, { status: 500 })
     }
-    return NextResponse.json({ ok: true })
-  }
-
-  if (action === 'delete') {
-    const { id } = payload
-    if (!id) return err('id manquant', 400)
-    const { error } = await admin.from('shift_types').delete().eq('id', id)
-    if (error) { console.error('[shifts-config] delete:', error.message); return err(error.message, 500) }
     return NextResponse.json({ ok: true })
   }
 

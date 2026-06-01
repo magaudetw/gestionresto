@@ -51,6 +51,9 @@ interface RoleTypeModalData {
 const COV_ROLES = ['gerant', 'serveur', 'bar', 'busboy'] as const
 type CovRole = typeof COV_ROLES[number]
 
+const JOURS = ['lun','mar','mer','jeu','ven','sam','dim'] as const
+const JOUR_LABELS: Record<string, string> = { lun:'LUN', mar:'MAR', mer:'MER', jeu:'JEU', ven:'VEN', sam:'SAM', dim:'DIM' }
+
 function loadGoogleFont(font: typeof FONTS[number]) {
   if (!('google' in font)) return
   const id = `gf-${font.label.replace(/\s/g, '-')}`
@@ -80,10 +83,11 @@ export default function ReglagesPage() {
   const [shiftSaveError, setShiftSaveError] = useState('')
   const [confirmDeleteShift, setConfirmDeleteShift] = useState<string | null>(null)
 
-  // Couverture minimale (roles × services matrix)
-  const [covRoles, setCovRoles] = useState<Record<string, number>>({})
+  // Couverture minimale (roles × services × jours matrix)
+  const [couverture, setCouverture] = useState<Record<string, number>>({})
   const [savingCouverture, setSavingCouverture] = useState(false)
   const [savedCouverture, setSavedCouverture] = useState(false)
+  const [couvertureError, setCouvertureError] = useState('')
 
   // Cotes
   const [cotesReg, setCotesReg] = useState<any[]>([])
@@ -117,11 +121,11 @@ export default function ReglagesPage() {
         .from('couverture_minimale').select('*').eq('restaurant_id', restaurantId)
       const covMap: Record<string, number> = {}
       for (const c of (cov || [])) {
-        if (c.role && c.service) {
-          covMap[`${c.role}_${c.service}`] = c.minimum ?? c.nb_personnes ?? 0
+        if (c.role && c.service && c.jour) {
+          covMap[`${c.role}_${c.service}_${c.jour}`] = c.minimum ?? 0
         }
       }
-      setCovRoles(covMap)
+      setCouverture(covMap)
 
       const { data: cotesD } = await supabase
         .from('cotes').select('*').eq('restaurant_id', restaurantId).order('nom')
@@ -179,36 +183,45 @@ export default function ReglagesPage() {
   }
 
   async function handleSaveShift() {
-    if (!shiftModal || !restaurantId || !shiftModal.nom.trim()) return
-    setSavingShift(true)
-    setShiftSaveError('')
-    const { data: { session } } = await supabase.auth.getSession()
-    const res = await fetch('/api/manage-shifts-config', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token ?? ''}` },
-      body: JSON.stringify({
-        action: 'upsert',
-        payload: {
-          id: shiftModal.id,
-          restaurant_id: restaurantId,
-          nom: shiftModal.nom.trim(),
-          debut: shiftModal.debut,
-          fin: shiftModal.fin,
-          couleur: shiftModal.couleur,
-        },
-      }),
-    })
-    if (!res.ok) {
-      const json = await res.json().catch(() => ({}))
-      console.error('[shifts-config] save error:', json.error)
-      setShiftSaveError(json.error || (lang === 'fr' ? 'Erreur lors de la sauvegarde' : 'Save failed'))
-      setSavingShift(false)
+    if (!shiftModal || !shiftModal.nom.trim()) return
+    if (!restaurantId) {
+      setShiftSaveError(lang === 'fr' ? 'Restaurant non sélectionné' : 'No restaurant selected')
       return
     }
-    await loadShiftTypes()
-    setShiftModal(null)
-    setConfirmDeleteShift(null)
-    setSavingShift(false)
+    setSavingShift(true)
+    setShiftSaveError('')
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/manage-shifts-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token ?? ''}` },
+        body: JSON.stringify({
+          action: 'upsert',
+          payload: {
+            id: shiftModal.id,
+            restaurant_id: restaurantId,
+            nom: shiftModal.nom.trim(),
+            debut: shiftModal.debut,
+            fin: shiftModal.fin,
+            couleur: shiftModal.couleur,
+          },
+        }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        console.error('[shifts-config] save error:', json)
+        setShiftSaveError(json.error || (lang === 'fr' ? 'Erreur lors de la sauvegarde' : 'Save failed'))
+        return
+      }
+      await loadShiftTypes()
+      setShiftModal(null)
+      setConfirmDeleteShift(null)
+    } catch (e) {
+      console.error('[handleSaveShift]', e)
+      setShiftSaveError(lang === 'fr' ? 'Erreur réseau' : 'Network error')
+    } finally {
+      setSavingShift(false)
+    }
   }
 
   async function handleDeleteShift() {
@@ -333,32 +346,39 @@ export default function ReglagesPage() {
   async function handleSaveCouverture() {
     if (!restaurantId) return
     setSavingCouverture(true)
+    setCouvertureError('')
     const rows = COV_ROLES.flatMap(role =>
-      (['midi', 'soir'] as const).map(service => ({
-        restaurant_id: restaurantId,
-        role,
-        service,
-        minimum: covRoles[`${role}_${service}`] ?? 0,
-      }))
+      (['midi', 'soir'] as const).flatMap(service =>
+        JOURS.map(jour => ({
+          restaurant_id: restaurantId,
+          role,
+          service,
+          jour,
+          minimum: couverture[`${role}_${service}_${jour}`] ?? 0,
+        }))
+      )
     )
-    const { data: { session } } = await supabase.auth.getSession()
-    const res = await fetch('/api/manage-shifts', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session?.access_token ?? ''}`,
-      },
-      body: JSON.stringify({ action: 'upsert_couverture_roles', payload: { rows } }),
-    })
-    if (!res.ok) {
-      const json = await res.json().catch(() => ({}))
-      console.error('[couverture] save error:', json.error)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/manage-couverture', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token ?? ''}` },
+        body: JSON.stringify({ action: 'upsert', payload: { rows } }),
+      })
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}))
+        console.error('[couverture] save error:', json.error)
+        setCouvertureError(json.error || (lang === 'fr' ? 'Erreur lors de la sauvegarde' : 'Save failed'))
+        return
+      }
+      setSavedCouverture(true)
+      setTimeout(() => setSavedCouverture(false), 2500)
+    } catch (e) {
+      console.error('[handleSaveCouverture]', e)
+      setCouvertureError(lang === 'fr' ? 'Erreur réseau' : 'Network error')
+    } finally {
       setSavingCouverture(false)
-      return
     }
-    setSavedCouverture(true)
-    setTimeout(() => setSavedCouverture(false), 2500)
-    setSavingCouverture(false)
   }
 
   if (loading) return <div className="loading-screen"><div className="loading-dot">CHARGEMENT…</div></div>
@@ -741,57 +761,91 @@ export default function ReglagesPage() {
             </div>
 
             <div style={{ background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 14, overflow: 'hidden' }}>
-              {/* Header */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 80px', padding: '8px 14px', borderBottom: `1px solid ${t.border}`, gap: 8 }}>
-                <div style={{ fontSize: 10, color: t.texteSecondaire, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                  {lang === 'fr' ? 'Rôle' : 'Role'}
-                </div>
-                <div style={{ fontSize: 10, color: t.texteSecondaire, textAlign: 'center', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                  {T.midiLabel}
-                </div>
-                <div style={{ fontSize: 10, color: t.texteSecondaire, textAlign: 'center', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                  {T.soirLabel}
-                </div>
-              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <div style={{ minWidth: 720 }}>
 
-              {COV_ROLES.map((role, idx) => {
-                const roleLbl = ROLE_LABELS[role]?.[lang] || role
-                return (
-                  <div key={role} style={{
-                    display: 'grid', gridTemplateColumns: '1fr 80px 80px',
-                    padding: '10px 14px', alignItems: 'center', gap: 8,
-                    borderBottom: idx < COV_ROLES.length - 1 ? `1px solid ${t.border}` : 'none',
-                  }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: ROLE_COLORS[role] || t.accent, flexShrink: 0 }} />
-                      <span style={{ fontSize: 13, color: t.texte }}>{roleLbl}</span>
-                    </div>
-                    {(['midi', 'soir'] as const).map(svc => (
-                      <div key={svc} style={{ display: 'flex', justifyContent: 'center' }}>
-                        <input
-                          type="number"
-                          min={0}
-                          max={99}
-                          value={covRoles[`${role}_${svc}`] ?? 0}
-                          onChange={e => {
-                            const val = Math.max(0, parseInt(e.target.value) || 0)
-                            setCovRoles(prev => ({ ...prev, [`${role}_${svc}`]: val }))
-                          }}
-                          style={{
-                            width: 56, textAlign: 'center',
-                            background: t.surface2, border: `1px solid ${t.border}`,
-                            borderRadius: 8, color: t.texte,
-                            padding: '6px 4px', fontSize: 15,
-                            fontFamily: "'Courier New', monospace",
-                            outline: 'none',
-                          }}
-                        />
+                  {/* Row 1 — Day names (each spans 2 sub-columns) */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '90px repeat(7, 90px)', borderBottom: `1px solid ${t.border}` }}>
+                    <div style={{ padding: '6px 8px' }} />
+                    {JOURS.map(j => (
+                      <div key={j} style={{
+                        textAlign: 'center', padding: '7px 0',
+                        borderLeft: `1px solid ${t.border}`,
+                        background: j === 'dim' ? t.surface2 : 'transparent',
+                        fontSize: 9, fontWeight: 700, letterSpacing: '0.12em',
+                        color: j === 'dim' ? t.texteSecondaire : t.texte,
+                      }}>
+                        {JOUR_LABELS[j]}
                       </div>
                     ))}
                   </div>
-                )
-              })}
+
+                  {/* Row 2 — Mi / So sub-labels */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '90px repeat(14, 45px)', borderBottom: `1px solid ${t.border}` }}>
+                    <div style={{ padding: '4px 8px', fontSize: 9, color: t.texteFaible, display: 'flex', alignItems: 'center' }}>
+                      {lang === 'fr' ? 'Rôle' : 'Role'}
+                    </div>
+                    {JOURS.flatMap(j => (['midi','soir'] as const).map(svc => (
+                      <div key={`hdr-${j}-${svc}`} style={{
+                        textAlign: 'center', padding: '4px 0',
+                        borderLeft: `1px solid ${t.border}`,
+                        background: j === 'dim' ? t.surface2 : 'transparent',
+                        fontSize: 8, color: t.texteFaible,
+                      }}>
+                        {svc === 'midi' ? 'Mi' : 'So'}
+                      </div>
+                    )))}
+                  </div>
+
+                  {/* Data rows */}
+                  {COV_ROLES.map((role, ri) => (
+                    <div key={role} style={{
+                      display: 'grid', gridTemplateColumns: '90px repeat(14, 45px)',
+                      borderTop: ri > 0 ? `1px solid ${t.border}` : 'none',
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 8px' }}>
+                        <div style={{ width: 7, height: 7, borderRadius: '50%', background: ROLE_COLORS[role] || t.accent, flexShrink: 0 }} />
+                        <span style={{ fontSize: 10, color: t.texte, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {ROLE_LABELS[role]?.[lang] || role}
+                        </span>
+                      </div>
+                      {JOURS.flatMap(jour => (['midi','soir'] as const).map(svc => (
+                        <div key={`${jour}-${svc}`} style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          padding: '5px 2px',
+                          borderLeft: `1px solid ${t.border}`,
+                          background: jour === 'dim' ? t.surface2 : 'transparent',
+                        }}>
+                          <input
+                            type="number"
+                            min={0} max={10}
+                            value={couverture[`${role}_${svc}_${jour}`] ?? 0}
+                            onChange={e => {
+                              const val = Math.max(0, parseInt(e.target.value) || 0)
+                              setCouverture(prev => ({ ...prev, [`${role}_${svc}_${jour}`]: val }))
+                            }}
+                            style={{
+                              width: 34, height: 28, textAlign: 'center',
+                              background: t.surface2, border: `1px solid ${t.border}`,
+                              borderRadius: 5, color: t.texte, fontSize: 12,
+                              fontFamily: "'Courier New', monospace", outline: 'none', padding: 0,
+                              boxSizing: 'border-box',
+                            }}
+                          />
+                        </div>
+                      )))}
+                    </div>
+                  ))}
+
+                </div>
+              </div>
             </div>
+
+            {couvertureError && (
+              <div style={{ background: 'var(--danger-subtle)', border: '1px solid var(--danger)', borderRadius: 10, padding: '10px 14px', marginTop: 10, fontSize: 12, color: 'var(--danger)' }}>
+                {couvertureError}
+              </div>
+            )}
 
             <button
               onClick={handleSaveCouverture}
