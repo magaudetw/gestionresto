@@ -346,8 +346,24 @@ export default function ReglagesPage() {
     }
   }
 
-  async function handleSaveCouverture() {
+  async function loadCouverture() {
     if (!restaurantId) return
+    const { data: cov } = await supabase
+      .from('couverture_minimale').select('*').eq('restaurant_id', restaurantId)
+    const covMap: Record<string, number> = {}
+    for (const c of (cov || [])) {
+      if (c.role && c.service && c.jour) {
+        covMap[`${c.role}_${c.service}_${c.jour}`] = c.minimum ?? 0
+      }
+    }
+    setCouverture(covMap)
+  }
+
+  async function handleSaveCouverture() {
+    if (!restaurantId) {
+      console.error('[handleSaveCouverture] restaurant_id manquant')
+      return
+    }
     setSavingCouverture(true)
     setCouvertureError('')
     const rows = COV_ROLES.flatMap(role =>
@@ -374,6 +390,7 @@ export default function ReglagesPage() {
         setCouvertureError(json.error || (lang === 'fr' ? 'Erreur lors de la sauvegarde' : 'Save failed'))
         return
       }
+      await loadCouverture()
       setSavedCouverture(true)
       setTimeout(() => setSavedCouverture(false), 2500)
     } catch (e) {
