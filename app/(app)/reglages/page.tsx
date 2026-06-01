@@ -185,6 +185,7 @@ export default function ReglagesPage() {
   async function handleSaveShift() {
     if (!shiftModal || !shiftModal.nom.trim()) return
     if (!restaurantId) {
+      console.error('[handleSaveShift] restaurant_id manquant')
       setShiftSaveError(lang === 'fr' ? 'Restaurant non sélectionné' : 'No restaurant selected')
       return
     }
@@ -207,19 +208,15 @@ export default function ReglagesPage() {
           },
         }),
       })
+      console.log('API response status:', res.status)
       const json = await res.json().catch(() => ({}))
+      console.log('API response data:', json)
       if (!res.ok) {
         console.error('[shifts-config] save error:', json)
         setShiftSaveError(json.error || (lang === 'fr' ? 'Erreur lors de la sauvegarde' : 'Save failed'))
         return
       }
-      if (json.data) {
-        if (shiftModal.id) {
-          setShiftTypes(prev => prev.map(s => s.id === json.data.id ? json.data : s))
-        } else {
-          setShiftTypes(prev => [...prev, json.data].sort((a, b) => a.debut.localeCompare(b.debut)))
-        }
-      }
+      await loadShiftTypes()
       setShiftModal(null)
       setConfirmDeleteShift(null)
     } catch (e) {

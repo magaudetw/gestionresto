@@ -41,11 +41,13 @@ export async function POST(req: NextRequest) {
     if (id) {
       const { data, error } = await admin.from('shift_types').update({ nom, debut, fin, couleur }).eq('id', id).select().single()
       if (error) { console.error('[shifts-config] update:', error.message); return err(error.message, 500) }
+      console.log('[shifts-config] upsert result:', JSON.stringify(data))
       return NextResponse.json({ ok: true, data })
     } else {
       if (!restaurant_id) return err('restaurant_id manquant', 400)
       const { data, error } = await admin.from('shift_types').insert({ restaurant_id, nom, debut, fin, couleur }).select().single()
       if (error) { console.error('[shifts-config] insert:', error.message); return err(error.message, 500) }
+      console.log('[shifts-config] upsert result:', JSON.stringify(data))
       return NextResponse.json({ ok: true, data })
     }
   }
