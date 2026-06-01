@@ -177,9 +177,15 @@ export default function ReglagesPage() {
 
   async function loadShiftTypes() {
     if (!restaurantId) return
-    const { data } = await supabase
-      .from('shift_types').select('*').eq('restaurant_id', restaurantId).order('debut')
-    setShiftTypes(data || [])
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    const res = await fetch(
+      `/api/manage-shifts-config?restaurant_id=${restaurantId}`,
+      { headers: { Authorization: `Bearer ${session.access_token}` } }
+    )
+    if (!res.ok) { console.error('[loadShiftTypes] error:', res.status); return }
+    const json = await res.json()
+    setShiftTypes(json.shifts || [])
   }
 
   async function handleSaveShift() {
@@ -354,10 +360,16 @@ export default function ReglagesPage() {
 
   async function loadCouverture() {
     if (!restaurantId) return
-    const { data: cov } = await supabase
-      .from('couverture_minimale').select('*').eq('restaurant_id', restaurantId)
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) return
+    const res = await fetch(
+      `/api/manage-couverture?restaurant_id=${restaurantId}`,
+      { headers: { Authorization: `Bearer ${session.access_token}` } }
+    )
+    if (!res.ok) { console.error('[loadCouverture] error:', res.status); return }
+    const json = await res.json()
     const covMap: Record<string, number> = {}
-    for (const c of (cov || [])) {
+    for (const c of (json.couverture || [])) {
       if (c.role && c.service && c.jour) {
         covMap[`${c.role}_${c.service}_${c.jour}`] = c.minimum ?? 0
       }

@@ -62,3 +62,34 @@ export async function POST(req: NextRequest) {
 
   return err('Unknown action', 400)
 }
+
+export async function GET(req: NextRequest) {
+  if (!SERVICE_ROLE_KEY) return err('Server misconfiguration', 500)
+
+  const authHeader = req.headers.get('Authorization') ?? ''
+  if (!authHeader.startsWith('Bearer ')) return err('Missing Authorization header', 401)
+
+  const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: authHeader } },
+    auth: { persistSession: false },
+  })
+  const { data: { user }, error: authError } = await userClient.auth.getUser()
+  if (authError || !user) return err('Unauthorized', 401)
+
+  const url = new URL(req.url)
+  const restaurant_id = url.searchParams.get('restaurant_id')
+  if (!restaurant_id) return err('restaurant_id manquant', 400)
+
+  const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  })
+
+  const { data, error } = await admin
+    .from('shift_types')
+    .select('*')
+    .eq('restaurant_id', restaurant_id)
+    .order('debut')
+
+  if (error) { console.error('[shifts-config] GET:', error.message); return err(error.message, 500) }
+  return NextResponse.json({ shifts: data })
+}
