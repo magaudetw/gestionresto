@@ -136,6 +136,23 @@ export default function HorairePage() {
     }
   }, [profile, userId, isManager])
 
+  async function loadShiftTypes() {
+    if (!ctxRestaurantId) return
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) return
+    const res = await fetch(
+      `/api/manage-shifts-config?restaurant_id=${ctxRestaurantId}`,
+      { headers: { Authorization: `Bearer ${session.access_token}` } }
+    )
+    if (!res.ok) {
+      console.error('[horaire] loadShiftTypes error:', res.status)
+      return
+    }
+    const json = await res.json()
+    console.log('[horaire] shift_types chargés:', json.shifts?.length)
+    setShiftTypes(json.shifts || [])
+  }
+
   // ─── Load week data ───────────────────────────────────────────────────────
   const loadData = useCallback(async () => {
     if (!profile || !userId) return
@@ -157,16 +174,15 @@ export default function HorairePage() {
     if (isManager && restaurantId) {
       const { data: { session } } = await supabase.auth.getSession()
       const authHeader = session?.access_token ? `Bearer ${session.access_token}` : ''
-      const [empsRes, stJson, disposRes, covJson] = await Promise.all([
+      const [empsRes, disposRes, covJson] = await Promise.all([
         supabase.from('profiles').select('id,nom,roles,taux_horaire,dispos_base')
           .contains('restaurant_ids', [restaurantId]).eq('actif', true).order('nom'),
-        fetch(`/api/manage-shifts-config?restaurant_id=${restaurantId}`, { headers: { Authorization: authHeader } }).then(r => r.json()),
         supabase.from('dispos_hebdo').select('*').eq('restaurant_id', restaurantId).eq('semaine_du', mondayISO),
         fetch(`/api/manage-couverture?restaurant_id=${restaurantId}`, { headers: { Authorization: authHeader } }).then(r => r.json()),
       ])
+      await loadShiftTypes()
       const emps = empsRes.data || []
       setAllEmployees(emps)
-      setShiftTypes(stJson.shifts || [])
       setDisposHebdo(disposRes.data || [])
       setCouverture(covJson.couverture || [])
       const map: Record<string, any> = {}
@@ -211,8 +227,9 @@ export default function HorairePage() {
       },
       body: JSON.stringify({ action, payload }),
     })
+    const json = await res.json().catch(() => ({}))
+    console.log('[horaire] upsert result:', res.status, json)
     if (!res.ok) {
-      const json = await res.json().catch(() => ({}))
       console.error(`[manage-shifts] ${action}:`, json.error, json.hint ?? '')
     }
     return res.ok
@@ -221,6 +238,7 @@ export default function HorairePage() {
   async function addShift() {
     if (!cellModal || !cellStId) return
     setSaving(true)
+    console.log('[horaire] handleConfirmShift:', { userId: cellModal.empId, date: cellModal.date, shiftTypeId: cellStId, restaurantId: ctxRestaurantId })
     await callShiftsAPI('upsert', {
       restaurant_id: ctxRestaurantId,
       user_id: cellModal.empId,
