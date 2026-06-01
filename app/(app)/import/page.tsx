@@ -402,11 +402,7 @@ export default function ImportPage() {
 
   // ── Loading ────────────────────────────────────────────────────────────────
 
-  if (loading) return (
-    <div style={{ minHeight: '100vh', background: '#080808', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ color: '#C9A84C', fontSize: 12, letterSpacing: '0.2em' }}>CHARGEMENT...</div>
-    </div>
-  )
+  if (loading) return <div className="loading-screen"><div className="loading-dot">CHARGEMENT…</div></div>
 
   const t    = getTheme(profile?.theme)
   const lang = (profile?.lang || 'fr') as 'fr' | 'en'
