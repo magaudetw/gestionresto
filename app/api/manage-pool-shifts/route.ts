@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
       service,
       pool_total: parseFloat(pool_total) || 0,
       notes: notes || null,
-      statut: 'brouillon',
+      statut: 'ouvert',
     }).select().single()
     if (error) {
       console.error('[manage-pool-shifts] insert error:', error.message)
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { error: statusErr } = await admin
-      .from('pool_shifts').update({ statut: 'valide' }).eq('id', pool_shift_id)
+      .from('pool_shifts').update({ statut: 'calcule' }).eq('id', pool_shift_id)
     if (statusErr) return err(statusErr.message, 500)
 
     return NextResponse.json({ ok: true, updates })
@@ -115,7 +115,7 @@ export async function POST(req: NextRequest) {
     const { pool_shift_id } = payload
     if (!pool_shift_id) return err('pool_shift_id required', 400)
     const { error } = await admin
-      .from('pool_shifts').delete().eq('id', pool_shift_id).eq('statut', 'brouillon')
+      .from('pool_shifts').delete().eq('id', pool_shift_id).eq('statut', 'ouvert')
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
     return NextResponse.json({ ok: true })
   }

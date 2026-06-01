@@ -158,7 +158,7 @@ export default function FinancesPage() {
     const { start, end, semaineDu } = getWeekBounds(offset)
     const [psRes, allPsRes, heuresRes, empsRes] = await Promise.all([
       supabase.from('pool_shifts').select('*')
-        .eq('restaurant_id', rid).gte('date', start).lte('date', end).eq('statut', 'valide'),
+        .eq('restaurant_id', rid).gte('date', start).lte('date', end).eq('statut', 'calcule'),
       supabase.from('pool_shifts').select('*')
         .eq('restaurant_id', rid).gte('date', start).lte('date', end).order('date'),
       supabase.from('heures_employes').select('*').gte('date', start).lte('date', end),
@@ -227,7 +227,7 @@ export default function FinancesPage() {
     const MOIS = lang === 'fr' ? MOIS_FR : MOIS_EN
     const [psRes, heuresRes, empsRes] = await Promise.all([
       supabase.from('pool_shifts').select('pool_total,date')
-        .eq('restaurant_id', rid).eq('statut', 'valide').gte('date', s4).lte('date', end),
+        .eq('restaurant_id', rid).eq('statut', 'calcule').gte('date', s4).lte('date', end),
       supabase.from('heures_employes').select('heures,user_id,date').gte('date', s4).lte('date', end),
       supabase.from('profiles').select('id,taux_horaire').contains('restaurant_ids', [rid]).eq('actif', true),
     ])
@@ -259,7 +259,7 @@ export default function FinancesPage() {
     const { end } = getWeekBounds(offset)
     const MOIS = lang === 'fr' ? MOIS_FR : MOIS_EN
     const psRes = await supabase.from('pool_shifts').select('id,pool_total,date')
-      .eq('restaurant_id', rid).eq('statut', 'valide').gte('date', s8).lte('date', end)
+      .eq('restaurant_id', rid).eq('statut', 'calcule').gte('date', s8).lte('date', end)
     const psShifts = psRes.data || []
     if (psShifts.length === 0) { setCotesData([]); return }
 
@@ -457,10 +457,10 @@ export default function FinancesPage() {
                         }}>{svcLbl}</span>
                         <span style={{
                           fontSize: 9, padding: '1px 6px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '0.06em',
-                          background: ps.statut === 'valide' ? 'var(--success-subtle)' : 'var(--warning-subtle)',
-                          color: ps.statut === 'valide' ? 'var(--success)' : 'var(--warning)',
+                          background: ps.statut === 'calcule' ? 'var(--success-subtle)' : 'var(--warning-subtle)',
+                          color: ps.statut === 'calcule' ? 'var(--success)' : 'var(--warning)',
                         }}>
-                          {ps.statut === 'valide' ? (lang === 'fr' ? 'Calculé' : 'Calculated') : (lang === 'fr' ? 'Brouillon' : 'Draft')}
+                          {ps.statut === 'calcule' ? (lang === 'fr' ? 'Calculé' : 'Calculated') : (lang === 'fr' ? 'En cours' : 'Open')}
                         </span>
                       </div>
                       {ps.notes && <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 2 }}>{ps.notes}</div>}
@@ -468,7 +468,7 @@ export default function FinancesPage() {
                     <div style={{ fontSize: 14, color: 'var(--accent)', fontFamily: "'Courier New', monospace", flexShrink: 0 }}>
                       {fmt$(ps.pool_total || 0)}
                     </div>
-                    {ps.statut === 'brouillon' && (
+                    {ps.statut === 'ouvert' && (
                       <button
                         onClick={() => handleCalculate(ps.id)}
                         disabled={isCalc}
