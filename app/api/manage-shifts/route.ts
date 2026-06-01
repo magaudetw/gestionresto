@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
-  // ── upsert couverture_minimale rows ────────────────────────────────────────
+  // ── upsert couverture_minimale rows (legacy: jour/service model) ──────────
   if (action === 'upsert_couverture') {
     const { rows } = payload
     if (!Array.isArray(rows)) return err('rows must be an array', 400)
@@ -103,6 +103,19 @@ export async function POST(req: NextRequest) {
       .upsert(rows, { onConflict: 'restaurant_id,jour,service' })
     if (error) {
       console.error('[manage-shifts] upsert_couverture error:', error.message)
+      return NextResponse.json({ error: error.message }, { status: 400 })
+    }
+    return NextResponse.json({ ok: true })
+  }
+
+  // ── upsert couverture_minimale rows (role/service model) ──────────────────
+  if (action === 'upsert_couverture_roles') {
+    const { rows } = payload
+    if (!Array.isArray(rows)) return err('rows must be an array', 400)
+    const { error } = await admin.from('couverture_minimale')
+      .upsert(rows, { onConflict: 'restaurant_id,role,service' })
+    if (error) {
+      console.error('[manage-shifts] upsert_couverture_roles error:', error.message)
       return NextResponse.json({ error: error.message }, { status: 400 })
     }
     return NextResponse.json({ ok: true })

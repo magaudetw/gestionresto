@@ -2,9 +2,9 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import AppShell from '@/components/AppShell'
-import { getTheme, THEME_NAMES, LIGHT_THEMES, DARK_THEMES, FONT_SIZES, FONTS, applyThemeToDocument } from '@/lib/themes'
+import { getTheme, LIGHT_THEMES, DARK_THEMES, FONTS, applyThemeToDocument } from '@/lib/themes'
 import type { ThemeName } from '@/lib/themes'
-import type { ShiftType, Jour } from '@/types'
+import type { ShiftType } from '@/types'
 import { useAuth } from '@/lib/auth-context'
 
 const ROLE_LABELS: Record<string, { fr: string; en: string }> = {
@@ -29,12 +29,6 @@ const ROLE_TYPE_COLORS = [
   '#C39BD3', '#72BA80', '#E0A850', '#F4A261',
 ]
 
-const JOURS_ORDRE: Jour[] = ['lun', 'mar', 'mer', 'jeu', 'ven', 'sam']
-const JOUR_LABELS: Record<Jour, { fr: string; en: string }> = {
-  lun: { fr: 'Lun', en: 'Mon' }, mar: { fr: 'Mar', en: 'Tue' },
-  mer: { fr: 'Mer', en: 'Wed' }, jeu: { fr: 'Jeu', en: 'Thu' },
-  ven: { fr: 'Ven', en: 'Fri' }, sam: { fr: 'Sam', en: 'Sat' },
-}
 
 interface ShiftModalData {
   id?: string
@@ -54,7 +48,8 @@ interface RoleTypeModalData {
   actif: boolean
 }
 
-type CovEntry = { nb_personnes: number; bar_requis: boolean; id?: string }
+const COV_ROLES = ['gerant', 'serveur', 'bar', 'busboy'] as const
+type CovRole = typeof COV_ROLES[number]
 
 function loadGoogleFont(font: typeof FONTS[number]) {
   if (!('google' in font)) return
@@ -74,19 +69,19 @@ export default function ReglagesPage() {
   const [saveError, setSaveError] = useState(false)
   const [activeTab, setActiveTab] = useState<'compte' | 'apparence' | 'shifts' | 'couverture' | 'cotes' | 'roles'>('compte')
 
-  const [selectedTheme, setSelectedTheme] = useState<ThemeName>('Lumière')
+  const [selectedTheme, setSelectedTheme] = useState<ThemeName>('Professionnel')
   const [selectedLang, setSelectedLang] = useState<'fr' | 'en'>('fr')
   const [selectedFont, setSelectedFont] = useState<string>(FONTS[0].value)
-  const [selectedFontSize, setSelectedFontSize] = useState<string>('md')
 
   // Shift types
   const [shiftTypes, setShiftTypes] = useState<ShiftType[]>([])
   const [shiftModal, setShiftModal] = useState<ShiftModalData | null>(null)
   const [savingShift, setSavingShift] = useState(false)
+  const [shiftSaveError, setShiftSaveError] = useState('')
   const [confirmDeleteShift, setConfirmDeleteShift] = useState<string | null>(null)
 
-  // Couverture minimale
-  const [couverture, setCouverture] = useState<Record<string, CovEntry>>({})
+  // Couverture minimale (roles × services matrix)
+  const [covRoles, setCovRoles] = useState<Record<string, number>>({})
   const [savingCouverture, setSavingCouverture] = useState(false)
   const [savedCouverture, setSavedCouverture] = useState(false)
 
@@ -108,7 +103,6 @@ export default function ReglagesPage() {
     if (profile.theme)       setSelectedTheme(profile.theme as ThemeName)
     if (profile.lang)        setSelectedLang(profile.lang as 'fr' | 'en')
     if (profile.font_family) setSelectedFont(profile.font_family)
-    if (profile.font_size)   setSelectedFontSize(profile.font_size)
   }, [profile])
 
   // Load manager data when profile is ready
@@ -121,11 +115,13 @@ export default function ReglagesPage() {
 
       const { data: cov } = await supabase
         .from('couverture_minimale').select('*').eq('restaurant_id', restaurantId)
-      const covMap: Record<string, CovEntry> = {}
+      const covMap: Record<string, number> = {}
       for (const c of (cov || [])) {
-        covMap[`${c.jour}_${c.service}`] = { nb_personnes: c.nb_personnes, bar_requis: c.bar_requis, id: c.id }
+        if (c.role && c.service) {
+          covMap[`${c.role}_${c.service}`] = c.minimum ?? c.nb_personnes ?? 0
+        }
       }
-      setCouverture(covMap)
+      setCovRoles(covMap)
 
       const { data: cotesD } = await supabase
         .from('cotes').select('*').eq('restaurant_id', restaurantId).order('nom')
@@ -157,7 +153,7 @@ export default function ReglagesPage() {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${session?.access_token ?? ''}`,
       },
-      body: JSON.stringify({ theme: selectedTheme, lang: selectedLang, font_family: selectedFont, font_size: selectedFontSize }),
+      body: JSON.stringify({ theme: selectedTheme, lang: selectedLang, font_family: selectedFont }),
     })
 
     setSaving(false)
@@ -169,7 +165,7 @@ export default function ReglagesPage() {
       return
     }
 
-    applyThemeToDocument(selectedTheme, selectedFont, selectedFontSize)
+    applyThemeToDocument(selectedTheme, selectedFont)
     await refreshProfile()
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
@@ -185,6 +181,7 @@ export default function ReglagesPage() {
   async function handleSaveShift() {
     if (!shiftModal || !restaurantId || !shiftModal.nom.trim()) return
     setSavingShift(true)
+    setShiftSaveError('')
     const { data: { session } } = await supabase.auth.getSession()
     const res = await fetch('/api/manage-shifts-config', {
       method: 'POST',
@@ -204,6 +201,7 @@ export default function ReglagesPage() {
     if (!res.ok) {
       const json = await res.json().catch(() => ({}))
       console.error('[shifts-config] save error:', json.error)
+      setShiftSaveError(json.error || (lang === 'fr' ? 'Erreur lors de la sauvegarde' : 'Save failed'))
       setSavingShift(false)
       return
     }
@@ -226,22 +224,6 @@ export default function ReglagesPage() {
       setShiftModal(null)
       setConfirmDeleteShift(null)
     }
-  }
-
-  function adjustCouverture(jour: Jour, service: 'midi' | 'soir', delta: number) {
-    const key = `${jour}_${service}`
-    setCouverture(prev => {
-      const current = prev[key] || { nb_personnes: 0, bar_requis: false }
-      return { ...prev, [key]: { ...current, nb_personnes: Math.max(0, current.nb_personnes + delta) } }
-    })
-  }
-
-  function toggleBarRequis(jour: Jour) {
-    const key = `${jour}_soir`
-    setCouverture(prev => {
-      const current = prev[key] || { nb_personnes: 0, bar_requis: false }
-      return { ...prev, [key]: { ...current, bar_requis: !current.bar_requis } }
-    })
   }
 
   async function loadCotesReg() {
@@ -351,13 +333,12 @@ export default function ReglagesPage() {
   async function handleSaveCouverture() {
     if (!restaurantId) return
     setSavingCouverture(true)
-    const rows = JOURS_ORDRE.flatMap(jour =>
+    const rows = COV_ROLES.flatMap(role =>
       (['midi', 'soir'] as const).map(service => ({
         restaurant_id: restaurantId,
-        jour,
+        role,
         service,
-        nb_personnes: couverture[`${jour}_${service}`]?.nb_personnes ?? 0,
-        bar_requis: service === 'soir' ? (couverture[`${jour}_${service}`]?.bar_requis ?? false) : false,
+        minimum: covRoles[`${role}_${service}`] ?? 0,
       }))
     )
     const { data: { session } } = await supabase.auth.getSession()
@@ -367,7 +348,7 @@ export default function ReglagesPage() {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${session?.access_token ?? ''}`,
       },
-      body: JSON.stringify({ action: 'upsert_couverture', payload: { rows } }),
+      body: JSON.stringify({ action: 'upsert_couverture_roles', payload: { rows } }),
     })
     if (!res.ok) {
       const json = await res.json().catch(() => ({}))
@@ -375,12 +356,6 @@ export default function ReglagesPage() {
       setSavingCouverture(false)
       return
     }
-    const { data } = await supabase.from('couverture_minimale').select('*').eq('restaurant_id', restaurantId)
-    const covMap: Record<string, CovEntry> = {}
-    for (const c of (data || [])) {
-      covMap[`${c.jour}_${c.service}`] = { nb_personnes: c.nb_personnes, bar_requis: c.bar_requis, id: c.id }
-    }
-    setCouverture(covMap)
     setSavedCouverture(true)
     setTimeout(() => setSavedCouverture(false), 2500)
     setSavingCouverture(false)
@@ -456,23 +431,21 @@ export default function ReglagesPage() {
   }
 
   const THEME_SWATCHES: Record<ThemeName, string> = {
-    'Lumière': '#3B82F6', 'Ivoire': '#92724A', 'Brume': '#5B7FA6', 'Craie': '#4A4A4A',
-    'Or noir': '#C9A84C', 'Minuit': '#58A6FF', 'Bordeaux': '#9B2335',
-    'Forêt': '#4A9B5F', 'Ardoise': '#6B8CAE', 'Cuivre': '#B87333',
-    'Améthyste': '#8B5CF6', 'Océan': '#0EA5E9', 'Professionnel': '#5B8DEF',
+    'Professionnel': '#0B6B73',
+    'Sauge':         '#5A8562',
+    'Ardoise bleu':  '#3B6BA0',
+    'Minuit pro':    '#2DC4D0',
+    'Forêt noire':   '#3EB870',
+    'Bordeaux pro':  '#C2395D',
   }
   const THEME_BKGS: Record<ThemeName, string> = {
-    'Lumière': '#F8F9FA', 'Ivoire': '#FAF7F2', 'Brume': '#F0F4F8', 'Craie': '#F5F5F0',
-    'Or noir': '#080808', 'Minuit': '#0D1117', 'Bordeaux': '#0F0A0A',
-    'Forêt': '#0A0F0A', 'Ardoise': '#0F1115', 'Cuivre': '#0F0C08',
-    'Améthyste': '#0D0A12', 'Océan': '#080D12', 'Professionnel': '#F7F8FA',
+    'Professionnel': '#F5F7FA',
+    'Sauge':         '#F3F6F1',
+    'Ardoise bleu':  '#F0F4F8',
+    'Minuit pro':    '#0A1A1C',
+    'Forêt noire':   '#0A1410',
+    'Bordeaux pro':  '#14080E',
   }
-
-  const btnCounter = {
-    width: 26, height: 26, borderRadius: 6, border: `1px solid ${t.border}`,
-    background: t.surface2, color: t.texte, cursor: 'pointer',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
-  } as const
 
   return (
     <AppShell profile={profile} restaurant="Le Carré">
@@ -615,7 +588,7 @@ export default function ReglagesPage() {
               <div style={{ fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.texteFaible, marginBottom: 6 }}>
                 {lang === 'fr' ? 'Clairs' : 'Light'}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, marginBottom: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, marginBottom: 12 }}>
                 {LIGHT_THEMES.map(name => {
                   const isSelected = selectedTheme === name
                   return (
@@ -640,7 +613,7 @@ export default function ReglagesPage() {
               <div style={{ fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: t.texteFaible, marginBottom: 6 }}>
                 {lang === 'fr' ? 'Sombres' : 'Dark'}
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
                 {DARK_THEMES.map(name => {
                   const isSelected = selectedTheme === name
                   return (
@@ -692,49 +665,6 @@ export default function ReglagesPage() {
             </div>
           </div>
 
-          {/* ── TAILLE DE POLICE ── */}
-          <div style={{ marginBottom: 28 }}>
-            <div style={{ fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 12 }}>
-              {lang === 'fr' ? 'TAILLE DU TEXTE' : 'TEXT SIZE'}
-            </div>
-            <div style={{ display: 'flex', background: t.surface1, borderRadius: 12, padding: 4, border: `1px solid ${t.border}`, gap: 4, marginBottom: 10 }}>
-              {([
-                { key: 'sm', fr: 'Petit',  en: 'Small',  px: '12px' },
-                { key: 'md', fr: 'Normal', en: 'Normal', px: '14px' },
-                { key: 'lg', fr: 'Grand',  en: 'Large',  px: '16px' },
-                { key: 'xl', fr: 'XL',     en: 'XL',     px: '18px' },
-              ] as const).map(sz => (
-                <button
-                  key={sz.key}
-                  onClick={() => {
-                    setSelectedFontSize(sz.key)
-                    const px = FONT_SIZES[sz.key]
-                    document.documentElement.style.setProperty('--font-size-base', px)
-                    document.documentElement.style.fontSize = px
-                  }}
-                  style={{
-                    flex: 1, padding: '9px 4px', borderRadius: 9, border: 'none', cursor: 'pointer',
-                    background: selectedFontSize === sz.key ? t.accent : 'transparent',
-                    color: selectedFontSize === sz.key ? (t.isDark ? '#080808' : '#fff') : t.texteSecondaire,
-                    fontSize: sz.px, fontFamily: font, fontWeight: selectedFontSize === sz.key ? 600 : 400,
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  {sz[lang]}
-                </button>
-              ))}
-            </div>
-            {/* Live preview */}
-            <div style={{ background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 10, padding: '12px 14px' }}>
-              <div style={{ fontSize: '1rem', color: t.texte, fontFamily: font, lineHeight: 1.5 }}>
-                {lang === 'fr' ? 'L\'aperçu du texte change en temps réel.' : 'Text preview updates in real time.'}
-              </div>
-              <div style={{ fontSize: '0.85rem', color: t.texteSecondaire, fontFamily: font, marginTop: 4 }}>
-                {lang === 'fr' ? 'Taille actuelle : ' : 'Current size: '}{FONT_SIZES[selectedFontSize]}
-              </div>
-            </div>
-          </div>
-
           <button
             onClick={handleSave}
             disabled={saving}
@@ -759,7 +689,7 @@ export default function ReglagesPage() {
                   {T.typesShifts}
                 </div>
                 <button
-                  onClick={() => setShiftModal({ nom: '', debut: '11:00', fin: '16:00', couleur: SHIFT_COLORS[0] })}
+                  onClick={() => { setShiftModal({ nom: '', debut: '11:00', fin: '16:00', couleur: SHIFT_COLORS[0] }); setShiftSaveError('') }}
                   style={{
                     background: t.accent, border: 'none', borderRadius: 8, padding: '4px 12px',
                     cursor: 'pointer', color: t.isDark ? '#080808' : '#fff', fontSize: 11, fontFamily: font,
@@ -778,7 +708,7 @@ export default function ReglagesPage() {
                   shiftTypes.map((st, i) => (
                     <button
                       key={st.id}
-                      onClick={() => setShiftModal({ id: st.id, nom: st.nom, debut: st.debut, fin: st.fin, couleur: st.couleur })}
+                      onClick={() => { setShiftModal({ id: st.id, nom: st.nom, debut: st.debut, fin: st.fin, couleur: st.couleur }); setShiftSaveError('') }}
                       style={{
                         width: '100%', background: 'none', border: 'none', cursor: 'pointer', fontFamily: font,
                         padding: '12px 16px',
@@ -806,87 +736,78 @@ export default function ReglagesPage() {
         {/* ── COUVERTURE TAB ── */}
         {isGerant && activeTab === 'couverture' && (
           <div style={{ marginBottom: 28 }}>
-              <div style={{ fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 12 }}>
-                {T.couvertureMin}
-              </div>
+            <div style={{ fontSize: 10, letterSpacing: '0.16em', textTransform: 'uppercase', color: t.texteSecondaire, marginBottom: 12 }}>
+              {T.couvertureMin}
+            </div>
 
-              <div style={{ background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 14, overflow: 'hidden' }}>
-                {/* Header row */}
-                <div style={{ display: 'grid', gridTemplateColumns: '52px 1fr 1fr', padding: '8px 14px', borderBottom: `1px solid ${t.border}` }}>
-                  <div />
-                  <div style={{ fontSize: 10, color: t.texteSecondaire, textAlign: 'center', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                    {T.midiLabel}
-                  </div>
-                  <div style={{ fontSize: 10, color: t.texteSecondaire, textAlign: 'center', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                    {T.soirLabel}
-                  </div>
+            <div style={{ background: t.surface1, border: `1px solid ${t.border}`, borderRadius: 14, overflow: 'hidden' }}>
+              {/* Header */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 80px', padding: '8px 14px', borderBottom: `1px solid ${t.border}`, gap: 8 }}>
+                <div style={{ fontSize: 10, color: t.texteSecondaire, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  {lang === 'fr' ? 'Rôle' : 'Role'}
                 </div>
-
-                {JOURS_ORDRE.map((jour, idx) => {
-                  const midiEntry = couverture[`${jour}_midi`] || { nb_personnes: 0, bar_requis: false }
-                  const soirEntry = couverture[`${jour}_soir`] || { nb_personnes: 0, bar_requis: false }
-                  return (
-                    <div key={jour} style={{
-                      display: 'grid', gridTemplateColumns: '52px 1fr 1fr',
-                      padding: '10px 14px', alignItems: 'center',
-                      borderBottom: idx < JOURS_ORDRE.length - 1 ? `1px solid ${t.border}` : 'none',
-                      gap: 4,
-                    }}>
-                      <div style={{ fontSize: 12, color: t.texteSecondaire }}>
-                        {JOUR_LABELS[jour][lang]}
-                      </div>
-
-                      {/* Midi counter */}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                        <button style={btnCounter} onClick={() => adjustCouverture(jour, 'midi', -1)}>−</button>
-                        <span style={{ fontSize: 15, color: t.texte, minWidth: 18, textAlign: 'center', fontFamily: "'Courier New', monospace" }}>
-                          {midiEntry.nb_personnes}
-                        </span>
-                        <button style={btnCounter} onClick={() => adjustCouverture(jour, 'midi', 1)}>+</button>
-                      </div>
-
-                      {/* Soir counter + bar requis */}
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                          <button style={btnCounter} onClick={() => adjustCouverture(jour, 'soir', -1)}>−</button>
-                          <span style={{ fontSize: 15, color: t.texte, minWidth: 18, textAlign: 'center', fontFamily: "'Courier New', monospace" }}>
-                            {soirEntry.nb_personnes}
-                          </span>
-                          <button style={btnCounter} onClick={() => adjustCouverture(jour, 'soir', 1)}>+</button>
-                        </div>
-                        <button
-                          onClick={() => toggleBarRequis(jour)}
-                          style={{
-                            padding: '2px 8px', borderRadius: 10, cursor: 'pointer', fontSize: 10,
-                            border: `1px solid ${soirEntry.bar_requis ? '#7EB8F7' : t.border}`,
-                            background: soirEntry.bar_requis ? 'rgba(126,184,247,0.15)' : 'transparent',
-                            color: soirEntry.bar_requis ? '#7EB8F7' : t.texteFaible,
-                            fontFamily: font,
-                          }}
-                        >
-                          {T.barRequis}
-                        </button>
-                      </div>
-                    </div>
-                  )
-                })}
+                <div style={{ fontSize: 10, color: t.texteSecondaire, textAlign: 'center', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  {T.midiLabel}
+                </div>
+                <div style={{ fontSize: 10, color: t.texteSecondaire, textAlign: 'center', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
+                  {T.soirLabel}
+                </div>
               </div>
 
-              <button
-                onClick={handleSaveCouverture}
-                disabled={savingCouverture}
-                style={{
-                  width: '100%', marginTop: 10, padding: '12px',
-                  background: savedCouverture ? 'var(--success)' : t.surface1,
-                  border: `1px solid ${savedCouverture ? 'var(--success)' : t.border}`,
-                  borderRadius: 12, cursor: savingCouverture ? 'wait' : 'pointer',
-                  color: savedCouverture ? '#fff' : t.texte,
-                  fontSize: 13, letterSpacing: '0.06em', fontFamily: font, fontWeight: 500,
-                  transition: 'all 0.3s',
-                }}
-              >
-                {savedCouverture ? T.savedCouv : savingCouverture ? '...' : T.sauvegarderCouv}
-              </button>
+              {COV_ROLES.map((role, idx) => {
+                const roleLbl = ROLE_LABELS[role]?.[lang] || role
+                return (
+                  <div key={role} style={{
+                    display: 'grid', gridTemplateColumns: '1fr 80px 80px',
+                    padding: '10px 14px', alignItems: 'center', gap: 8,
+                    borderBottom: idx < COV_ROLES.length - 1 ? `1px solid ${t.border}` : 'none',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 8, height: 8, borderRadius: '50%', background: ROLE_COLORS[role] || t.accent, flexShrink: 0 }} />
+                      <span style={{ fontSize: 13, color: t.texte }}>{roleLbl}</span>
+                    </div>
+                    {(['midi', 'soir'] as const).map(svc => (
+                      <div key={svc} style={{ display: 'flex', justifyContent: 'center' }}>
+                        <input
+                          type="number"
+                          min={0}
+                          max={99}
+                          value={covRoles[`${role}_${svc}`] ?? 0}
+                          onChange={e => {
+                            const val = Math.max(0, parseInt(e.target.value) || 0)
+                            setCovRoles(prev => ({ ...prev, [`${role}_${svc}`]: val }))
+                          }}
+                          style={{
+                            width: 56, textAlign: 'center',
+                            background: t.surface2, border: `1px solid ${t.border}`,
+                            borderRadius: 8, color: t.texte,
+                            padding: '6px 4px', fontSize: 15,
+                            fontFamily: "'Courier New', monospace",
+                            outline: 'none',
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )
+              })}
+            </div>
+
+            <button
+              onClick={handleSaveCouverture}
+              disabled={savingCouverture}
+              style={{
+                width: '100%', marginTop: 10, padding: '12px',
+                background: savedCouverture ? 'var(--success)' : t.surface1,
+                border: `1px solid ${savedCouverture ? 'var(--success)' : t.border}`,
+                borderRadius: 12, cursor: savingCouverture ? 'wait' : 'pointer',
+                color: savedCouverture ? '#fff' : t.texte,
+                fontSize: 13, letterSpacing: '0.06em', fontFamily: font, fontWeight: 500,
+                transition: 'all 0.3s',
+              }}
+            >
+              {savedCouverture ? T.savedCouv : savingCouverture ? '...' : T.sauvegarderCouv}
+            </button>
           </div>
         )}
 
@@ -1031,7 +952,7 @@ export default function ReglagesPage() {
       {/* ── SHIFT TYPE MODAL ── */}
       {shiftModal && (
         <div
-          onClick={() => { setShiftModal(null); setConfirmDeleteShift(null) }}
+          onClick={() => { setShiftModal(null); setConfirmDeleteShift(null); setShiftSaveError('') }}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 100, display: 'flex', alignItems: 'flex-end' }}
         >
           <div
@@ -1108,6 +1029,13 @@ export default function ReglagesPage() {
                 </span>
               </div>
             </div>
+
+            {/* Save error */}
+            {shiftSaveError && (
+              <div style={{ background: 'var(--danger-subtle)', border: '1px solid var(--danger)', borderRadius: 10, padding: '10px 14px', marginBottom: 14, fontSize: 12, color: 'var(--danger)' }}>
+                {shiftSaveError}
+              </div>
+            )}
 
             {/* Confirm delete */}
             {confirmDeleteShift && (
