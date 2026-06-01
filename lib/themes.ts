@@ -146,15 +146,97 @@ export function applyThemeToDocument(
   const name = (themeName ?? 'Professionnel') as ThemeName
   const t = getTheme(name)
   const slug = themeSlug(name)
-  document.documentElement.setAttribute('data-theme', slug)
-  document.documentElement.setAttribute('data-font', fontFamily ?? '')
-  document.documentElement.style.background = t.fond
-  document.documentElement.style.color      = t.texte
-  if (fontFamily) document.documentElement.style.fontFamily = fontFamily
+  const root = document.documentElement
 
+  root.setAttribute('data-theme', slug)
+  root.setAttribute('data-font', fontFamily ?? '')
+
+  // Appliquer TOUTES les CSS variables utilisées dans globals.css
+  root.style.setProperty('--bg',               t.fond)
+  root.style.setProperty('--surface1',         t.surface1)
+  root.style.setProperty('--surface2',         t.surface2)
+  root.style.setProperty('--surface3',         t.surface3)
+  root.style.setProperty('--accent',           t.accent)
+  root.style.setProperty('--accent-hover',     t.accentSombre)
+  root.style.setProperty('--accent-subtle',    t.accentClair + '22')
+  root.style.setProperty('--accent-text',      t.isDark ? '#ffffff' : '#ffffff')
+  root.style.setProperty('--text',             t.texte)
+  root.style.setProperty('--text-secondary',   t.texteSecondaire)
+  root.style.setProperty('--text-muted',       t.texteSecondaire)
+  root.style.setProperty('--text-faint',       t.texteFaible)
+  root.style.setProperty('--border',           t.border)
+  root.style.setProperty('--border-accent',    t.borderAccent)
+  root.style.setProperty('--sidebar-bg',       t.sidebarBg)
+  root.style.setProperty('--sidebar-text',     t.isDark
+    ? 'rgba(255,255,255,0.70)'
+    : 'rgba(0,0,0,0.60)')
+  root.style.setProperty('--sidebar-text-active', t.sidebarActiveText)
+
+  // États
+  root.style.setProperty('--success',          '#10B981')
+  root.style.setProperty('--success-subtle',   '#10B98118')
+  root.style.setProperty('--danger',           '#EF4444')
+  root.style.setProperty('--danger-subtle',    '#EF444418')
+  root.style.setProperty('--warning',          '#F59E0B')
+  root.style.setProperty('--warning-subtle',   '#F59E0B18')
+  root.style.setProperty('--info',             '#3B82F6')
+  root.style.setProperty('--info-subtle',      '#3B82F618')
+
+  // Ombres
+  const shadowColor = t.isDark ? '0,0,0' : '0,0,0'
+  root.style.setProperty('--shadow-card',
+    t.isDark
+      ? '0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3)'
+      : '0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.05)')
+  root.style.setProperty('--shadow-menu',
+    t.isDark
+      ? '0 8px 24px rgba(0,0,0,0.6)'
+      : '0 8px 24px rgba(0,0,0,0.12)')
+
+  // Z-index
+  root.style.setProperty('--z-modal', '1000')
+  root.style.setProperty('--z-menu',  '900')
+  root.style.setProperty('--z-topbar','800')
+
+  // Espacements (fixes, ne changent pas avec le thème)
+  root.style.setProperty('--space-1', '4px')
+  root.style.setProperty('--space-2', '8px')
+  root.style.setProperty('--space-3', '12px')
+  root.style.setProperty('--space-4', '16px')
+  root.style.setProperty('--space-5', '20px')
+  root.style.setProperty('--space-6', '24px')
+  root.style.setProperty('--space-8', '32px')
+
+  // Border radius
+  root.style.setProperty('--radius-sm',   '6px')
+  root.style.setProperty('--radius-md',   '10px')
+  root.style.setProperty('--radius-lg',   '14px')
+  root.style.setProperty('--radius-full', '9999px')
+
+  // Transitions
+  root.style.setProperty('--transition-fast', '0.15s ease')
+
+  // Taille de police
   const px = FONT_SIZES[fontSize ?? 'md'] ?? '14px'
-  document.documentElement.style.setProperty('--font-size-base', px)
-  document.documentElement.style.fontSize = px
+  root.style.setProperty('--font-size-base', px)
+  root.style.setProperty('--fz-xs',  'calc(var(--font-size-base) * 0.85)')
+  root.style.setProperty('--fz-sm',  'calc(var(--font-size-base) * 0.93)')
+  root.style.setProperty('--fz-md',  'var(--font-size-base)')
+  root.style.setProperty('--fz-lg',  'calc(var(--font-size-base) * 1.14)')
+  root.style.setProperty('--fz-xl',  'calc(var(--font-size-base) * 1.28)')
+  root.style.setProperty('--fz-2xl', 'calc(var(--font-size-base) * 1.57)')
+  root.style.setProperty('--fz-3xl', 'calc(var(--font-size-base) * 2)')
+  root.style.fontSize = px
+
+  // Police
+  if (fontFamily) {
+    root.style.setProperty('--font-body', fontFamily)
+    root.style.fontFamily = fontFamily
+  }
+
+  // Body background
+  root.style.background = t.fond
+  root.style.color = t.texte
 
   if (typeof localStorage !== 'undefined') {
     localStorage.setItem('gr-theme-fond',  t.fond)
