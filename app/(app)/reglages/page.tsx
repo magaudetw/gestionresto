@@ -193,6 +193,11 @@ export default function ReglagesPage() {
     setShiftSaveError('')
     try {
       const { data: { session } } = await supabase.auth.getSession()
+      console.log('[handleSaveShift] payload:', {
+        restaurantId,
+        shiftModal,
+        token: session?.access_token ? 'présent' : 'ABSENT',
+      })
       const res = await fetch('/api/manage-shifts-config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token ?? ''}` },
@@ -208,9 +213,10 @@ export default function ReglagesPage() {
           },
         }),
       })
-      console.log('API response status:', res.status)
-      const json = await res.json().catch(() => ({}))
-      console.log('API response data:', json)
+      console.log('[handleSaveShift] response status:', res.status)
+      const responseText = await res.text()
+      console.log('[handleSaveShift] response body:', responseText)
+      const json = JSON.parse(responseText)
       if (!res.ok) {
         console.error('[shifts-config] save error:', json)
         setShiftSaveError(json.error || (lang === 'fr' ? 'Erreur lors de la sauvegarde' : 'Save failed'))
