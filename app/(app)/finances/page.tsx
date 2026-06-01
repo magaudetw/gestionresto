@@ -36,7 +36,7 @@ function fmtWeekLabel(monday: Date, lang: 'fr' | 'en'): string {
 }
 
 const ROLE_COLORS: Record<string, string> = {
-  admin: '#E07070', gerant: '#C9A84C', bar: '#7EB8F7', serveur: '#82E0AA', busboy: '#C39BD3',
+  admin: 'var(--danger)', gerant: 'var(--warning)', bar: 'var(--info)', serveur: 'var(--success)', busboy: '#C39BD3',
 }
 const ROLE_LBL: Record<'fr' | 'en', Record<string, string>> = {
   fr: { admin: 'Admin', gerant: 'Gérant', bar: 'Bar', serveur: 'Serveur', busboy: 'Busboy' },
@@ -105,7 +105,7 @@ function TrendChart({ data, font }: { data: WeekTrend[]; font: string }) {
             <rect x={cx - barW - 1} y={padT + chartH - b1h} width={barW} height={b1h} rx={2}
               fill="var(--accent)" opacity={b1h > 0 ? 0.85 : 0} />
             <rect x={cx + 1} y={padT + chartH - b2h} width={barW} height={b2h} rx={2}
-              fill="#7EB8F7" opacity={b2h > 0 ? 0.85 : 0} />
+              style={{ fill: 'var(--info)' }} opacity={b2h > 0 ? 0.85 : 0} />
             <text x={cx} y={H - 4} textAnchor="middle" fontSize={8} fill="var(--text-secondary)"
               fontFamily={font}>{d.label}</text>
           </g>
@@ -113,7 +113,7 @@ function TrendChart({ data, font }: { data: WeekTrend[]; font: string }) {
       })}
       <rect x={padL} y={3} width={7} height={7} rx={1} fill="var(--accent)" opacity={0.85} />
       <text x={padL + 10} y={9} fontSize={7} fill="var(--text-secondary)">Pool</text>
-      <rect x={padL + 38} y={3} width={7} height={7} rx={1} fill="#7EB8F7" opacity={0.85} />
+      <rect x={padL + 38} y={3} width={7} height={7} rx={1} style={{ fill: 'var(--info)' }} opacity={0.85} />
       <text x={padL + 48} y={9} fontSize={7} fill="var(--text-secondary)">Salaire</text>
     </svg>
   )
@@ -470,7 +470,7 @@ export default function FinancesPage() {
                               .map((d, idx) => {
                                 const dt = new Date(d.date + 'T00:00:00')
                                 const dateLbl = `${dt.getDate()} ${MOIS[dt.getMonth()]}`
-                                const svcColor = d.service === 'midi' ? '#F4A261' : d.service === 'soir' ? '#7EB8F7' : '#9CA3AF'
+                                const svcColor = d.service === 'midi' ? 'var(--warning)' : d.service === 'soir' ? 'var(--info)' : 'var(--text-muted)'
                                 const svcLbl = d.service === 'midi' ? (lang === 'fr' ? 'Midi' : 'Lunch')
                                   : d.service === 'soir' ? (lang === 'fr' ? 'Soir' : 'Dinner')
                                   : d.service
@@ -558,7 +558,7 @@ export default function FinancesPage() {
                             position: 'absolute', top: 3,
                             left: isEffectue ? 18 : 2,
                             width: 14, height: 14, borderRadius: '50%',
-                            background: isEffectue ? '#fff' : 'var(--text-secondary)',
+                            background: isEffectue ? 'var(--surface1)' : 'var(--text-secondary)',
                             transition: 'left 0.2s',
                           }} />
                         </button>
