@@ -65,6 +65,13 @@ interface CoteVerseeRow {
   nbServices: number
 }
 
+interface PoolModal {
+  date: string
+  service: string
+  pool_total: string
+  notes: string
+}
+
 function TrendChart({ data, font }: { data: WeekTrend[]; font: string }) {
   const hasData = data.some(d => d.pool > 0 || d.salaire > 0)
   if (!hasData) return (
@@ -121,14 +128,26 @@ function TrendChart({ data, font }: { data: WeekTrend[]; font: string }) {
 
 export default function FinancesPage() {
   const { profile, restaurantId: ctxRid, isManager, loading } = useAuth()
-  const [weekOffset, setWeekOffset]   = useState(0)
+  const [weekOffset, setWeekOffset]         = useState(0)
   const [weekPoolShifts, setWeekPoolShifts] = useState<any[]>([])
-  const [empSummaries, setEmpSummaries] = useState<EmpSummary[]>([])
-  const [virements, setVirements]     = useState<Virement[]>([])
-  const [trendData, setTrendData]     = useState<WeekTrend[]>([])
-  const [cotesData, setCotesData]     = useState<CoteVerseeRow[]>([])
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+  const [allPoolShifts, setAllPoolShifts]   = useState<any[]>([])
+  const [empSummaries, setEmpSummaries]     = useState<EmpSummary[]>([])
+  const [virements, setVirements]           = useState<Virement[]>([])
+  const [trendData, setTrendData]           = useState<WeekTrend[]>([])
+  const [cotesData, setCotesData]           = useState<CoteVerseeRow[]>([])
+  const [expandedRows, setExpandedRows]     = useState<Set<string>>(new Set())
   const [savingVirement, setSavingVirement] = useState<string | null>(null)
+
+  // Pool shift entry
+  const [poolModal, setPoolModal]       = useState<PoolModal | null>(null)
+  const [savingPool, setSavingPool]     = useState(false)
+  const [poolError, setPoolError]       = useState('')
+
+  // Tip calculation
+  const [calcShiftId, setCalcShiftId]   = useState<string | null>(null)
+  const [calcLoading, setCalcLoading]   = useState(false)
+  const [calcError, setCalcError]       = useState('')
+
   const router = useRouter()
 
   useEffect(() => {
@@ -137,9 +156,11 @@ export default function FinancesPage() {
 
   const loadWeekData = useCallback(async (rid: string, offset: number) => {
     const { start, end, semaineDu } = getWeekBounds(offset)
-    const [psRes, heuresRes, empsRes] = await Promise.all([
+    const [psRes, allPsRes, heuresRes, empsRes] = await Promise.all([
       supabase.from('pool_shifts').select('*')
         .eq('restaurant_id', rid).gte('date', start).lte('date', end).eq('statut', 'valide'),
+      supabase.from('pool_shifts').select('*')
+        .eq('restaurant_id', rid).gte('date', start).lte('date', end).order('date'),
       supabase.from('heures_employes').select('*').gte('date', start).lte('date', end),
       supabase.from('profiles').select('id,nom,taux_horaire,roles')
         .contains('restaurant_ids', [rid]).eq('actif', true),
@@ -148,6 +169,7 @@ export default function FinancesPage() {
     const heures = heuresRes.data || []
     const emps = empsRes.data || []
     setWeekPoolShifts(shifts)
+    setAllPoolShifts(allPsRes.data || [])
 
     const summaryMap: Record<string, EmpSummary> = {}
     for (const emp of emps) {
@@ -209,7 +231,7 @@ export default function FinancesPage() {
       supabase.from('heures_employes').select('heures,user_id,date').gte('date', s4).lte('date', end),
       supabase.from('profiles').select('id,taux_horaire').contains('restaurant_ids', [rid]).eq('actif', true),
     ])
-    const shifts = psRes.data || []
+    const psShifts = psRes.data || []
     const heures = heuresRes.data || []
     const tauxMap: Record<string, number> = {}
     ;(empsRes.data || []).forEach((e: any) => { tauxMap[e.id] = e.taux_horaire || 0 })
@@ -217,7 +239,7 @@ export default function FinancesPage() {
     const weeks: WeekTrend[] = []
     for (let i = -3; i <= 0; i++) {
       const { start: ws, end: we, monday } = getWeekBounds(offset + i)
-      const pool = shifts
+      const pool = psShifts
         .filter((s: any) => s.date >= ws && s.date <= we)
         .reduce((sum: number, s: any) => sum + (s.pool_total || 0), 0)
       const salaire = heures
@@ -238,10 +260,10 @@ export default function FinancesPage() {
     const MOIS = lang === 'fr' ? MOIS_FR : MOIS_EN
     const psRes = await supabase.from('pool_shifts').select('id,pool_total,date')
       .eq('restaurant_id', rid).eq('statut', 'valide').gte('date', s8).lte('date', end)
-    const shifts = psRes.data || []
-    if (shifts.length === 0) { setCotesData([]); return }
+    const psShifts = psRes.data || []
+    if (psShifts.length === 0) { setCotesData([]); return }
 
-    const ids = shifts.map((s: any) => s.id)
+    const ids = psShifts.map((s: any) => s.id)
     const { data: heures } = await supabase.from('heures_employes')
       .select('montant_employe,pool_shift_id').in('pool_shift_id', ids)
     const heuresRows = heures || []
@@ -249,7 +271,7 @@ export default function FinancesPage() {
     const rows: CoteVerseeRow[] = []
     for (let i = -7; i <= 0; i++) {
       const { start: ws, end: we, monday } = getWeekBounds(offset + i)
-      const weekShifts = shifts.filter((s: any) => s.date >= ws && s.date <= we)
+      const weekShifts = psShifts.filter((s: any) => s.date >= ws && s.date <= we)
       if (weekShifts.length === 0) continue
       const weekIds = new Set(weekShifts.map((s: any) => s.id))
       const poolTotal = weekShifts.reduce((s: number, p: any) => s + (p.pool_total || 0), 0)
@@ -285,6 +307,59 @@ export default function FinancesPage() {
     await supabase.from('virements').update(update).eq('id', v.id)
     setVirements(prev => prev.map(x => x.id === v.id ? { ...x, ...update } as Virement : x))
     setSavingVirement(null)
+  }
+
+  async function handleInsertPoolShift() {
+    if (!poolModal || !ctxRid) return
+    const { date, service, pool_total, notes } = poolModal
+    if (!date || !service || !pool_total) return
+    setSavingPool(true)
+    setPoolError('')
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch('/api/manage-pool-shifts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token ?? ''}` },
+      body: JSON.stringify({
+        action: 'insert',
+        payload: { restaurant_id: ctxRid, date, service, pool_total, notes },
+      }),
+    })
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      setPoolError(json.error || 'Erreur')
+      setSavingPool(false)
+      return
+    }
+    setPoolModal(null)
+    const lang = (profile?.lang || 'fr') as 'fr' | 'en'
+    loadWeekData(ctxRid, weekOffset)
+    loadTrendData(ctxRid, weekOffset, lang)
+    setSavingPool(false)
+  }
+
+  async function handleCalculate(shiftId: string) {
+    setCalcShiftId(shiftId)
+    setCalcLoading(true)
+    setCalcError('')
+    const { data: { session } } = await supabase.auth.getSession()
+    const res = await fetch('/api/manage-pool-shifts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token ?? ''}` },
+      body: JSON.stringify({ action: 'calculate', payload: { pool_shift_id: shiftId } }),
+    })
+    const json = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      setCalcError(json.error || 'Erreur')
+      setCalcLoading(false)
+      return
+    }
+    setCalcShiftId(null)
+    setCalcLoading(false)
+    if (ctxRid) {
+      const lang = (profile?.lang || 'fr') as 'fr' | 'en'
+      loadWeekData(ctxRid, weekOffset)
+      loadTrendData(ctxRid, weekOffset, lang)
+    }
   }
 
   function exportCSV() {
@@ -341,8 +416,83 @@ export default function FinancesPage() {
               className="btn btn-ghost"
               style={{ width: 30, height: 30, padding: 0 }}
             >→</button>
+            <button
+              onClick={() => {
+                const { start } = getWeekBounds(weekOffset)
+                setPoolModal({ date: start, service: 'soir', pool_total: '', notes: '' })
+                setPoolError('')
+              }}
+              style={{
+                background: 'var(--accent)', border: 'none', borderRadius: 8,
+                color: 'var(--accent-text)', fontSize: 18, width: 30, height: 30,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+              title={lang === 'fr' ? 'Ajouter un service' : 'Add service'}
+            >+</button>
           </div>
         </div>
+
+        {/* Services list */}
+        {allPoolShifts.length > 0 && (
+          <div style={{ marginBottom: 20 }}>
+            <div style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 10 }}>
+              {lang === 'fr' ? `Services (${allPoolShifts.length})` : `Services (${allPoolShifts.length})`}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {allPoolShifts.map(ps => {
+                const dt = new Date(ps.date + 'T00:00:00')
+                const dateLbl = `${dt.getDate()} ${MOIS[dt.getMonth()]}`
+                const svcLbl = ps.service === 'midi' ? (lang === 'fr' ? 'Midi' : 'Lunch')
+                  : ps.service === 'soir' ? (lang === 'fr' ? 'Soir' : 'Dinner') : ps.service
+                const isCalc = calcShiftId === ps.id
+                return (
+                  <div key={ps.id} className="card" style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 12 }}>{dateLbl}</span>
+                        <span style={{
+                          fontSize: 9, padding: '1px 6px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '0.06em',
+                          background: ps.service === 'midi' ? 'var(--warning-subtle)' : 'var(--info-subtle)',
+                          color: ps.service === 'midi' ? 'var(--warning)' : 'var(--info)',
+                        }}>{svcLbl}</span>
+                        <span style={{
+                          fontSize: 9, padding: '1px 6px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '0.06em',
+                          background: ps.statut === 'valide' ? 'var(--success-subtle)' : 'var(--warning-subtle)',
+                          color: ps.statut === 'valide' ? 'var(--success)' : 'var(--warning)',
+                        }}>
+                          {ps.statut === 'valide' ? (lang === 'fr' ? 'Calculé' : 'Calculated') : (lang === 'fr' ? 'Brouillon' : 'Draft')}
+                        </span>
+                      </div>
+                      {ps.notes && <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 2 }}>{ps.notes}</div>}
+                    </div>
+                    <div style={{ fontSize: 14, color: 'var(--accent)', fontFamily: "'Courier New', monospace", flexShrink: 0 }}>
+                      {fmt$(ps.pool_total || 0)}
+                    </div>
+                    {ps.statut === 'brouillon' && (
+                      <button
+                        onClick={() => handleCalculate(ps.id)}
+                        disabled={isCalc}
+                        style={{
+                          background: 'var(--accent)', border: 'none', borderRadius: 8,
+                          color: 'var(--accent-text)', fontSize: 10, padding: '5px 10px',
+                          cursor: isCalc ? 'wait' : 'pointer', letterSpacing: '0.06em', flexShrink: 0,
+                          opacity: isCalc ? 0.6 : 1,
+                        }}
+                      >
+                        {isCalc ? '...' : (lang === 'fr' ? 'Calculer' : 'Calculate')}
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+            {calcError && (
+              <div style={{ fontSize: 11, color: 'var(--danger)', marginTop: 6, padding: '6px 10px', background: 'var(--danger-subtle)', borderRadius: 8 }}>
+                {calcError}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* KPI cards */}
         <div className="kpi-grid" style={{ gridTemplateColumns: '1fr 1fr', marginBottom: 20 }}>
@@ -415,40 +565,22 @@ export default function FinancesPage() {
                       </div>
                       <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexShrink: 0 }}>
                         <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: 9, color: 'var(--text-faint)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                            {lang === 'fr' ? 'Hrs' : 'Hrs'}
-                          </div>
-                          <div style={{ fontSize: 12, fontFamily: "'Courier New', monospace" }}>
-                            {emp.heures.toFixed(1)}
-                          </div>
+                          <div style={{ fontSize: 9, color: 'var(--text-faint)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Hrs</div>
+                          <div style={{ fontSize: 12, fontFamily: "'Courier New', monospace" }}>{emp.heures.toFixed(1)}</div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: 9, color: 'var(--text-faint)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                            {lang === 'fr' ? 'Sal.' : 'Sal.'}
-                          </div>
-                          <div style={{ fontSize: 12, color: 'var(--info)', fontFamily: "'Courier New', monospace" }}>
-                            {fmt$(emp.salaire)}
-                          </div>
+                          <div style={{ fontSize: 9, color: 'var(--text-faint)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{lang === 'fr' ? 'Sal.' : 'Sal.'}</div>
+                          <div style={{ fontSize: 12, color: 'var(--info)', fontFamily: "'Courier New', monospace" }}>{fmt$(emp.salaire)}</div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: 9, color: 'var(--text-faint)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                            {lang === 'fr' ? 'Pourb.' : 'Tips'}
-                          </div>
-                          <div style={{ fontSize: 12, color: 'var(--accent)', fontFamily: "'Courier New', monospace" }}>
-                            {fmt$(emp.pourboires)}
-                          </div>
+                          <div style={{ fontSize: 9, color: 'var(--text-faint)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>{lang === 'fr' ? 'Pourb.' : 'Tips'}</div>
+                          <div style={{ fontSize: 12, color: 'var(--accent)', fontFamily: "'Courier New', monospace" }}>{fmt$(emp.pourboires)}</div>
                         </div>
                         <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: 9, color: 'var(--text-faint)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                            Total
-                          </div>
-                          <div style={{ fontSize: 13, color: 'var(--success)', fontFamily: "'Courier New', monospace", fontWeight: 500 }}>
-                            {fmt$(emp.total)}
-                          </div>
+                          <div style={{ fontSize: 9, color: 'var(--text-faint)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>Total</div>
+                          <div style={{ fontSize: 13, color: 'var(--success)', fontFamily: "'Courier New', monospace", fontWeight: 500 }}>{fmt$(emp.total)}</div>
                         </div>
-                        <div style={{ fontSize: 10, color: 'var(--text-faint)', paddingBottom: 2 }}>
-                          {isOpen ? '▲' : '▼'}
-                        </div>
+                        <div style={{ fontSize: 10, color: 'var(--text-faint)', paddingBottom: 2 }}>{isOpen ? '▲' : '▼'}</div>
                       </div>
                     </div>
 
@@ -472,8 +604,7 @@ export default function FinancesPage() {
                                 const dateLbl = `${dt.getDate()} ${MOIS[dt.getMonth()]}`
                                 const svcColor = d.service === 'midi' ? 'var(--warning)' : d.service === 'soir' ? 'var(--info)' : 'var(--text-muted)'
                                 const svcLbl = d.service === 'midi' ? (lang === 'fr' ? 'Midi' : 'Lunch')
-                                  : d.service === 'soir' ? (lang === 'fr' ? 'Soir' : 'Dinner')
-                                  : d.service
+                                  : d.service === 'soir' ? (lang === 'fr' ? 'Soir' : 'Dinner') : d.service
                                 return (
                                   <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 8, justifyContent: 'space-between' }}>
                                     <div style={{ fontSize: 11, color: 'var(--text-secondary)', minWidth: 48 }}>{dateLbl}</div>
@@ -482,9 +613,7 @@ export default function FinancesPage() {
                                       background: `${svcColor}18`, borderRadius: 4, minWidth: 36, textAlign: 'center',
                                     }}>{svcLbl}</div>
                                     <div style={{ flex: 1 }} />
-                                    <div style={{ fontSize: 11, fontFamily: "'Courier New', monospace" }}>
-                                      {d.heures.toFixed(2)}h
-                                    </div>
+                                    <div style={{ fontSize: 11, fontFamily: "'Courier New', monospace" }}>{d.heures.toFixed(2)}h</div>
                                     <div style={{ fontSize: 11, color: 'var(--accent)', fontFamily: "'Courier New', monospace", minWidth: 56, textAlign: 'right' }}>
                                       {d.tips > 0 ? fmt$(d.tips) : '—'}
                                     </div>
@@ -612,6 +741,110 @@ export default function FinancesPage() {
         )}
 
       </main>
+
+      {/* ── POOL SHIFT MODAL ── */}
+      {poolModal && (
+        <div
+          onClick={() => setPoolModal(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 100, display: 'flex', alignItems: 'flex-end' }}
+        >
+          <div
+            onClick={e => e.stopPropagation()}
+            style={{
+              width: '100%', maxWidth: 480, margin: '0 auto',
+              background: 'var(--surface1)', borderRadius: '20px 20px 0 0',
+              padding: '20px 18px 32px',
+            }}
+          >
+            <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border)', margin: '0 auto 20px' }} />
+            <h2 style={{ fontSize: 18, fontWeight: 300, margin: '0 0 20px', color: 'var(--text)' }}>
+              {lang === 'fr' ? 'Nouveau service' : 'New service'}
+            </h2>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                  {lang === 'fr' ? 'Date *' : 'Date *'}
+                </div>
+                <input
+                  type="date"
+                  value={poolModal.date}
+                  onChange={e => setPoolModal(m => m ? { ...m, date: e.target.value } : m)}
+                  style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', padding: '10px 12px', fontSize: 14, outline: 'none', boxSizing: 'border-box' }}
+                />
+              </div>
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                  {lang === 'fr' ? 'Service *' : 'Service *'}
+                </div>
+                <select
+                  value={poolModal.service}
+                  onChange={e => setPoolModal(m => m ? { ...m, service: e.target.value } : m)}
+                  style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', padding: '10px 12px', fontSize: 14, outline: 'none', boxSizing: 'border-box', fontFamily: 'inherit' }}
+                >
+                  <option value="midi">{lang === 'fr' ? 'Midi' : 'Lunch'}</option>
+                  <option value="soir">{lang === 'fr' ? 'Soir' : 'Dinner'}</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                {lang === 'fr' ? 'Pool pourboires ($) *' : 'Tip pool ($) *'}
+              </div>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={poolModal.pool_total}
+                onChange={e => setPoolModal(m => m ? { ...m, pool_total: e.target.value } : m)}
+                placeholder="0.00"
+                style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', padding: '10px 12px', fontSize: 16, fontFamily: "'Courier New', monospace", outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                {lang === 'fr' ? 'Notes' : 'Notes'}
+              </div>
+              <input
+                value={poolModal.notes}
+                onChange={e => setPoolModal(m => m ? { ...m, notes: e.target.value } : m)}
+                placeholder={lang === 'fr' ? 'Soirée spéciale, etc.' : 'Special event, etc.'}
+                style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', padding: '10px 12px', fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+
+            {poolError && (
+              <div style={{ background: 'var(--danger-subtle)', border: '1px solid var(--danger)', borderRadius: 8, padding: '8px 12px', marginBottom: 14, fontSize: 12, color: 'var(--danger)' }}>
+                {poolError}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => setPoolModal(null)}
+                style={{ flex: 1, padding: '12px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 13 }}
+              >
+                {lang === 'fr' ? 'Annuler' : 'Cancel'}
+              </button>
+              <button
+                onClick={handleInsertPoolShift}
+                disabled={savingPool || !poolModal.date || !poolModal.pool_total}
+                style={{
+                  flex: 2, padding: '12px', background: 'var(--accent)', border: 'none', borderRadius: 10,
+                  color: 'var(--accent-text)', cursor: savingPool ? 'wait' : 'pointer',
+                  fontSize: 13, fontWeight: 600,
+                  opacity: !poolModal.date || !poolModal.pool_total ? 0.5 : 1,
+                }}
+              >
+                {savingPool ? '...' : (lang === 'fr' ? 'Créer le service' : 'Create service')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </AppShell>
   )
 }
