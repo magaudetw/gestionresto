@@ -144,13 +144,42 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, poolShift })
   }
 
-  // ── Delete an ouvert pool shift ───────────────────────────────────────────
+  // ── Delete a pool shift and its hours ────────────────────────────────────
   if (action === 'delete') {
     const { pool_shift_id } = payload
     if (!pool_shift_id) return err('pool_shift_id required', 400)
-    const { error } = await admin
-      .from('pool_shifts').delete().eq('id', pool_shift_id).eq('statut', 'ouvert')
+    await admin.from('heures_employes').delete().eq('pool_shift_id', pool_shift_id)
+    const { error } = await admin.from('pool_shifts').delete().eq('id', pool_shift_id)
     if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+    return NextResponse.json({ ok: true })
+  }
+
+  // ── Update a pool shift and replace its hours ─────────────────────────────
+  if (action === 'update') {
+    const { pool_shift_id, pool_carte, pool_especes, pool_total, notes, heures } = payload
+    if (!pool_shift_id) return err('pool_shift_id required', 400)
+    const { error: updErr } = await admin.from('pool_shifts')
+      .update({
+        pool_carte:   pool_carte   ?? 0,
+        pool_especes: pool_especes ?? 0,
+        pool_total:   pool_total   ?? 0,
+        notes: notes || null,
+      })
+      .eq('id', pool_shift_id)
+    if (updErr) return err(updErr.message, 500)
+    await admin.from('heures_employes').delete().eq('pool_shift_id', pool_shift_id)
+    if (Array.isArray(heures) && heures.length > 0) {
+      const { data: ps } = await admin.from('pool_shifts').select('date').eq('id', pool_shift_id).single()
+      const rows = (heures as any[]).map(h => ({
+        user_id: h.user_id,
+        pool_shift_id,
+        date: ps?.date,
+        heures: parseFloat(String(h.heures)) || 0,
+        source: 'manuel',
+      }))
+      const { error: hErr } = await admin.from('heures_employes').insert(rows)
+      if (hErr) console.error('[manage-pool-shifts] update heures error:', hErr.message)
+    }
     return NextResponse.json({ ok: true })
   }
 

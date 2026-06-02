@@ -166,6 +166,9 @@ export default function FinancesPage() {
   const [calcLoading, setCalcLoading]   = useState(false)
   const [calcError, setCalcError]       = useState('')
 
+  // Edit mode
+  const [editingService, setEditingService] = useState<any>(null)
+
   const router = useRouter()
 
   useEffect(() => {
@@ -365,7 +368,30 @@ export default function FinancesPage() {
     const { data: { session } } = await supabase.auth.getSession()
     const heuresArr = Object.entries(heuresEmployes)
       .filter(([, h]) => parseFloat(h) > 0)
-      .map(([userId, h]) => ({ user_id: userId, heures: parseFloat(h), source: 'manuel' }))
+      .map(([userId, h]) => ({ user_id: userId, heures: parseFloat(h) }))
+
+    if (editingService) {
+      const res = await fetch('/api/manage-pool-shifts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token ?? ''}` },
+        body: JSON.stringify({
+          action: 'update',
+          payload: {
+            pool_shift_id: editingService.id,
+            pool_carte: carteVal, pool_especes: cashVal, pool_total: total,
+            notes, heures: heuresArr,
+          },
+        }),
+      })
+      const json = await res.json().catch(() => ({}))
+      if (!res.ok) { setPoolError(json.error || 'Erreur'); setSavingPool(false); return }
+      setPoolModal(null); setEditingService(null); resetPoolModal()
+      const lang = (profile?.lang || 'fr') as 'fr' | 'en'
+      loadWeekData(ctxRid, weekOffset); loadTrendData(ctxRid, weekOffset, lang)
+      setSavingPool(false)
+      return
+    }
+
     const res = await fetch('/api/manage-pool-shifts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token ?? ''}` },
@@ -390,6 +416,34 @@ export default function FinancesPage() {
     loadWeekData(ctxRid, weekOffset)
     loadTrendData(ctxRid, weekOffset, lang)
     setSavingPool(false)
+  }
+
+  async function handleDeleteService(id: string) {
+    if (!window.confirm(lang === 'fr' ? 'Supprimer ce service définitivement ?' : 'Delete this service permanently?')) return
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) return
+    const res = await fetch('/api/manage-pool-shifts', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+      body: JSON.stringify({ action: 'delete', payload: { pool_shift_id: id } }),
+    })
+    if (res.ok) {
+      const l = (profile?.lang || 'fr') as 'fr' | 'en'
+      loadWeekData(ctxRid!, weekOffset); loadTrendData(ctxRid!, weekOffset, l)
+    }
+  }
+
+  function handleEditService(ps: any) {
+    setEditingService(ps)
+    setPoolModal({ date: ps.date, service: ps.service, notes: ps.notes || '' })
+    setPoolCarte(String(ps.pool_carte || 0))
+    setPoolCash(String(ps.pool_especes || 0))
+    const heuresMap: Record<string, string> = {}
+    weekHeures.filter((h: any) => h.pool_shift_id === ps.id).forEach((h: any) => {
+      heuresMap[h.user_id] = String(h.heures)
+    })
+    setHeuresEmployes(heuresMap)
+    setPoolError('')
   }
 
   async function handleCalculate(shiftId: string) {
@@ -540,17 +594,31 @@ export default function FinancesPage() {
                     )}
                     {ps.notes && <div style={{ fontSize: 10, color: 'var(--text-faint)', marginBottom: 6 }}>{ps.notes}</div>}
                     {/* Row 4 : actions */}
-                    {ps.statut === 'ouvert' && (
-                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                      <button
+                        onClick={() => handleEditService(ps)}
+                        style={{ background: 'transparent', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 11, padding: '4px 10px' }}
+                      >
+                        {lang === 'fr' ? 'Modifier' : 'Edit'}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteService(ps.id)}
+                        style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 11, padding: '4px 8px', borderRadius: 6, opacity: 0.7 }}
+                        onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+                        onMouseLeave={e => (e.currentTarget.style.opacity = '0.7')}
+                      >
+                        {lang === 'fr' ? 'Supprimer' : 'Delete'}
+                      </button>
+                      {ps.statut === 'ouvert' && (
                         <button
                           onClick={() => handleCalculate(ps.id)}
                           disabled={isCalc}
                           style={{ background: 'var(--accent)', border: 'none', borderRadius: 8, color: 'var(--accent-text)', fontSize: 11, padding: '6px 12px', cursor: isCalc ? 'wait' : 'pointer', letterSpacing: '0.06em', opacity: isCalc ? 0.6 : 1 }}
                         >
-                          {isCalc ? '...' : (lang === 'fr' ? 'Calculer répartition' : 'Calculate')}
+                          {isCalc ? '...' : (lang === 'fr' ? 'Calculer' : 'Calculate')}
                         </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 )
               })}
@@ -814,7 +882,7 @@ export default function FinancesPage() {
       {/* ── POOL SHIFT MODAL ── */}
       {poolModal && (
         <div
-          onClick={() => setPoolModal(null)}
+          onClick={() => { setPoolModal(null); setEditingService(null); resetPoolModal() }}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 100, display: 'flex', alignItems: 'flex-end' }}
         >
           <div
@@ -822,12 +890,14 @@ export default function FinancesPage() {
             style={{
               width: '100%', maxWidth: 480, margin: '0 auto',
               background: 'var(--surface1)', borderRadius: '20px 20px 0 0',
-              padding: '20px 18px 32px',
+              padding: '20px 18px 32px', maxHeight: '90vh', overflowY: 'auto',
             }}
           >
             <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border)', margin: '0 auto 20px' }} />
             <h2 style={{ fontSize: 18, fontWeight: 300, margin: '0 0 20px', color: 'var(--text)' }}>
-              {lang === 'fr' ? 'Nouveau service' : 'New service'}
+              {editingService
+                ? (lang === 'fr' ? 'Modifier le service' : 'Edit service')
+                : (lang === 'fr' ? 'Nouveau service' : 'New service')}
             </h2>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
@@ -894,7 +964,7 @@ export default function FinancesPage() {
               <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8 }}>
                 {lang === 'fr' ? 'Heures réelles de chaque employé présent' : 'Actual hours for each employee present'}
               </div>
-              <div style={{ maxHeight: 220, overflowY: 'auto' }}>
+              <div style={{ maxHeight: 240, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 10 }}>
                 {allEmployees.map((emp: any) => (
                   <div key={emp.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
@@ -957,7 +1027,7 @@ export default function FinancesPage() {
 
             <div style={{ display: 'flex', gap: 8 }}>
               <button
-                onClick={() => { setPoolModal(null); resetPoolModal() }}
+                onClick={() => { setPoolModal(null); setEditingService(null); resetPoolModal() }}
                 style={{ flex: 1, padding: '12px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 13 }}
               >
                 {lang === 'fr' ? 'Annuler' : 'Cancel'}
@@ -972,7 +1042,9 @@ export default function FinancesPage() {
                   opacity: !poolModal.date ? 0.5 : 1,
                 }}
               >
-                {savingPool ? '...' : (lang === 'fr' ? 'Créer le service' : 'Create service')}
+                {savingPool ? '...' : editingService
+                  ? (lang === 'fr' ? 'Enregistrer' : 'Save changes')
+                  : (lang === 'fr' ? 'Créer le service' : 'Create service')}
               </button>
             </div>
           </div>
