@@ -98,6 +98,23 @@ function dureeShift(debut: string, fin: string): string {
   return m > 0 ? `${h}h${m}` : `${h}h`
 }
 
+function getServices(shiftType: any): ('midi' | 'soir')[] {
+  if (!shiftType?.debut || !shiftType?.fin) return []
+  function toMins(hhmm: string): number {
+    const [h, m] = hhmm.split(':').map(Number)
+    return h * 60 + m
+  }
+  const debut = toMins(shiftType.debut)
+  let fin = toMins(shiftType.fin)
+  if (fin <= debut) fin += 24 * 60
+  const MIDI_DEBUT = 12 * 60, MIDI_FIN = 13 * 60
+  const SOIR_DEBUT = 18 * 60, SOIR_FIN = 19 * 60
+  const services: ('midi' | 'soir')[] = []
+  if (debut < MIDI_FIN && fin > MIDI_DEBUT) services.push('midi')
+  if (debut < SOIR_FIN && fin > SOIR_DEBUT) services.push('soir')
+  return services
+}
+
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
 interface CellModal {
@@ -535,8 +552,8 @@ export default function HorairePage() {
     const dateStr = isoDate(days[dayIdx])
     const jourKey = JOURS[dayIdx]
     const dayShifts = shiftsByDate[dateStr] || []
-    const midiShifts = dayShifts.filter((s: any) => inferService(s.shift_types?.debut) === 'midi')
-    const soirShifts = dayShifts.filter((s: any) => inferService(s.shift_types?.debut) === 'soir')
+    const midiShifts = dayShifts.filter((s: any) => getServices(s.shift_types).includes('midi'))
+    const soirShifts = dayShifts.filter((s: any) => getServices(s.shift_types).includes('soir'))
     const needMidi = couverture.filter((c: any) => c.jour === jourKey && c.service === 'midi').reduce((s: number, c: any) => s + (c.minimum ?? 0), 0)
     const needSoir = couverture.filter((c: any) => c.jour === jourKey && c.service === 'soir').reduce((s: number, c: any) => s + (c.minimum ?? 0), 0)
     return {
@@ -592,6 +609,16 @@ export default function HorairePage() {
         return sum + mins / 60
       }, 0)
       .toFixed(1)
+  }
+
+  function countAssigned(role: string, service: 'midi' | 'soir', date: string): number {
+    return shifts.filter((s: any) => {
+      if (s.date !== date) return false
+      if (!getServices(s.shift_types).includes(service)) return false
+      const employe = allEmployees.find((e: any) => e.id === s.user_id)
+      if (!employe) return false
+      return employe.roles?.includes(role)
+    }).length
   }
 
   const shiftsCompatibles = cellModal
@@ -661,6 +688,20 @@ export default function HorairePage() {
   }
 
   // ─── Render ───────────────────────────────────────────────────────────────
+  if (isManager && days.length > 0) {
+    console.log('[couverture] shifts lundi:', shifts
+      .filter((s: any) => s.date === isoDate(days[0]))
+      .map((s: any) => ({
+        nom: s.profiles?.nom,
+        shift: s.shift_types?.nom,
+        debut: s.shift_types?.debut,
+        fin: s.shift_types?.fin,
+        services: getServices(s.shift_types),
+        roles: allEmployees.find((e: any) => e.id === s.user_id)?.roles,
+      }))
+    )
+  }
+
   return (
     <>
     <style>{`
@@ -884,7 +925,7 @@ export default function HorairePage() {
                               const dateStr = isoDate(day)
                               const jourKey = JOURS[di]
                               const dayShifts = shiftsByDate[dateStr] || []
-                              const have = dayShifts.filter((s: any) => inferService(s.shift_types?.debut) === service && s.shift_types?.role === role).length
+                              const have = countAssigned(role, service as 'midi' | 'soir', dateStr)
                               const need = couverture.find((c: any) => c.jour === jourKey && c.service === service && c.role === role)?.minimum ?? 0
                               return (
                                 <td key={dateStr} style={{ padding: '5px 4px', textAlign: 'center', borderRight: '1px solid var(--border)', borderTop: '1px solid var(--border)', fontSize: 11, fontWeight: 600, color: covColor(have, need) }}>
