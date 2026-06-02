@@ -742,7 +742,7 @@ export default function HorairePage() {
           <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
             {/* SIDE PANEL */}
-            <div style={{ width: 220, flexShrink: 0, background: 'var(--surface1)', borderRight: '1px solid var(--border)', overflowY: 'auto', padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div className="horaire-sidebar" style={{ width: 220, flexShrink: 0, background: 'var(--surface1)', borderRight: '1px solid var(--border)', overflowY: 'auto', padding: '16px 12px', gap: 20 }}>
 
               {/* Positions */}
               <div>
@@ -787,9 +787,9 @@ export default function HorairePage() {
             <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
 
               {/* TOPBAR */}
-              <div style={{ height: 52, background: 'var(--surface1)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px', flexShrink: 0 }}>
+              <div className="horaire-topbar" style={{ height: 52, background: 'var(--surface1)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px', flexShrink: 0 }}>
                 {/* Search */}
-                <div style={{ position: 'relative', flex: 1, maxWidth: 200 }}>
+                <div className="horaire-search" style={{ position: 'relative', flex: 1, maxWidth: 200 }}>
                   <input value={searchEmploye} onChange={e => setSearchEmploye(e.target.value)} placeholder={lang === 'fr' ? 'Employés…' : 'Employees…'} style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 20, padding: '6px 12px 6px 28px', fontSize: 12, color: 'var(--text)', outline: 'none', boxSizing: 'border-box' }} />
                   <span style={{ position: 'absolute', left: 9, top: 7, color: 'var(--text-secondary)', fontSize: 13, pointerEvents: 'none' }}>🔍</span>
                 </div>
@@ -807,8 +807,8 @@ export default function HorairePage() {
               </div>
 
               {/* GRID */}
-              <div style={{ flex: 1, overflow: 'auto' }}>
-                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 700 }}>
+              <div style={{ flex: 1, overflowX: 'auto', overflowY: 'auto', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 600 }}>
                   <thead>
                     <tr>
                       <th style={{ width: 180, padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', color: 'var(--text-secondary)', background: 'var(--surface1)', borderBottom: '2px solid var(--border)', borderRight: '1px solid var(--border)', position: 'sticky', left: 0, top: 0, zIndex: 3 }}>
