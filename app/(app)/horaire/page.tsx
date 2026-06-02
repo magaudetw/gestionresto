@@ -42,11 +42,19 @@ const ROLE_LABELS_COV: Record<string, { fr: string; en: string }> = {
 }
 
 const ROLE_COLORS: Record<string, string> = {
-  gerant: '#6366f1', serveur: '#0ea5e9', bar: '#f59e0b', busboy: '#10b981', admin: '#8b5cf6',
+  gerant:  '#C9A84C',
+  serveur: '#82E0AA',
+  bar:     '#7EB8F7',
+  busboy:  '#C39BD3',
+  admin:   '#E07070',
 }
 
 const ROLE_SHORT: Record<string, string> = {
   gerant: 'GÉR', serveur: 'SRV', bar: 'BAR', busboy: 'BUS', admin: 'ADM',
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  gerant: 'Gérant', serveur: 'Serveur', bar: 'Bar', busboy: 'Busboy', admin: 'Admin',
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -516,7 +524,9 @@ export default function HorairePage() {
   )
 
   // Filtered employees for the grid
-  let employesFiltres = employees.filter((e: any) =>
+  console.log('[filtres] employes roles:', allEmployees.map((e: any) => ({ nom: e.nom, roles: e.roles })))
+  console.log('[filtres] filtreRoles actifs:', filtreRoles)
+  let employesFiltres = allEmployees.filter((e: any) =>
     e.roles?.some((r: string) => filtreRoles.includes(r)) &&
     (e.nom || '').toLowerCase().includes(searchEmploye.toLowerCase())
   )
