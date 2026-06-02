@@ -110,6 +110,40 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, updates })
   }
 
+  // ── Create a pool shift with employee hours ───────────────────────────────
+  if (action === 'create') {
+    const { restaurant_id, date, service, pool_carte, pool_especes, pool_total, notes, heures } = payload
+    if (!restaurant_id || !date || !service || pool_total == null)
+      return err('Missing required fields', 400)
+    const { data: ps, error: psErr } = await admin.from('pool_shifts').insert({
+      restaurant_id, date, service,
+      pool_carte:   parseFloat(String(pool_carte  ?? 0)) || 0,
+      pool_especes: parseFloat(String(pool_especes ?? 0)) || 0,
+      pool_total:   parseFloat(String(pool_total))        || 0,
+      notes: notes || null,
+      statut: 'ouvert',
+    }).select().single()
+    if (psErr) {
+      console.error('[manage-pool-shifts] create error:', psErr.message)
+      return NextResponse.json({ error: psErr.message }, { status: 400 })
+    }
+    if (Array.isArray(heures) && heures.length > 0) {
+      const rows = (heures as any[]).map(h => ({
+        user_id: h.user_id,
+        pool_shift_id: ps.id,
+        date,
+        heures: parseFloat(String(h.heures)) || 0,
+        source: h.source || 'manuel',
+      }))
+      const { error: hErr } = await admin.from('heures_employes').insert(rows)
+      if (hErr) {
+        console.error('[manage-pool-shifts] create heures error:', hErr.message)
+        return NextResponse.json({ error: hErr.message }, { status: 400 })
+      }
+    }
+    return NextResponse.json({ ok: true, data: ps })
+  }
+
   // ── Delete an ouvert pool shift ───────────────────────────────────────────
   if (action === 'delete') {
     const { pool_shift_id } = payload

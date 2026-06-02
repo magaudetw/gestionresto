@@ -35,8 +35,20 @@ function fmtWeekLabel(monday: Date, lang: 'fr' | 'en'): string {
   return `${monday.getDate()} ${MOIS[monday.getMonth()]} – ${sun.getDate()} ${MOIS[sun.getMonth()]}`
 }
 
+function avatarColor(nom: string): string {
+  let hash = 0
+  for (let i = 0; i < nom.length; i++) hash = nom.charCodeAt(i) + ((hash << 5) - hash)
+  return `hsl(${Math.abs(hash) % 360}, 55%, 45%)`
+}
+function initiales(nom: string): string {
+  return nom.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+}
+
 const ROLE_COLORS: Record<string, string> = {
-  admin: 'var(--danger)', gerant: 'var(--warning)', bar: 'var(--info)', serveur: 'var(--success)', busboy: '#C39BD3',
+  admin: '#E07070', gerant: '#C9A84C', bar: '#7EB8F7', serveur: '#82E0AA', busboy: '#C39BD3',
+}
+const ROLE_SHORT: Record<string, string> = {
+  gerant: 'GÉR', serveur: 'SRV', bar: 'BAR', busboy: 'BUS', admin: 'ADM',
 }
 const ROLE_LBL: Record<'fr' | 'en', Record<string, string>> = {
   fr: { admin: 'Admin', gerant: 'Gérant', bar: 'Bar', serveur: 'Serveur', busboy: 'Busboy' },
@@ -68,7 +80,6 @@ interface CoteVerseeRow {
 interface PoolModal {
   date: string
   service: string
-  pool_total: string
   notes: string
 }
 
@@ -138,8 +149,15 @@ export default function FinancesPage() {
   const [expandedRows, setExpandedRows]     = useState<Set<string>>(new Set())
   const [savingVirement, setSavingVirement] = useState<string | null>(null)
 
+  // Employees for modal
+  const [allEmployees, setAllEmployees] = useState<any[]>([])
+  const [weekHeures, setWeekHeures]     = useState<any[]>([])
+
   // Pool shift entry
   const [poolModal, setPoolModal]       = useState<PoolModal | null>(null)
+  const [poolCarte, setPoolCarte]       = useState('')
+  const [poolCash, setPoolCash]         = useState('')
+  const [heuresEmployes, setHeuresEmployes] = useState<Record<string, string>>({})
   const [savingPool, setSavingPool]     = useState(false)
   const [poolError, setPoolError]       = useState('')
 
@@ -170,6 +188,8 @@ export default function FinancesPage() {
     const emps = empsRes.data || []
     setWeekPoolShifts(shifts)
     setAllPoolShifts(allPsRes.data || [])
+    setAllEmployees(emps)
+    setWeekHeures(heures)
 
     const summaryMap: Record<string, EmpSummary> = {}
     for (const emp of emps) {
@@ -309,19 +329,36 @@ export default function FinancesPage() {
     setSavingVirement(null)
   }
 
-  async function handleInsertPoolShift() {
+  function resetPoolModal() {
+    setPoolCarte('')
+    setPoolCash('')
+    setHeuresEmployes({})
+    setPoolError('')
+  }
+
+  async function handleCreateService() {
     if (!poolModal || !ctxRid) return
-    const { date, service, pool_total, notes } = poolModal
-    if (!date || !service || !pool_total) return
+    const { date, service, notes } = poolModal
+    if (!date || !service) return
+    const carteVal = parseFloat(poolCarte || '0')
+    const cashVal  = parseFloat(poolCash  || '0')
+    const total = carteVal + cashVal
     setSavingPool(true)
     setPoolError('')
     const { data: { session } } = await supabase.auth.getSession()
+    const heuresArr = Object.entries(heuresEmployes)
+      .filter(([, h]) => parseFloat(h) > 0)
+      .map(([userId, h]) => ({ user_id: userId, heures: parseFloat(h), source: 'manuel' }))
     const res = await fetch('/api/manage-pool-shifts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token ?? ''}` },
       body: JSON.stringify({
-        action: 'insert',
-        payload: { restaurant_id: ctxRid, date, service, pool_total, notes },
+        action: 'create',
+        payload: {
+          restaurant_id: ctxRid, date, service,
+          pool_carte: carteVal, pool_especes: cashVal, pool_total: total,
+          notes, heures: heuresArr,
+        },
       }),
     })
     const json = await res.json().catch(() => ({}))
@@ -331,6 +368,7 @@ export default function FinancesPage() {
       return
     }
     setPoolModal(null)
+    resetPoolModal()
     const lang = (profile?.lang || 'fr') as 'fr' | 'en'
     loadWeekData(ctxRid, weekOffset)
     loadTrendData(ctxRid, weekOffset, lang)
@@ -419,8 +457,8 @@ export default function FinancesPage() {
             <button
               onClick={() => {
                 const { start } = getWeekBounds(weekOffset)
-                setPoolModal({ date: start, service: 'soir', pool_total: '', notes: '' })
-                setPoolError('')
+                setPoolModal({ date: start, service: 'soir', notes: '' })
+                resetPoolModal()
               }}
               style={{
                 background: 'var(--accent)', border: 'none', borderRadius: 8,
@@ -438,49 +476,63 @@ export default function FinancesPage() {
             <div style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 10 }}>
               {lang === 'fr' ? `Services (${allPoolShifts.length})` : `Services (${allPoolShifts.length})`}
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {allPoolShifts.map(ps => {
                 const dt = new Date(ps.date + 'T00:00:00')
                 const dateLbl = `${dt.getDate()} ${MOIS[dt.getMonth()]}`
                 const svcLbl = ps.service === 'midi' ? (lang === 'fr' ? 'Midi' : 'Lunch')
                   : ps.service === 'soir' ? (lang === 'fr' ? 'Soir' : 'Dinner') : ps.service
                 const isCalc = calcShiftId === ps.id
+                const psHeures = weekHeures.filter((h: any) => h.pool_shift_id === ps.id)
+                const nbEmp = new Set(psHeures.map((h: any) => h.user_id)).size
+                const totalH = psHeures.reduce((s: number, h: any) => s + (h.heures || 0), 0)
+                const carte   = ps.pool_carte   ?? 0
+                const especes = ps.pool_especes ?? 0
+                const hasSplit = carte > 0 || especes > 0
+                const statutColor = ps.statut === 'calcule' ? 'var(--success)' : ps.statut === 'vire' ? 'var(--info)' : 'var(--warning)'
+                const statutLbl   = ps.statut === 'calcule' ? (lang === 'fr' ? 'CALCULÉ' : 'CALCULATED') : ps.statut === 'vire' ? (lang === 'fr' ? 'VIRÉ' : 'PAID') : (lang === 'fr' ? 'EN COURS' : 'OPEN')
                 return (
-                  <div key={ps.id} className="card" style={{ padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
+                  <div key={ps.id} className="card" style={{ padding: '12px 14px' }}>
+                    {/* Row 1 : date · service + statut */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 12 }}>{dateLbl}</span>
-                        <span style={{
-                          fontSize: 9, padding: '1px 6px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '0.06em',
-                          background: ps.service === 'midi' ? 'var(--warning-subtle)' : 'var(--info-subtle)',
-                          color: ps.service === 'midi' ? 'var(--warning)' : 'var(--info)',
-                        }}>{svcLbl}</span>
-                        <span style={{
-                          fontSize: 9, padding: '1px 6px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '0.06em',
-                          background: ps.statut === 'calcule' ? 'var(--success-subtle)' : 'var(--warning-subtle)',
-                          color: ps.statut === 'calcule' ? 'var(--success)' : 'var(--warning)',
-                        }}>
-                          {ps.statut === 'calcule' ? (lang === 'fr' ? 'Calculé' : 'Calculated') : (lang === 'fr' ? 'En cours' : 'Open')}
-                        </span>
+                        <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{dateLbl}</span>
+                        <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '0.06em', background: ps.service === 'midi' ? 'var(--warning-subtle)' : 'var(--info-subtle)', color: ps.service === 'midi' ? 'var(--warning)' : 'var(--info)' }}>{svcLbl}</span>
                       </div>
-                      {ps.notes && <div style={{ fontSize: 10, color: 'var(--text-faint)', marginTop: 2 }}>{ps.notes}</div>}
+                      <span style={{ fontSize: 9, padding: '2px 8px', borderRadius: 10, textTransform: 'uppercase', letterSpacing: '0.08em', background: `${statutColor}18`, color: statutColor, fontWeight: 700 }}>
+                        {statutLbl}
+                      </span>
                     </div>
-                    <div style={{ fontSize: 14, color: 'var(--accent)', fontFamily: "'Courier New', monospace", flexShrink: 0 }}>
-                      {fmt$(ps.pool_total || 0)}
+                    {/* Row 2 : pourboires */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: hasSplit ? 2 : 6 }}>
+                      {hasSplit ? (
+                        <>
+                          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>💳 {fmt$(carte)}</span>
+                          <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>💵 {fmt$(especes)}</span>
+                          <span style={{ fontSize: 13, color: 'var(--accent)', fontFamily: "'Courier New', monospace", fontWeight: 600, marginLeft: 'auto' }}>= {fmt$(ps.pool_total || 0)}</span>
+                        </>
+                      ) : (
+                        <span style={{ fontSize: 13, color: 'var(--accent)', fontFamily: "'Courier New', monospace", fontWeight: 600 }}>{fmt$(ps.pool_total || 0)}</span>
+                      )}
                     </div>
+                    {/* Row 3 : employés + heures */}
+                    {(nbEmp > 0 || totalH > 0) && (
+                      <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6 }}>
+                        👥 {nbEmp} {lang === 'fr' ? 'employé(s)' : 'employee(s)'} · {totalH.toFixed(1)}h {lang === 'fr' ? 'totales' : 'total'}
+                      </div>
+                    )}
+                    {ps.notes && <div style={{ fontSize: 10, color: 'var(--text-faint)', marginBottom: 6 }}>{ps.notes}</div>}
+                    {/* Row 4 : actions */}
                     {ps.statut === 'ouvert' && (
-                      <button
-                        onClick={() => handleCalculate(ps.id)}
-                        disabled={isCalc}
-                        style={{
-                          background: 'var(--accent)', border: 'none', borderRadius: 8,
-                          color: 'var(--accent-text)', fontSize: 10, padding: '5px 10px',
-                          cursor: isCalc ? 'wait' : 'pointer', letterSpacing: '0.06em', flexShrink: 0,
-                          opacity: isCalc ? 0.6 : 1,
-                        }}
-                      >
-                        {isCalc ? '...' : (lang === 'fr' ? 'Calculer' : 'Calculate')}
-                      </button>
+                      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+                        <button
+                          onClick={() => handleCalculate(ps.id)}
+                          disabled={isCalc}
+                          style={{ background: 'var(--accent)', border: 'none', borderRadius: 8, color: 'var(--accent-text)', fontSize: 11, padding: '6px 12px', cursor: isCalc ? 'wait' : 'pointer', letterSpacing: '0.06em', opacity: isCalc ? 0.6 : 1 }}
+                        >
+                          {isCalc ? '...' : (lang === 'fr' ? 'Calculer répartition' : 'Calculate')}
+                        </button>
+                      </div>
                     )}
                   </div>
                 )
@@ -788,21 +840,86 @@ export default function FinancesPage() {
               </div>
             </div>
 
-            <div style={{ marginBottom: 14 }}>
-              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6 }}>
-                {lang === 'fr' ? 'Pool pourboires ($) *' : 'Tip pool ($) *'}
+            {/* Pourboires */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 10, fontWeight: 600 }}>
+                {lang === 'fr' ? 'POURBOIRES' : 'TIPS'}
               </div>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={poolModal.pool_total}
-                onChange={e => setPoolModal(m => m ? { ...m, pool_total: e.target.value } : m)}
-                placeholder="0.00"
-                style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', padding: '10px 12px', fontSize: 16, fontFamily: "'Courier New', monospace", outline: 'none', boxSizing: 'border-box' }}
-              />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div>
+                  <label style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>
+                    💳 {lang === 'fr' ? 'Carte de crédit ($)' : 'Credit card ($)'}
+                  </label>
+                  <input type="number" min="0" step="0.01" value={poolCarte} onChange={e => setPoolCarte(e.target.value)} placeholder="0.00"
+                    style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', padding: '10px 12px', fontSize: 16, fontFamily: "'Courier New', monospace", outline: 'none', boxSizing: 'border-box' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' }}>
+                    💵 {lang === 'fr' ? 'Comptant ($)' : 'Cash ($)'}
+                  </label>
+                  <input type="number" min="0" step="0.01" value={poolCash} onChange={e => setPoolCash(e.target.value)} placeholder="0.00"
+                    style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', padding: '10px 12px', fontSize: 16, fontFamily: "'Courier New', monospace", outline: 'none', boxSizing: 'border-box' }} />
+                </div>
+              </div>
+              <div style={{ marginTop: 8, padding: '8px 12px', background: 'var(--surface2)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{lang === 'fr' ? 'Total pourboires' : 'Total tips'}</span>
+                <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--accent)', fontFamily: "'Courier New', monospace" }}>
+                  ${(parseFloat(poolCarte || '0') + parseFloat(poolCash || '0')).toFixed(2)}
+                </span>
+              </div>
             </div>
 
+            {/* Heures employés */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 10, fontWeight: 600 }}>
+                {lang === 'fr' ? 'HEURES TRAVAILLÉES' : 'HOURS WORKED'}
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 8 }}>
+                {lang === 'fr' ? 'Heures réelles de chaque employé présent' : 'Actual hours for each employee present'}
+              </div>
+              <div style={{ maxHeight: 220, overflowY: 'auto' }}>
+                {allEmployees.map((emp: any) => (
+                  <div key={emp.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: avatarColor(emp.nom), color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, flexShrink: 0 }}>
+                        {initiales(emp.nom)}
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text)' }}>{emp.nom}</div>
+                        <div style={{ display: 'flex', gap: 3, marginTop: 2 }}>
+                          {(emp.roles || []).map((r: string) => (
+                            <span key={r} style={{ fontSize: 9, padding: '1px 5px', borderRadius: 8, background: `${ROLE_COLORS[r] || 'var(--accent)'}22`, color: ROLE_COLORS[r] || 'var(--accent)', fontWeight: 600, textTransform: 'uppercase' }}>
+                              {ROLE_SHORT[r] || r}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <input type="number" min="0" max="24" step="0.25"
+                        value={heuresEmployes[emp.id] || ''}
+                        onChange={e => setHeuresEmployes(prev => ({ ...prev, [emp.id]: e.target.value }))}
+                        placeholder="0"
+                        style={{ width: 64, background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)', padding: '6px 8px', fontSize: 14, fontFamily: "'Courier New', monospace", outline: 'none', textAlign: 'center' }} />
+                      <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>h</span>
+                    </div>
+                  </div>
+                ))}
+                {allEmployees.length === 0 && (
+                  <div style={{ fontSize: 12, color: 'var(--text-faint)', padding: '8px 0', textAlign: 'center' }}>
+                    {lang === 'fr' ? 'Aucun employé chargé' : 'No employees loaded'}
+                  </div>
+                )}
+              </div>
+              <div style={{ marginTop: 8, padding: '8px 12px', background: 'var(--surface2)', borderRadius: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{lang === 'fr' ? 'Total heures' : 'Total hours'}</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', fontFamily: "'Courier New', monospace" }}>
+                  {Object.values(heuresEmployes).reduce((s, v) => s + parseFloat(v || '0'), 0).toFixed(2)}h
+                </span>
+              </div>
+            </div>
+
+            {/* Notes */}
             <div style={{ marginBottom: 20 }}>
               <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6 }}>
                 {lang === 'fr' ? 'Notes' : 'Notes'}
@@ -823,19 +940,19 @@ export default function FinancesPage() {
 
             <div style={{ display: 'flex', gap: 8 }}>
               <button
-                onClick={() => setPoolModal(null)}
+                onClick={() => { setPoolModal(null); resetPoolModal() }}
                 style={{ flex: 1, padding: '12px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 13 }}
               >
                 {lang === 'fr' ? 'Annuler' : 'Cancel'}
               </button>
               <button
-                onClick={handleInsertPoolShift}
-                disabled={savingPool || !poolModal.date || !poolModal.pool_total}
+                onClick={handleCreateService}
+                disabled={savingPool || !poolModal.date}
                 style={{
                   flex: 2, padding: '12px', background: 'var(--accent)', border: 'none', borderRadius: 10,
                   color: 'var(--accent-text)', cursor: savingPool ? 'wait' : 'pointer',
                   fontSize: 13, fontWeight: 600,
-                  opacity: !poolModal.date || !poolModal.pool_total ? 0.5 : 1,
+                  opacity: !poolModal.date ? 0.5 : 1,
                 }}
               >
                 {savingPool ? '...' : (lang === 'fr' ? 'Créer le service' : 'Create service')}
