@@ -160,3 +160,38 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
+
+export async function GET(req: NextRequest) {
+  if (!SERVICE_ROLE_KEY) return err('Server misconfiguration', 500)
+
+  const authHeader = req.headers.get('Authorization') ?? ''
+  if (!authHeader.startsWith('Bearer ')) return err('Missing Authorization header', 401)
+
+  const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    global: { headers: { Authorization: authHeader } },
+    auth: { persistSession: false },
+  })
+  const { data: { user }, error: authError } = await userClient.auth.getUser()
+  if (authError || !user) return err('Unauthorized', 401)
+
+  const reqUrl = new URL(req.url)
+  const action = reqUrl.searchParams.get('action')
+  const restaurant_id = reqUrl.searchParams.get('restaurant_id')
+
+  if (action === 'list_employes') {
+    if (!restaurant_id) return err('restaurant_id manquant', 400)
+    const admin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+    const { data, error } = await admin
+      .from('profiles')
+      .select('id, nom, roles, taux_horaire')
+      .contains('restaurant_ids', [restaurant_id])
+      .eq('actif', true)
+      .order('nom')
+    if (error) return err(error.message, 500)
+    return NextResponse.json({ employes: data })
+  }
+
+  return err('Unknown action', 400)
+}

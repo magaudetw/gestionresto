@@ -174,18 +174,21 @@ export default function FinancesPage() {
 
   const loadWeekData = useCallback(async (rid: string, offset: number) => {
     const { start, end, semaineDu } = getWeekBounds(offset)
-    const [psRes, allPsRes, heuresRes, empsRes] = await Promise.all([
+    const { data: { session } } = await supabase.auth.getSession()
+    const authHeader = session?.access_token ? `Bearer ${session.access_token}` : ''
+    const [psRes, allPsRes, heuresRes, empsJson] = await Promise.all([
       supabase.from('pool_shifts').select('*')
         .eq('restaurant_id', rid).gte('date', start).lte('date', end).eq('statut', 'calcule'),
       supabase.from('pool_shifts').select('*')
         .eq('restaurant_id', rid).gte('date', start).lte('date', end).order('date'),
       supabase.from('heures_employes').select('*').gte('date', start).lte('date', end),
-      supabase.from('profiles').select('id,nom,taux_horaire,roles')
-        .contains('restaurant_ids', [rid]).eq('actif', true),
+      fetch(`/api/manage-profile?action=list_employes&restaurant_id=${rid}`, {
+        headers: { Authorization: authHeader },
+      }).then(r => r.json()),
     ])
     const shifts = psRes.data || []
     const heures = heuresRes.data || []
-    const emps = empsRes.data || []
+    const emps: any[] = empsJson.employes || []
     setWeekPoolShifts(shifts)
     setAllPoolShifts(allPsRes.data || [])
     setAllEmployees(emps)
@@ -309,13 +312,27 @@ export default function FinancesPage() {
     setCotesData(rows.reverse())
   }, [])
 
+  const loadEmployes = useCallback(async () => {
+    if (!ctxRid) return
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session?.access_token) return
+    const res = await fetch(
+      `/api/manage-profile?action=list_employes&restaurant_id=${ctxRid}`,
+      { headers: { Authorization: `Bearer ${session.access_token}` } }
+    )
+    const json = await res.json()
+    console.log('[finances] employes chargés:', json.employes?.length)
+    setAllEmployees(json.employes || [])
+  }, [ctxRid])
+
   useEffect(() => {
     if (!ctxRid || !profile) return
     const lang = (profile.lang || 'fr') as 'fr' | 'en'
     loadWeekData(ctxRid, weekOffset)
     loadTrendData(ctxRid, weekOffset, lang)
     loadCotesData(ctxRid, weekOffset, lang)
-  }, [ctxRid, weekOffset, profile, loadWeekData, loadTrendData, loadCotesData])
+    loadEmployes()
+  }, [ctxRid, weekOffset, profile, loadWeekData, loadTrendData, loadCotesData, loadEmployes])
 
   async function toggleVirement(v: Virement) {
     setSavingVirement(v.id)
