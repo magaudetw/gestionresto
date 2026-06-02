@@ -41,6 +41,14 @@ const ROLE_LABELS_COV: Record<string, { fr: string; en: string }> = {
   busboy:  { fr: 'Busboy',  en: 'Busboy'  },
 }
 
+const ROLE_COLORS: Record<string, string> = {
+  gerant: '#6366f1', serveur: '#0ea5e9', bar: '#f59e0b', busboy: '#10b981', admin: '#8b5cf6',
+}
+
+const ROLE_SHORT: Record<string, string> = {
+  gerant: 'GÉR', serveur: 'SRV', bar: 'BAR', busboy: 'BUS', admin: 'ADM',
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function isoDate(d: Date) { return d.toISOString().split('T')[0] }
@@ -68,6 +76,26 @@ function fmtShiftDate(dateStr: string, lang: 'fr' | 'en', MOIS: string[]): strin
   const en = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
   const dow = lang === 'fr' ? fr[d.getDay()] : en[d.getDay()]
   return `${dow} ${d.getDate()} ${MOIS[d.getMonth()]}`
+}
+
+function avatarColor(nom: string): string {
+  let hash = 0
+  for (let i = 0; i < nom.length; i++) hash = nom.charCodeAt(i) + ((hash << 5) - hash)
+  return `hsl(${Math.abs(hash) % 360}, 55%, 45%)`
+}
+
+function initiales(nom: string): string {
+  return nom.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2)
+}
+
+function dureeShift(debut: string, fin: string): string {
+  const [dh, dm] = debut.split(':').map(Number)
+  const [fh, fm] = fin.split(':').map(Number)
+  let mins = (fh * 60 + fm) - (dh * 60 + dm)
+  if (mins < 0) mins += 1440
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  return m > 0 ? `${h}h${m}` : `${h}h`
 }
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
@@ -116,7 +144,18 @@ export default function HorairePage() {
   const [approveComment, setApproveComment] = useState('')
 
   const [saving, setSaving] = useState(false)
+
+  // Filtres / affichage
+  const [filtreRoles, setFiltreRoles]       = useState<string[]>(['gerant','serveur','bar','busboy'])
+  const [showOpenShifts, setShowOpenShifts] = useState(true)
+  const [groupByRole, setGroupByRole]       = useState(false)
+  const [searchEmploye, setSearchEmploye]   = useState('')
+
   const router = useRouter()
+
+  function toggleFiltreRole(role: string) {
+    setFiltreRoles(prev => prev.includes(role) ? prev.filter(r => r !== role) : [...prev, role])
+  }
 
   // ─── Load exchanges (not week-filtered) ──────────────────────────────────
   const loadEchanges = useCallback(async () => {
@@ -151,12 +190,8 @@ export default function HorairePage() {
       `/api/manage-shifts-config?restaurant_id=${ctxRestaurantId}`,
       { headers: { Authorization: `Bearer ${session.access_token}` } }
     )
-    if (!res.ok) {
-      console.error('[horaire] loadShiftTypes error:', res.status)
-      return
-    }
+    if (!res.ok) { console.error('[horaire] loadShiftTypes error:', res.status); return }
     const json = await res.json()
-    console.log('[horaire] shift_types chargés:', json.shifts?.length)
     setShiftTypes(json.shifts || [])
   }
 
@@ -173,12 +208,8 @@ export default function HorairePage() {
         `/api/manage-shifts?restaurant_id=${ctxRestaurantId}&date_start=${mondayISO}&date_end=${saturdayISO}`,
         { headers: { Authorization: `Bearer ${session.access_token}` } }
       )
-      if (!res.ok) {
-        console.error('[horaire] loadWeekShifts error:', res.status)
-        return
-      }
+      if (!res.ok) { console.error('[horaire] loadWeekShifts error:', res.status); return }
       const json = await res.json()
-      console.log('[horaire] shifts chargés:', json.shifts?.length)
       setShifts(json.shifts || [])
     } else {
       const { data: shiftsData } = await supabase.from('horaire_shifts')
@@ -249,29 +280,20 @@ export default function HorairePage() {
     const { data: { session } } = await supabase.auth.getSession()
     const res = await fetch('/api/manage-shifts', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session?.access_token ?? ''}`,
-      },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session?.access_token ?? ''}` },
       body: JSON.stringify({ action, payload }),
     })
     const json = await res.json().catch(() => ({}))
-    console.log('[horaire] upsert result:', res.status, json)
-    if (!res.ok) {
-      console.error(`[manage-shifts] ${action}:`, json.error, json.hint ?? '')
-    }
+    if (!res.ok) console.error(`[manage-shifts] ${action}:`, json.error, json.hint ?? '')
     return res.ok
   }
 
   async function addShift() {
     if (!cellModal || !cellStId) return
     setSaving(true)
-    console.log('[horaire] handleConfirmShift:', { userId: cellModal.empId, date: cellModal.date, shiftTypeId: cellStId, restaurantId: ctxRestaurantId })
     await callShiftsAPI('upsert', {
-      restaurant_id: ctxRestaurantId,
-      user_id: cellModal.empId,
-      shift_type_id: cellStId,
-      date: cellModal.date,
+      restaurant_id: ctxRestaurantId, user_id: cellModal.empId,
+      shift_type_id: cellStId, date: cellModal.date,
     })
     setCellModal(null)
     await loadData()
@@ -281,10 +303,7 @@ export default function HorairePage() {
   async function updateShift() {
     if (!cellModal?.shiftId || !cellStId) return
     setSaving(true)
-    await callShiftsAPI('upsert', {
-      shift_id: cellModal.shiftId,
-      shift_type_id: cellStId,
-    })
+    await callShiftsAPI('upsert', { shift_id: cellModal.shiftId, shift_type_id: cellStId })
     setCellModal(null)
     await loadData()
     setSaving(false)
@@ -304,8 +323,7 @@ export default function HorairePage() {
     const lang = profile?.lang || 'fr'
     await callShiftsAPI('publish', {
       restaurant_id: ctxRestaurantId,
-      week_start: isoDate(monday),
-      week_end: isoDate(saturday),
+      week_start: isoDate(monday), week_end: isoDate(saturday),
     })
     const affectedIds = [...new Set(shifts.map((s: any) => s.user_id as string))]
     const weekLabel = `${monday.getDate()}/${monday.getMonth() + 1} – ${saturday.getDate()}/${saturday.getMonth() + 1}`
@@ -327,17 +345,13 @@ export default function HorairePage() {
     setSaving(true)
     const lang = profile?.lang || 'fr'
     await supabase.from('echanges').insert({
-      demandeur_id: userId,
-      recepteur_id: proposeColleagueId,
+      demandeur_id: userId, recepteur_id: proposeColleagueId,
       shift_demandeur_id: proposeModal.shift.id,
-      shift_recepteur_id: proposeColleagueShiftId,
-      statut: 'en_attente',
+      shift_recepteur_id: proposeColleagueShiftId, statut: 'en_attente',
     })
     await supabase.from('notifications').insert({
       user_id: proposeColleagueId, type: 'echange', lu: false,
-      message: lang === 'fr'
-        ? `${profile.nom} vous propose un échange de shift.`
-        : `${profile.nom} is proposing a shift swap with you.`,
+      message: lang === 'fr' ? `${profile.nom} vous propose un échange de shift.` : `${profile.nom} is proposing a shift swap with you.`,
     })
     setProposeModal(null)
     setProposeColleagueId('')
@@ -346,17 +360,15 @@ export default function HorairePage() {
     setSaving(false)
   }
 
-  // ─── Exchange: Step 2 — Respond (colleague accepts/refuses) ──────────────
+  // ─── Exchange: Step 2 — Respond ───────────────────────────────────────────
   async function respondExchange(accept: boolean) {
     if (!respondModal || saving) return
     setSaving(true)
     const lang = profile?.lang || 'fr'
     const e = respondModal.echange
     const comment = respondComment.trim()
-
     if (accept) {
       await supabase.from('echanges').update({ statut: 'accepte' }).eq('id', e.id)
-      // Notify managers
       const restaurantId = profile?.restaurant_ids?.[0]
       const { data: managers } = await supabase.from('profiles')
         .select('id').contains('restaurant_ids', restaurantId ? [restaurantId] : [])
@@ -375,10 +387,7 @@ export default function HorairePage() {
           : `${e.recepteur?.nom} accepted your swap. Awaiting manager approval.`,
       })
     } else {
-      await supabase.from('echanges').update({
-        statut: 'refuse',
-        ...(comment ? { commentaire: comment } : {}),
-      }).eq('id', e.id)
+      await supabase.from('echanges').update({ statut: 'refuse', ...(comment ? { commentaire: comment } : {}) }).eq('id', e.id)
       await supabase.from('notifications').insert({
         user_id: e.demandeur_id, type: 'echange', lu: false,
         message: lang === 'fr'
@@ -386,23 +395,19 @@ export default function HorairePage() {
           : `${e.recepteur?.nom} declined your swap request.${comment ? ` Reason: ${comment}` : ''}`,
       })
     }
-    setRespondModal(null)
-    setRespondAccept(null)
-    setRespondComment('')
+    setRespondModal(null); setRespondAccept(null); setRespondComment('')
     await loadEchanges()
     setSaving(false)
   }
 
-  // ─── Exchange: Step 3 — Approve/Reject (manager) ─────────────────────────
+  // ─── Exchange: Step 3 — Approve/Reject ────────────────────────────────────
   async function approveExchange(approve: boolean) {
     if (!approveModal || saving) return
     setSaving(true)
     const lang = profile?.lang || 'fr'
     const e = approveModal.echange
     const comment = approveComment.trim()
-
     if (approve) {
-      // Swap the user_ids on the two shifts
       await supabase.from('horaire_shifts').update({ user_id: e.recepteur_id }).eq('id', e.shift_demandeur_id)
       await supabase.from('horaire_shifts').update({ user_id: e.demandeur_id }).eq('id', e.shift_recepteur_id)
       await supabase.from('echanges').update({ statut: 'approuve' }).eq('id', e.id)
@@ -412,10 +417,7 @@ export default function HorairePage() {
         { user_id: e.recepteur_id, type: 'echange', message: msg, lu: false },
       ])
     } else {
-      await supabase.from('echanges').update({
-        statut: 'rejete',
-        ...(comment ? { commentaire: comment } : {}),
-      }).eq('id', e.id)
+      await supabase.from('echanges').update({ statut: 'rejete', ...(comment ? { commentaire: comment } : {}) }).eq('id', e.id)
       const msg = lang === 'fr'
         ? `Votre échange a été rejeté par le gérant.${comment ? ` Motif : ${comment}` : ''}`
         : `Your swap was rejected by the manager.${comment ? ` Reason: ${comment}` : ''}`
@@ -424,14 +426,12 @@ export default function HorairePage() {
         { user_id: e.recepteur_id, type: 'echange', message: msg, lu: false },
       ])
     }
-    setApproveModal(null)
-    setApproveReject(null)
-    setApproveComment('')
+    setApproveModal(null); setApproveReject(null); setApproveComment('')
     await Promise.all([loadData(), loadEchanges()])
     setSaving(false)
   }
 
-  // ─── Exchange: Cancel (demandeur cancels while en_attente) ───────────────
+  // ─── Exchange: Cancel ─────────────────────────────────────────────────────
   async function cancelExchange(echangeId: string) {
     if (saving) return
     setSaving(true)
@@ -441,9 +441,7 @@ export default function HorairePage() {
     await supabase.from('echanges').update({ statut: 'refuse' }).eq('id', echangeId)
     await supabase.from('notifications').insert({
       user_id: e.recepteur_id, type: 'echange', lu: false,
-      message: lang === 'fr'
-        ? `${profile.nom} a annulé sa demande d'échange.`
-        : `${profile.nom} cancelled their swap request.`,
+      message: lang === 'fr' ? `${profile.nom} a annulé sa demande d'échange.` : `${profile.nom} cancelled their swap request.`,
     })
     await loadEchanges()
     setSaving(false)
@@ -472,6 +470,16 @@ export default function HorairePage() {
     if (!shiftsByDate[s.date]) shiftsByDate[s.date] = []
     shiftsByDate[s.date].push(s)
   })
+
+  // Per-employee per-day lookup (array for multiple shifts)
+  const shiftsByEmpDate: Record<string, any[]> = {}
+  shifts.forEach(s => {
+    const key = `${s.user_id}|${s.date}`
+    if (!shiftsByEmpDate[key]) shiftsByEmpDate[key] = []
+    shiftsByEmpDate[key].push(s)
+  })
+
+  // Keep single-entry map for backward compat
   const shiftByEmpDate: Record<string, any> = {}
   shifts.forEach(s => { shiftByEmpDate[`${s.user_id}|${s.date}`] = s })
 
@@ -485,23 +493,34 @@ export default function HorairePage() {
   const myInProgress       = echanges.filter((e: any) =>
     (e.demandeur_id === userId || e.recepteur_id === userId) && e.statut === 'accepte'
   )
-  const myHistory          = echanges.filter((e: any) =>
+  const myHistory = echanges.filter((e: any) =>
     (e.demandeur_id === userId || e.recepteur_id === userId) &&
     ['approuve','refuse','rejete'].includes(e.statut)
   )
+
+  // Filtered employees for the grid
+  let employesFiltres = employees.filter((e: any) =>
+    e.roles?.some((r: string) => filtreRoles.includes(r)) &&
+    (e.nom || '').toLowerCase().includes(searchEmploye.toLowerCase())
+  )
+  if (groupByRole) {
+    const roleOrder = ['gerant','serveur','bar','busboy']
+    employesFiltres = [...employesFiltres].sort((a: any, b: any) => {
+      const ra = roleOrder.findIndex(r => a.roles?.includes(r))
+      const rb = roleOrder.findIndex(r => b.roles?.includes(r))
+      return ra - rb || a.nom.localeCompare(b.nom)
+    })
+  }
 
   function getEmpDispoInfo(empId: string, jourKey: Jour): { source: 'hebdo' | 'base' | 'unknown'; available: boolean } {
     const hebdo = disposHebdo.find((x: any) => x.user_id === empId)
     if (hebdo) {
       const svcs = hebdo.dispos?.[jourKey]
-      const available = Array.isArray(svcs) && svcs.length > 0
-      return { source: 'hebdo', available }
+      return { source: 'hebdo', available: Array.isArray(svcs) && svcs.length > 0 }
     }
     const emp = employeeMap[empId]
     const base = emp?.dispos_base
-    if (base?.jours) {
-      return { source: 'base', available: base.jours.includes(jourKey) }
-    }
+    if (base?.jours) return { source: 'base', available: base.jours.includes(jourKey) }
     return { source: 'unknown', available: false }
   }
 
@@ -518,12 +537,8 @@ export default function HorairePage() {
     const dayShifts = shiftsByDate[dateStr] || []
     const midiShifts = dayShifts.filter((s: any) => inferService(s.shift_types?.debut) === 'midi')
     const soirShifts = dayShifts.filter((s: any) => inferService(s.shift_types?.debut) === 'soir')
-    const needMidi = couverture
-      .filter((c: any) => c.jour === jourKey && c.service === 'midi')
-      .reduce((s: number, c: any) => s + (c.minimum ?? 0), 0)
-    const needSoir = couverture
-      .filter((c: any) => c.jour === jourKey && c.service === 'soir')
-      .reduce((s: number, c: any) => s + (c.minimum ?? 0), 0)
+    const needMidi = couverture.filter((c: any) => c.jour === jourKey && c.service === 'midi').reduce((s: number, c: any) => s + (c.minimum ?? 0), 0)
+    const needSoir = couverture.filter((c: any) => c.jour === jourKey && c.service === 'soir').reduce((s: number, c: any) => s + (c.minimum ?? 0), 0)
     return {
       midi: { ok: needMidi === 0 || midiShifts.length >= needMidi, have: midiShifts.length, need: needMidi },
       soir: { ok: needSoir === 0 || soirShifts.length >= needSoir, have: soirShifts.length, need: needSoir },
@@ -543,16 +558,12 @@ export default function HorairePage() {
     for (let i = 0; i < 6; i++) {
       const cov = getCoverage(i)
       const js = JOUR_SHORT[JOURS[i]][lang]
-      if (!cov.midi.ok && cov.midi.need > 0)
-        alerts.push(lang === 'fr' ? `${js} Midi : ${cov.midi.have}/${cov.midi.need}` : `${js} Lunch: ${cov.midi.have}/${cov.midi.need}`)
-      if (cov.soir.need > 0 && cov.soir.have < cov.soir.need)
-        alerts.push(lang === 'fr' ? `${js} Soir : ${cov.soir.have}/${cov.soir.need}` : `${js} Evening: ${cov.soir.have}/${cov.soir.need}`)
+      if (!cov.midi.ok && cov.midi.need > 0) alerts.push(lang === 'fr' ? `${js} Midi : ${cov.midi.have}/${cov.midi.need}` : `${js} Lunch: ${cov.midi.have}/${cov.midi.need}`)
+      if (cov.soir.need > 0 && cov.soir.have < cov.soir.need) alerts.push(lang === 'fr' ? `${js} Soir : ${cov.soir.have}/${cov.soir.need}` : `${js} Evening: ${cov.soir.have}/${cov.soir.need}`)
     }
     shifts.forEach((s: any) => { empShiftCount[s.user_id] = (empShiftCount[s.user_id] || 0) + 1 })
     const withoutShift = employees.filter((e: any) => !empShiftCount[e.id])
-    if (withoutShift.length > 0) {
-      alerts.push(lang === 'fr' ? `Sans shift : ${withoutShift.map((e: any) => e.nom.split(' ')[0]).join(', ')}` : `No shifts: ${withoutShift.map((e: any) => e.nom.split(' ')[0]).join(', ')}`)
-    }
+    if (withoutShift.length > 0) alerts.push(lang === 'fr' ? `Sans shift : ${withoutShift.map((e: any) => e.nom.split(' ')[0]).join(', ')}` : `No shifts: ${withoutShift.map((e: any) => e.nom.split(' ')[0]).join(', ')}`)
     return alerts
   }
 
@@ -567,9 +578,20 @@ export default function HorairePage() {
 
   function getCompatibleColleagues() {
     const myRoles = profile?.roles || []
-    return allEmployees.filter((e: any) =>
-      e.id !== userId && (e.roles || []).some((r: string) => myRoles.includes(r))
-    )
+    return allEmployees.filter((e: any) => e.id !== userId && (e.roles || []).some((r: string) => myRoles.includes(r)))
+  }
+
+  function totalHeuresEmp(empId: string): string {
+    return shifts
+      .filter((s: any) => s.user_id === empId)
+      .reduce((sum: number, s: any) => {
+        const [dh, dm] = (s.shift_types?.debut || '0:0').split(':').map(Number)
+        const [fh, fm] = (s.shift_types?.fin || '0:0').split(':').map(Number)
+        let mins = (fh * 60 + fm) - (dh * 60 + dm)
+        if (mins < 0) mins += 1440
+        return sum + mins / 60
+      }, 0)
+      .toFixed(1)
   }
 
   const shiftsCompatibles = cellModal
@@ -591,11 +613,7 @@ export default function HorairePage() {
     const canApprove = mgr        && e.statut === 'accepte'
 
     return (
-      <div style={{
-        background: 'var(--surface1)', border: `1px solid ${e.statut === 'accepte' ? 'color-mix(in srgb, var(--info) 35%, transparent)' : 'var(--border)'}`,
-        borderRadius: 12, padding: '12px 14px', marginBottom: 8,
-      }}>
-        {/* Header */}
+      <div style={{ background: 'var(--surface1)', border: `1px solid ${e.statut === 'accepte' ? 'color-mix(in srgb, var(--info) 35%, transparent)' : 'var(--border)'}`, borderRadius: 12, padding: '12px 14px', marginBottom: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--text)' }}>
             <span>{e.demandeur?.nom?.split(' ')[0]}</span>
@@ -604,13 +622,9 @@ export default function HorairePage() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <span style={{ fontSize: 11 }}>{cfg.icon}</span>
-            <span style={{ fontSize: 10, color: cfg.color, letterSpacing: '0.06em' }}>
-              {cfg[lang]}
-            </span>
+            <span style={{ fontSize: 10, color: cfg.color, letterSpacing: '0.06em' }}>{cfg[lang]}</span>
           </div>
         </div>
-
-        {/* Shifts */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
           <div style={{ flex: 1, background: `${sdSt?.couleur || 'var(--accent)'}14`, borderRadius: 8, padding: '6px 8px' }}>
             <div style={{ fontSize: 9, color: 'var(--text-faint)', marginBottom: 2 }}>{e.demandeur?.nom?.split(' ')[0]}</div>
@@ -626,40 +640,19 @@ export default function HorairePage() {
             {srSt && <div style={{ fontSize: 9, color: 'var(--text-faint)' }}>{srSt.debut}–{srSt.fin}</div>}
           </div>
         </div>
-
-        {/* Comment */}
-        {e.commentaire && (
-          <div style={{ fontSize: 10, color: 'var(--text-faint)', fontStyle: 'italic', marginBottom: 8 }}>
-            "{e.commentaire}"
-          </div>
-        )}
-
-        {/* Actions */}
+        {e.commentaire && <div style={{ fontSize: 10, color: 'var(--text-faint)', fontStyle: 'italic', marginBottom: 8 }}>"{e.commentaire}"</div>}
         {canRespond && (
-          <button onClick={() => { setRespondModal({ echange: e }); setRespondAccept(null); setRespondComment('') }} style={{
-            width: '100%', padding: '8px',
-            background: 'var(--warning-subtle)',
-            border: 'color-mix(in srgb, var(--warning) 40%, transparent) 1px solid',
-            borderRadius: 8, color: 'var(--warning)', cursor: 'pointer', fontSize: 12, fontFamily: font,
-          }}>
+          <button onClick={() => { setRespondModal({ echange: e }); setRespondAccept(null); setRespondComment('') }} style={{ width: '100%', padding: '8px', background: 'var(--warning-subtle)', border: 'color-mix(in srgb, var(--warning) 40%, transparent) 1px solid', borderRadius: 8, color: 'var(--warning)', cursor: 'pointer', fontSize: 12, fontFamily: font }}>
             {lang === 'fr' ? '↩ Répondre à cette demande' : '↩ Respond to this request'}
           </button>
         )}
         {canCancel && (
-          <button onClick={() => cancelExchange(e.id)} disabled={saving} style={{
-            width: '100%', padding: '6px', background: 'transparent', border: '1px solid var(--border)',
-            borderRadius: 8, color: 'var(--text-faint)', cursor: 'pointer', fontSize: 11, fontFamily: font,
-          }}>
+          <button onClick={() => cancelExchange(e.id)} disabled={saving} style={{ width: '100%', padding: '6px', background: 'transparent', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-faint)', cursor: 'pointer', fontSize: 11, fontFamily: font }}>
             {lang === 'fr' ? 'Annuler ma demande' : 'Cancel my request'}
           </button>
         )}
         {canApprove && (
-          <button onClick={() => { setApproveModal({ echange: e }); setApproveReject(null); setApproveComment('') }} style={{
-            width: '100%', padding: '8px',
-            background: 'var(--info-subtle)',
-            border: '1px solid color-mix(in srgb, var(--info) 40%, transparent)',
-            borderRadius: 8, color: 'var(--info)', cursor: 'pointer', fontSize: 12, fontFamily: font, fontWeight: 600,
-          }}>
+          <button onClick={() => { setApproveModal({ echange: e }); setApproveReject(null); setApproveComment('') }} style={{ width: '100%', padding: '8px', background: 'var(--info-subtle)', border: '1px solid color-mix(in srgb, var(--info) 40%, transparent)', borderRadius: 8, color: 'var(--info)', cursor: 'pointer', fontSize: 12, fontFamily: font, fontWeight: 600 }}>
             {lang === 'fr' ? '↩ Statuer sur cet échange' : '↩ Review this swap'}
           </button>
         )}
@@ -670,144 +663,206 @@ export default function HorairePage() {
   // ─── Render ───────────────────────────────────────────────────────────────
   return (
     <>
-    <style>{`.schedule-cell-empty:hover{background:var(--accent-subtle)!important}.schedule-cell-empty:hover .cell-plus{opacity:.8!important;color:var(--accent)}`}</style>
+    <style>{`
+      .sched-cell { transition: background 0.12s; }
+      .sched-cell:hover { background: color-mix(in srgb, var(--accent) 7%, transparent) !important; }
+      .sched-cell .cell-add { opacity: 0; transition: opacity 0.12s; }
+      .sched-cell:hover .cell-add { opacity: 1; }
+    `}</style>
     <AppShell profile={profile} restaurant="Le Carré">
-      <main className="page-content" style={{ paddingBottom: 96 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
 
-        {/* Tab bar */}
-        <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', padding: '0 16px' }}>
+        {/* ── Tab bar ── */}
+        <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', flexShrink: 0, background: 'var(--surface1)' }}>
           {(['horaire', 'echanges'] as const).map(tab => {
             const isActive = activeTab === tab
-            const badge = tab === 'echanges'
-              ? (isManager ? pendingApprovalCount : myPendingReceived.length)
-              : 0
+            const badge = tab === 'echanges' ? (isManager ? pendingApprovalCount : myPendingReceived.length) : 0
             return (
-              <button key={tab} onClick={() => setActiveTab(tab)} style={{
-                flex: 1, padding: '14px 4px', background: 'none', border: 'none',
-                borderBottom: `2px solid ${isActive ? 'var(--accent)' : 'transparent'}`,
-                color: isActive ? 'var(--accent)' : 'var(--text-secondary)',
-                cursor: 'pointer', fontSize: 11, fontFamily: font,
-                letterSpacing: '0.08em', textTransform: 'uppercase',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-                transition: 'color 0.15s',
-              }}>
+              <button key={tab} onClick={() => setActiveTab(tab)} style={{ flex: 1, padding: '14px 4px', background: 'none', border: 'none', borderBottom: `2px solid ${isActive ? 'var(--accent)' : 'transparent'}`, color: isActive ? 'var(--accent)' : 'var(--text-secondary)', cursor: 'pointer', fontSize: 11, fontFamily: font, letterSpacing: '0.08em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
                 {tab === 'horaire' ? (lang === 'fr' ? 'Horaire' : 'Schedule') : (lang === 'fr' ? 'Échanges' : 'Swaps')}
-                {badge > 0 && (
-                  <span style={{
-                    background: 'var(--danger)', color: '#fff', borderRadius: '50%',
-                    minWidth: 16, height: 16, fontSize: 9, fontWeight: 700,
-                    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px',
-                  }}>
-                    {badge}
-                  </span>
-                )}
+                {badge > 0 && <span style={{ background: 'var(--danger)', color: '#fff', borderRadius: '50%', minWidth: 16, height: 16, fontSize: 9, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>{badge}</span>}
               </button>
             )
           })}
         </div>
 
-        <div style={{ padding: '16px' }}>
+        {/* ══════════════ HORAIRE — MANAGER ══════════════ */}
+        {activeTab === 'horaire' && isManager && (
+          <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
-          {/* ══════════════ HORAIRE TAB ══════════════ */}
-          {activeTab === 'horaire' && (
-            <>
-              {/* Week navigation */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                <button onClick={() => setWeekOffset(w => w - 1)} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: 8, padding: '8px 13px', cursor: 'pointer', fontSize: 16, flexShrink: 0 }}>‹</button>
-                <div style={{ flex: 1, textAlign: 'center' }}>
-                  <div style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 1 }}>
-                    {weekOffset === 0 ? (lang === 'fr' ? 'Cette semaine' : 'This week')
-                      : weekOffset === 1 ? (lang === 'fr' ? 'Semaine prochaine' : 'Next week')
-                      : weekOffset < 0 ? (lang === 'fr' ? `Il y a ${-weekOffset} sem.` : `${-weekOffset} wk ago`)
-                      : (lang === 'fr' ? `Dans ${weekOffset} semaines` : `In ${weekOffset} weeks`)}
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--text)' }}>{weekLabel}</div>
+            {/* SIDE PANEL */}
+            <div style={{ width: 220, flexShrink: 0, background: 'var(--surface1)', borderRight: '1px solid var(--border)', overflowY: 'auto', padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: 20 }}>
+
+              {/* Positions */}
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span>{lang === 'fr' ? 'POSITIONS' : 'POSITIONS'}</span>
+                  <span style={{ background: 'var(--accent)', color: 'var(--accent-text)', borderRadius: 10, padding: '1px 6px', fontSize: 9 }}>{filtreRoles.length}</span>
                 </div>
-                <button onClick={() => { if (!isManager || weekOffset < 4) setWeekOffset(w => w + 1) }}
-                  style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: isManager && weekOffset >= 4 ? 'var(--text-faint)' : 'var(--text)', borderRadius: 8, padding: '8px 13px', cursor: isManager && weekOffset >= 4 ? 'default' : 'pointer', fontSize: 16, flexShrink: 0 }}>
-                  ›
+                {(['gerant','serveur','bar','busboy'] as const).map(role => (
+                  <label key={role} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 4px', cursor: 'pointer', borderRadius: 6, fontSize: 13, color: 'var(--text)' }}>
+                    <input type="checkbox" checked={filtreRoles.includes(role)} onChange={() => toggleFiltreRole(role)} />
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: ROLE_COLORS[role], flexShrink: 0, display: 'inline-block' }} />
+                    {ROLE_LABELS_COV[role]?.[lang] || role}
+                  </label>
+                ))}
+              </div>
+
+              {/* Affichage */}
+              <div>
+                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 8 }}>
+                  {lang === 'fr' ? 'AFFICHAGE' : 'DISPLAY'}
+                </div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 4px', cursor: 'pointer', fontSize: 13, color: 'var(--text)' }}>
+                  <input type="checkbox" checked={showOpenShifts} onChange={() => setShowOpenShifts(v => !v)} />
+                  {lang === 'fr' ? 'Shifts ouverts' : 'Open shifts'}
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 4px', cursor: 'pointer', fontSize: 13, color: 'var(--text)' }}>
+                  <input type="checkbox" checked={groupByRole} onChange={() => setGroupByRole(v => !v)} />
+                  {lang === 'fr' ? 'Grouper par rôle' : 'Group by role'}
+                </label>
+              </div>
+
+              {/* Dispos link */}
+              <div>
+                <button onClick={() => router.push('/dispos')} style={{ width: '100%', padding: '8px 10px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 12, fontFamily: font, textAlign: 'left' }}>
+                  📋 {lang === 'fr' ? 'Disponibilités' : 'Availability'}
                 </button>
               </div>
-              {weekOffset !== 0 && (
-                <div style={{ textAlign: 'center', marginBottom: 10 }}>
-                  <button onClick={() => setWeekOffset(0)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 20, color: 'var(--text-secondary)', fontSize: 10, padding: '3px 12px', cursor: 'pointer', fontFamily: font, letterSpacing: '0.06em' }}>
-                    {lang === 'fr' ? '↩ Cette semaine' : '↩ This week'}
-                  </button>
-                </div>
-              )}
 
-              {/* ── MANAGER: top actions ── */}
-              {isManager && (
-                <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-                  <button onClick={() => router.push('/dispos')} style={{ padding: '9px 12px', background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 11, fontFamily: font, flexShrink: 0 }}>
-                    📋 {lang === 'fr' ? 'Dispos' : 'Avail.'}
-                  </button>
-                  <button onClick={() => setPublishModal(true)} disabled={brouillonCount === 0} style={{ flex: 1, padding: '9px', borderRadius: 10, fontSize: 11, fontFamily: font, background: brouillonCount > 0 ? 'var(--accent-coral, #e05a3a)' : 'var(--surface1)', border: `1px solid ${brouillonCount > 0 ? 'var(--accent-coral, #e05a3a)' : 'var(--border)'}`, color: brouillonCount > 0 ? '#fff' : 'var(--text-faint)', cursor: brouillonCount === 0 ? 'default' : 'pointer', fontWeight: brouillonCount > 0 ? 600 : 400, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                    📢 {lang === 'fr' ? 'Publier' : 'Publish'}
-                    {brouillonCount > 0 && <span style={{ background: 'var(--danger)', color: '#fff', borderRadius: '50%', minWidth: 18, height: 18, fontSize: 10, fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', padding: '0 4px' }}>{brouillonCount}</span>}
-                  </button>
-                </div>
-              )}
+            </div>
 
-              {/* ── MANAGER: employee grid ── */}
-              {isManager && (
-                <>
-                  <div style={{ border: '1px solid var(--border)', borderRadius: 14, overflow: 'hidden', marginBottom: 10 }}>
-                    {/* Header */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '140px repeat(6, 1fr)', borderBottom: '1px solid var(--border)', background: 'var(--surface2)' }}>
-                      <div style={{ padding: '6px 8px', position: 'sticky', left: 0, background: 'var(--surface2)', zIndex: 2 }} />
+            {/* MAIN AREA */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+
+              {/* TOPBAR */}
+              <div style={{ height: 52, background: 'var(--surface1)', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px', flexShrink: 0 }}>
+                {/* Search */}
+                <div style={{ position: 'relative', flex: 1, maxWidth: 200 }}>
+                  <input value={searchEmploye} onChange={e => setSearchEmploye(e.target.value)} placeholder={lang === 'fr' ? 'Employés…' : 'Employees…'} style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 20, padding: '6px 12px 6px 28px', fontSize: 12, color: 'var(--text)', outline: 'none', boxSizing: 'border-box' }} />
+                  <span style={{ position: 'absolute', left: 9, top: 7, color: 'var(--text-secondary)', fontSize: 13, pointerEvents: 'none' }}>🔍</span>
+                </div>
+                {/* Week nav */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
+                  <button onClick={() => setWeekOffset(w => w - 1)} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', color: 'var(--text)', fontSize: 16 }}>‹</button>
+                  <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', whiteSpace: 'nowrap', minWidth: 160, textAlign: 'center' }}>{weekLabel}</span>
+                  <button onClick={() => { if (weekOffset < 4) setWeekOffset(w => w + 1) }} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', cursor: weekOffset >= 4 ? 'default' : 'pointer', color: weekOffset >= 4 ? 'var(--text-faint)' : 'var(--text)', fontSize: 16 }}>›</button>
+                </div>
+                {/* Publier */}
+                <button onClick={() => setPublishModal(true)} disabled={brouillonCount === 0} style={{ background: brouillonCount > 0 ? 'var(--accent-coral, #E8855A)' : 'var(--surface2)', color: brouillonCount > 0 ? '#fff' : 'var(--text-faint)', border: 'none', borderRadius: 20, padding: '7px 14px', fontSize: 12, fontWeight: 600, cursor: brouillonCount === 0 ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                  {lang === 'fr' ? 'Publier' : 'Publish'}
+                  {brouillonCount > 0 && <span style={{ background: '#fff', color: 'var(--accent-coral, #E8855A)', borderRadius: 10, padding: '1px 7px', fontSize: 11, fontWeight: 700 }}>{brouillonCount}</span>}
+                </button>
+              </div>
+
+              {/* GRID */}
+              <div style={{ flex: 1, overflow: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 700 }}>
+                  <thead>
+                    <tr>
+                      <th style={{ width: 180, padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 600, letterSpacing: '0.06em', color: 'var(--text-secondary)', background: 'var(--surface1)', borderBottom: '2px solid var(--border)', borderRight: '1px solid var(--border)', position: 'sticky', left: 0, top: 0, zIndex: 3 }}>
+                        {lang === 'fr' ? 'Employé' : 'Employee'}
+                      </th>
                       {days.map((day, di) => {
                         const dateStr = isoDate(day)
                         const isToday = dateStr === today
                         const cov = getCoverage(di)
                         const covOk = cov.midi.ok && cov.soir.ok
                         return (
-                          <div key={dateStr} style={{ padding: '5px 2px', textAlign: 'center', borderLeft: '1px solid var(--border)' }}>
-                            <div style={{ fontSize: 11, letterSpacing: '0.08em', textTransform: 'uppercase', color: isToday ? 'var(--accent)' : 'var(--text)' }}>{JOUR_SHORT[JOURS[di]][lang]}</div>
-                            <div style={{ fontSize: 11, fontWeight: isToday ? 700 : 400, color: isToday ? 'var(--accent)' : 'var(--text-faint)' }}>{day.getDate()}</div>
-                            {couverture.length > 0 && <div style={{ fontSize: 'var(--fz-8)', color: covOk ? 'var(--success)' : 'var(--danger)', marginTop: 1 }}>{covOk ? '✓' : '✗'}</div>}
-                          </div>
+                          <th key={dateStr} style={{ padding: '8px 6px', textAlign: 'center', background: isToday ? 'color-mix(in srgb, var(--accent) 8%, var(--surface1))' : 'var(--surface1)', borderBottom: '2px solid var(--border)', borderRight: '1px solid var(--border)', minWidth: 110, position: 'sticky', top: 0, zIndex: 2 }}>
+                            <div style={{ fontSize: 10, color: isToday ? 'var(--accent)' : 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>{JOUR_SHORT[JOURS[di]][lang]}</div>
+                            <div style={{ fontSize: 20, fontWeight: 700, color: isToday ? 'var(--accent)' : 'var(--text)', lineHeight: 1.1 }}>{day.getDate()}</div>
+                            {couverture.length > 0 && <div style={{ fontSize: 9, color: covOk ? 'var(--success)' : 'var(--danger)', marginTop: 1 }}>{covOk ? '✓' : '✗'}</div>}
+                          </th>
                         )
                       })}
-                    </div>
-                    {employees.length === 0 && <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-faint)', fontSize: 12 }}>{lang === 'fr' ? 'Aucun employé' : 'No employees'}</div>}
-                    {employees.map((emp: any, ei: number) => {
-                      const rowBg = ei % 2 === 1 ? 'var(--surface2)' : 'var(--surface1)'
+                      <th style={{ padding: '8px 10px', textAlign: 'center', fontSize: 10, fontWeight: 600, letterSpacing: '0.08em', color: 'var(--text-secondary)', textTransform: 'uppercase', background: 'var(--surface1)', borderBottom: '2px solid var(--border)', minWidth: 60, position: 'sticky', top: 0, zIndex: 2 }}>
+                        {lang === 'fr' ? 'Total' : 'Total'}
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {/* Open shifts row */}
+                    {showOpenShifts && (
+                      <tr style={{ background: 'var(--surface2)' }}>
+                        <td style={{ padding: '8px 14px', fontSize: 12, color: 'var(--text-secondary)', borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)', position: 'sticky', left: 0, background: 'var(--surface2)', zIndex: 1, whiteSpace: 'nowrap' }}>
+                          <span style={{ marginRight: 6 }}>📋</span>{lang === 'fr' ? 'Shifts ouverts' : 'Open shifts'}
+                        </td>
+                        {days.map(day => <td key={isoDate(day)} style={{ borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)', padding: 6, minHeight: 48 }} />)}
+                        <td style={{ borderBottom: '1px solid var(--border)' }} />
+                      </tr>
+                    )}
+                    {/* Employee rows */}
+                    {employesFiltres.length === 0 && (
+                      <tr>
+                        <td colSpan={9} style={{ padding: 32, textAlign: 'center', color: 'var(--text-faint)', fontSize: 13 }}>
+                          {lang === 'fr' ? 'Aucun employé' : 'No employees'}
+                        </td>
+                      </tr>
+                    )}
+                    {employesFiltres.map((emp: any, ei: number) => {
+                      const rowBg = ei % 2 === 0 ? 'var(--surface1)' : 'color-mix(in srgb, var(--surface2) 40%, var(--surface1))'
+                      const hTotal = totalHeuresEmp(emp.id)
                       return (
-                      <div key={emp.id} style={{ display: 'grid', gridTemplateColumns: '140px repeat(6, 1fr)', borderBottom: ei < employees.length - 1 ? '1px solid var(--border)' : 'none', background: rowBg }}>
-                        <div style={{ padding: '0 8px', fontSize: 14, fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', minHeight: 52, position: 'sticky', left: 0, background: 'var(--surface1)', zIndex: 1 }}>
-                          {emp.nom.split(' ')[0]}
-                        </div>
-                        {days.map((day, di) => {
-                          const dateStr = isoDate(day)
-                          const jourKey = JOURS[di]
-                          const shift = shiftByEmpDate[`${emp.id}|${dateStr}`]
-                          const bg = cellBg(emp.id, jourKey)
-                          const isToday = dateStr === today
-                          const st = shift?.shift_types
-                          return (
-                            <button key={dateStr}
-                              onClick={() => { setCellModal({ empId: emp.id, date: dateStr, jourKey, shiftId: shift?.id, shiftTypeId: shift?.shift_type_id }); setCellStId(shift?.shift_type_id || '') }}
-                              className={!shift ? 'schedule-cell-empty' : undefined}
-                              style={{ borderTop: 'none', borderRight: 'none', borderBottom: 'none', borderLeft: '1px solid var(--border)', background: bg || (isToday ? 'var(--accent-subtle)' : 'transparent'), cursor: 'pointer', padding: '3px 2px', minHeight: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              {shift ? (
-                                <div style={{ width: '100%', borderRadius: 8, padding: '5px 6px', background: `${st?.couleur || 'var(--accent)'}26`, borderLeft: `4px solid ${st?.couleur || 'var(--accent)'}`, position: 'relative', display: 'flex', flexDirection: 'column', gap: 2 }}>
-                                  <div style={{ fontSize: 12, color: st?.couleur || 'var(--accent)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: 600 }}>{st?.nom || '?'}</div>
-                                  {st?.debut && <div style={{ fontSize: 10, color: 'var(--text-faint)' }}>{st.debut.slice(0,5)}–{(st.fin || '').slice(0,5)}</div>}
-                                  {shift.statut === 'brouillon' && <div style={{ position: 'absolute', top: 2, right: 2, width: 5, height: 5, borderRadius: '50%', background: 'var(--warning)' }} />}
+                        <tr key={emp.id} style={{ background: rowBg }}>
+                          <td style={{ padding: '8px 12px', borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)', position: 'sticky', left: 0, background: rowBg, zIndex: 1, minWidth: 180 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                              <div style={{ width: 32, height: 32, borderRadius: '50%', background: avatarColor(emp.nom), color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>
+                                {initiales(emp.nom)}
+                              </div>
+                              <div style={{ minWidth: 0 }}>
+                                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{emp.nom}</div>
+                                <div style={{ display: 'flex', gap: 3, marginTop: 2, flexWrap: 'wrap' }}>
+                                  {(emp.roles || []).map((role: string) => (
+                                    <span key={role} style={{ fontSize: 9, fontWeight: 600, padding: '1px 5px', borderRadius: 10, background: `${ROLE_COLORS[role] || 'var(--accent)'}22`, color: ROLE_COLORS[role] || 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                      {ROLE_SHORT[role] || role}
+                                    </span>
+                                  ))}
                                 </div>
-                              ) : (
-                                <span className="cell-plus" style={{ fontSize: 18, color: 'var(--accent)', opacity: 0.3 }}>+</span>
-                              )}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    )
+                                <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 1 }}>{hTotal}h</div>
+                              </div>
+                            </div>
+                          </td>
+                          {days.map((day, di) => {
+                            const dateStr = isoDate(day)
+                            const jourKey = JOURS[di]
+                            const dayShifts = shiftsByEmpDate[`${emp.id}|${dateStr}`] || []
+                            const firstShift = dayShifts[0]
+                            const bg = cellBg(emp.id, jourKey)
+                            const isToday = dateStr === today
+                            return (
+                              <td key={dateStr}
+                                onClick={() => { setCellModal({ empId: emp.id, date: dateStr, jourKey, shiftId: firstShift?.id, shiftTypeId: firstShift?.shift_type_id }); setCellStId(firstShift?.shift_type_id || '') }}
+                                className="sched-cell"
+                                style={{ borderRight: '1px solid var(--border)', borderBottom: '1px solid var(--border)', padding: 5, verticalAlign: 'top', minHeight: 60, cursor: 'pointer', background: bg || (isToday ? 'color-mix(in srgb, var(--accent) 5%, transparent)' : 'transparent') }}
+                              >
+                                {dayShifts.length > 0 ? dayShifts.map((s: any) => {
+                                  const st = s.shift_types
+                                  return (
+                                    <div key={s.id} style={{ background: `${st?.couleur || 'var(--accent)'}18`, borderLeft: `3px solid ${st?.couleur || 'var(--accent)'}`, borderRadius: '0 6px 6px 0', padding: '4px 7px', marginBottom: 3, position: 'relative' }}>
+                                      <div style={{ fontSize: 12, fontWeight: 600, color: st?.couleur || 'var(--accent)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{st?.nom || '?'}</div>
+                                      <div style={{ fontSize: 10, color: 'var(--text-secondary)' }}>{(st?.debut || '').slice(0,5)}–{(st?.fin || '').slice(0,5)}</div>
+                                      {st?.debut && st?.fin && <div style={{ fontSize: 9, color: 'var(--text-faint)' }}>{dureeShift(st.debut, st.fin)}</div>}
+                                      {s.statut === 'brouillon' && <div style={{ position: 'absolute', top: 3, right: 3, width: 5, height: 5, borderRadius: '50%', background: 'var(--warning)' }} />}
+                                    </div>
+                                  )
+                                }) : (
+                                  <div style={{ height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <span className="cell-add" style={{ fontSize: 20, color: 'var(--accent)' }}>+</span>
+                                  </div>
+                                )}
+                              </td>
+                            )
+                          })}
+                          <td style={{ padding: '8px 10px', textAlign: 'center', borderBottom: '1px solid var(--border)', fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                            {hTotal}h
+                          </td>
+                        </tr>
+                      )
                     })}
-                  </div>
+                  </tbody>
 
-                  {/* Coverage panel — by role */}
+                  {/* Coverage footer */}
                   {couverture.length > 0 && (() => {
                     const allCovRows = [...new Map(
                       couverture
@@ -818,214 +873,186 @@ export default function HorairePage() {
                     )
                     if (allCovRows.length === 0) return null
                     return (
-                      <div style={{ border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', marginBottom: 12 }}>
-                        <div style={{ fontSize: 9, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-secondary)', padding: '5px 10px', background: 'var(--surface2)', borderBottom: '1px solid var(--border)' }}>
-                          {lang === 'fr' ? 'COUVERTURE' : 'COVERAGE'}
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '140px repeat(6, 1fr)', background: 'var(--surface1)' }}>
-                          {allCovRows.flatMap(({ service, role }, ri) => [
-                            <div key={`lbl-${ri}`} style={{ padding: '3px 8px', borderTop: ri > 0 ? '1px solid var(--border)' : 'none', display: 'flex', alignItems: 'center' }}>
-                              <span style={{ fontSize: 9, color: 'var(--text-faint)', letterSpacing: '0.04em' }}>
-                                {ROLE_LABELS_COV[role]?.[lang] || role}
-                                {' '}{service === 'midi' ? (lang === 'fr' ? '·M' : '·L') : '·S'}
-                              </span>
-                            </div>,
-                            ...days.map((day, di) => {
+                      <tfoot>
+                        {allCovRows.map(({ service, role }) => (
+                          <tr key={`${service}|${role}`} style={{ background: 'var(--surface2)' }}>
+                            <td style={{ padding: '5px 14px', fontSize: 10, color: 'var(--text-secondary)', borderRight: '1px solid var(--border)', borderTop: '1px solid var(--border)', position: 'sticky', left: 0, background: 'var(--surface2)', zIndex: 1, whiteSpace: 'nowrap' }}>
+                              <span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: ROLE_COLORS[role] || 'var(--accent)', marginRight: 5 }} />
+                              {ROLE_LABELS_COV[role]?.[lang] || role} · {service === 'midi' ? (lang === 'fr' ? 'Midi' : 'Lunch') : (lang === 'fr' ? 'Soir' : 'Evening')}
+                            </td>
+                            {days.map((day, di) => {
                               const dateStr = isoDate(day)
                               const jourKey = JOURS[di]
                               const dayShifts = shiftsByDate[dateStr] || []
-                              const have = dayShifts.filter((s: any) =>
-                                inferService(s.shift_types?.debut) === service && s.shift_types?.role === role
-                              ).length
+                              const have = dayShifts.filter((s: any) => inferService(s.shift_types?.debut) === service && s.shift_types?.role === role).length
                               const need = couverture.find((c: any) => c.jour === jourKey && c.service === service && c.role === role)?.minimum ?? 0
                               return (
-                                <div key={`${ri}-${di}`} style={{ padding: '3px 2px', textAlign: 'center', borderLeft: '1px solid var(--border)', borderTop: ri > 0 ? '1px solid var(--border)' : 'none' }}>
-                                  <span style={{ fontSize: 9, color: covColor(have, need), fontFamily: "'Courier New', monospace" }}>
-                                    {need > 0 ? `${have}/${need}` : '—'}
-                                  </span>
-                                </div>
+                                <td key={dateStr} style={{ padding: '5px 4px', textAlign: 'center', borderRight: '1px solid var(--border)', borderTop: '1px solid var(--border)', fontSize: 11, fontWeight: 600, color: covColor(have, need) }}>
+                                  {need > 0 ? `${have}/${need}` : '—'}
+                                </td>
                               )
-                            })
-                          ])}
-                        </div>
-                      </div>
+                            })}
+                            <td style={{ borderTop: '1px solid var(--border)' }} />
+                          </tr>
+                        ))}
+                      </tfoot>
                     )
                   })()}
-                </>
-              )}
 
-              {/* ── EMPLOYEE: personal week ── */}
-              {!isManager && (
-                <>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {days.map((day, di) => {
-                      const dateStr = isoDate(day)
-                      const dayShifts = (shiftsByDate[dateStr] || []).filter((s: any) => s.user_id === userId)
-                      const isToday = dateStr === today
-                      const isPast = day < new Date() && !isToday
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
 
-                      if (dayShifts.length === 0) {
-                        return (
-                          <div key={dateStr} style={{ background: 'var(--surface1)', border: `1px solid ${isToday ? 'var(--border-accent)' : 'var(--border)'}`, borderRadius: 12, padding: '10px 14px', opacity: isPast ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <span style={{ fontSize: 12, color: isToday ? 'var(--accent)' : 'var(--text-secondary)' }}>
-                              {JOUR_LONG[JOURS[di]][lang]} {day.getDate()} {MOIS[day.getMonth()]}
-                            </span>
-                            <span style={{ fontSize: 11, color: 'var(--text-faint)', fontStyle: 'italic' }}>{lang === 'fr' ? 'Congé' : 'Day off'}</span>
-                          </div>
-                        )
-                      }
+        {/* ══════════════ HORAIRE — EMPLOYEE ══════════════ */}
+        {activeTab === 'horaire' && !isManager && (
+          <div style={{ flex: 1, overflow: 'auto', padding: 16, paddingBottom: 100 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+              <button onClick={() => setWeekOffset(w => w - 1)} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: 8, padding: '8px 13px', cursor: 'pointer', fontSize: 16, flexShrink: 0 }}>‹</button>
+              <div style={{ flex: 1, textAlign: 'center' }}>
+                <div style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 1 }}>
+                  {weekOffset === 0 ? (lang === 'fr' ? 'Cette semaine' : 'This week') : weekOffset === 1 ? (lang === 'fr' ? 'Semaine prochaine' : 'Next week') : weekOffset < 0 ? (lang === 'fr' ? `Il y a ${-weekOffset} sem.` : `${-weekOffset} wk ago`) : (lang === 'fr' ? `Dans ${weekOffset} semaines` : `In ${weekOffset} weeks`)}
+                </div>
+                <div style={{ fontSize: 12, color: 'var(--text)' }}>{weekLabel}</div>
+              </div>
+              <button onClick={() => setWeekOffset(w => w + 1)} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: 8, padding: '8px 13px', cursor: 'pointer', fontSize: 16, flexShrink: 0 }}>›</button>
+            </div>
+            {weekOffset !== 0 && (
+              <div style={{ textAlign: 'center', marginBottom: 10 }}>
+                <button onClick={() => setWeekOffset(0)} style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 20, color: 'var(--text-secondary)', fontSize: 10, padding: '3px 12px', cursor: 'pointer', fontFamily: font, letterSpacing: '0.06em' }}>
+                  {lang === 'fr' ? '↩ Cette semaine' : '↩ This week'}
+                </button>
+              </div>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {days.map((day, di) => {
+                const dateStr = isoDate(day)
+                const dayShifts = (shiftsByDate[dateStr] || []).filter((s: any) => s.user_id === userId)
+                const isToday = dateStr === today
+                const isPast = day < new Date() && !isToday
+                if (dayShifts.length === 0) {
+                  return (
+                    <div key={dateStr} style={{ background: 'var(--surface1)', border: `1px solid ${isToday ? 'var(--border-accent)' : 'var(--border)'}`, borderRadius: 12, padding: '10px 14px', opacity: isPast ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: 12, color: isToday ? 'var(--accent)' : 'var(--text-secondary)' }}>{JOUR_LONG[JOURS[di]][lang]} {day.getDate()} {MOIS[day.getMonth()]}</span>
+                      <span style={{ fontSize: 11, color: 'var(--text-faint)', fontStyle: 'italic' }}>{lang === 'fr' ? 'Congé' : 'Day off'}</span>
+                    </div>
+                  )
+                }
+                return dayShifts.map((s: any) => {
+                  const st = s.shift_types
+                  const couleur = st?.couleur || 'var(--accent)'
+                  return (
+                    <div key={s.id} style={{ background: isToday ? 'linear-gradient(135deg, var(--surface2), var(--surface1))' : 'var(--surface1)', border: `1px solid ${isToday ? 'var(--border-accent)' : 'var(--border)'}`, borderRadius: 12, padding: '12px 14px', opacity: isPast ? 0.65 : 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 3, height: 36, borderRadius: 2, background: couleur, flexShrink: 0 }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 11, color: isToday ? 'var(--accent)' : 'var(--text-secondary)', marginBottom: 3 }}>{JOUR_LONG[JOURS[di]][lang]} {day.getDate()} {MOIS[day.getMonth()]}</div>
+                          <div style={{ fontSize: 14, color: 'var(--text)' }}>{st?.nom || '—'}</div>
+                          {st && <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{st.debut} – {st.fin}</div>}
+                        </div>
+                        <button onClick={() => { setProposeModal({ shift: s }); setProposeColleagueId(''); setProposeColleagueShiftId('') }} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '5px 9px', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 10, fontFamily: font, flexShrink: 0 }}>
+                          🔄 {lang === 'fr' ? 'Échange' : 'Swap'}
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })
+              })}
+            </div>
+            <div style={{ marginTop: 20, background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px' }}>
+              <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 10 }}>{lang === 'fr' ? 'Estimation paie' : 'Pay estimate'}</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <div>
+                  <span style={{ fontSize: 22, color: 'var(--accent)' }}>{payEstimate.toFixed(2)}</span>
+                  <span style={{ fontSize: 12, color: 'var(--text-secondary)', marginLeft: 4 }}>$</span>
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>{totalHeures.toFixed(1)}h × {profile?.taux_horaire || 0}$/h</div>
+              </div>
+              <div style={{ fontSize: 9, color: 'var(--text-faint)', marginTop: 8, fontStyle: 'italic' }}>* {lang === 'fr' ? 'Estimation — exclut les pourboires' : 'Estimate — excludes tips'}</div>
+            </div>
+          </div>
+        )}
 
-                      return dayShifts.map((s: any) => {
-                        const st = s.shift_types
-                        const couleur = st?.couleur || 'var(--accent)'
-                        return (
-                          <div key={s.id} style={{ background: isToday ? `linear-gradient(135deg, var(--surface2), var(--surface1))` : 'var(--surface1)', border: `1px solid ${isToday ? 'var(--border-accent)' : 'var(--border)'}`, borderRadius: 12, padding: '12px 14px', opacity: isPast ? 0.65 : 1 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                              <div style={{ width: 3, height: 36, borderRadius: 2, background: couleur, flexShrink: 0 }} />
-                              <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ fontSize: 11, color: isToday ? 'var(--accent)' : 'var(--text-secondary)', marginBottom: 3 }}>
-                                  {JOUR_LONG[JOURS[di]][lang]} {day.getDate()} {MOIS[day.getMonth()]}
-                                </div>
-                                <div style={{ fontSize: 14, color: 'var(--text)' }}>{st?.nom || '—'}</div>
-                                {st && <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{st.debut} – {st.fin}</div>}
-                              </div>
-                              <button onClick={() => { setProposeModal({ shift: s }); setProposeColleagueId(''); setProposeColleagueShiftId('') }} style={{ background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, padding: '5px 9px', color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 10, fontFamily: font, flexShrink: 0 }}>
-                                🔄 {lang === 'fr' ? 'Échange' : 'Swap'}
-                              </button>
-                            </div>
-                          </div>
-                        )
-                      })
-                    })}
+        {/* ══════════════ ÉCHANGES TAB ══════════════ */}
+        {activeTab === 'echanges' && (
+          <div style={{ flex: 1, overflow: 'auto', padding: 16, paddingBottom: 100 }}>
+            {isManager && (
+              <>
+                {echanges.filter((e: any) => e.statut === 'accepte').length > 0 && (
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--info)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <span style={{ background: 'var(--info)', borderRadius: '50%', width: 6, height: 6, display: 'inline-block' }} />
+                      {lang === 'fr' ? 'À approuver' : 'Awaiting approval'} ({echanges.filter((e: any) => e.statut === 'accepte').length})
+                    </div>
+                    {echanges.filter((e: any) => e.statut === 'accepte').map((e: any) => <EchangeCard key={e.id} e={e} isManager />)}
                   </div>
-
-                  {/* Pay estimate */}
-                  <div style={{ marginTop: 20, background: 'var(--surface1)', border: '1px solid var(--border)', borderRadius: 14, padding: '14px 16px' }}>
-                    <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 10 }}>{lang === 'fr' ? 'Estimation paie' : 'Pay estimate'}</div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                      <div>
-                        <span style={{ fontSize: 22, color: 'var(--accent)' }}>{payEstimate.toFixed(2)}</span>
-                        <span style={{ fontSize: 12, color: 'var(--text-secondary)', marginLeft: 4 }}>$</span>
-                      </div>
-                      <div style={{ fontSize: 11, color: 'var(--text-faint)' }}>{totalHeures.toFixed(1)}h × {profile?.taux_horaire || 0}$/h</div>
+                )}
+                {echanges.filter((e: any) => e.statut === 'en_attente').length > 0 && (
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--warning)', marginBottom: 10 }}>
+                      ⏳ {lang === 'fr' ? 'En attente collègue' : 'Awaiting colleague'} ({echanges.filter((e: any) => e.statut === 'en_attente').length})
                     </div>
-                    <div style={{ fontSize: 9, color: 'var(--text-faint)', marginTop: 8, fontStyle: 'italic' }}>* {lang === 'fr' ? 'Estimation — exclut les pourboires' : 'Estimate — excludes tips'}</div>
+                    {echanges.filter((e: any) => e.statut === 'en_attente').map((e: any) => <EchangeCard key={e.id} e={e} isManager />)}
                   </div>
-                </>
-              )}
-            </>
-          )}
-
-          {/* ══════════════ ÉCHANGES TAB ══════════════ */}
-          {activeTab === 'echanges' && (
-            <>
-              {/* ── Manager exchange dashboard ── */}
-              {isManager && (
-                <>
-                  {/* À approuver */}
-                  {echanges.filter((e: any) => e.statut === 'accepte').length > 0 && (
-                    <div style={{ marginBottom: 20 }}>
-                      <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--info)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <span style={{ background: 'var(--info)', borderRadius: '50%', width: 6, height: 6, display: 'inline-block' }} />
-                        {lang === 'fr' ? 'À approuver' : 'Awaiting approval'} ({echanges.filter((e: any) => e.statut === 'accepte').length})
-                      </div>
-                      {echanges.filter((e: any) => e.statut === 'accepte').map((e: any) => (
-                        <EchangeCard key={e.id} e={e} isManager />
-                      ))}
+                )}
+                {echanges.length === 0 && historyEchanges.length === 0 && (
+                  <div style={{ textAlign: 'center', paddingTop: 40, color: 'var(--text-faint)' }}>
+                    <div style={{ fontSize: 32, marginBottom: 10 }}>🔄</div>
+                    <div style={{ fontSize: 13 }}>{lang === 'fr' ? 'Aucun échange en cours' : 'No active swaps'}</div>
+                  </div>
+                )}
+                {historyEchanges.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 10 }}>
+                      {lang === 'fr' ? 'Historique (4 semaines)' : 'History (4 weeks)'}
                     </div>
-                  )}
+                    {historyEchanges.map((e: any) => <EchangeCard key={e.id} e={e} isManager />)}
+                  </div>
+                )}
+              </>
+            )}
+            {!isManager && (
+              <>
+                {myPendingReceived.length > 0 && (
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--warning)', marginBottom: 10 }}>⚡ {lang === 'fr' ? 'À répondre' : 'Action required'} ({myPendingReceived.length})</div>
+                    {myPendingReceived.map((e: any) => <EchangeCard key={e.id} e={e} />)}
+                  </div>
+                )}
+                {myActiveSent.length > 0 && (
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--warning)', marginBottom: 10 }}>⏳ {lang === 'fr' ? 'Demandes envoyées' : 'Sent requests'} ({myActiveSent.length})</div>
+                    {myActiveSent.map((e: any) => <EchangeCard key={e.id} e={e} />)}
+                  </div>
+                )}
+                {myInProgress.length > 0 && (
+                  <div style={{ marginBottom: 20 }}>
+                    <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--info)', marginBottom: 10 }}>✓ {lang === 'fr' ? 'En attente gérant' : 'Awaiting manager'} ({myInProgress.length})</div>
+                    {myInProgress.map((e: any) => <EchangeCard key={e.id} e={e} />)}
+                  </div>
+                )}
+                {myHistory.length > 0 && (
+                  <div>
+                    <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 10 }}>{lang === 'fr' ? 'Terminé' : 'Completed'}</div>
+                    {myHistory.map((e: any) => <EchangeCard key={e.id} e={e} />)}
+                  </div>
+                )}
+                {echanges.length === 0 && (
+                  <div style={{ textAlign: 'center', paddingTop: 40, color: 'var(--text-faint)' }}>
+                    <div style={{ fontSize: 32, marginBottom: 10 }}>🔄</div>
+                    <div style={{ fontSize: 13 }}>{lang === 'fr' ? 'Aucun échange en cours' : 'No swaps yet'}</div>
+                    <div style={{ fontSize: 11, marginTop: 6, color: 'var(--text-faint)' }}>{lang === 'fr' ? "Proposez un échange depuis l'onglet Horaire" : 'Propose a swap from the Schedule tab'}</div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
 
-                  {/* En attente collègue */}
-                  {echanges.filter((e: any) => e.statut === 'en_attente').length > 0 && (
-                    <div style={{ marginBottom: 20 }}>
-                      <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--warning)', marginBottom: 10 }}>
-                        ⏳ {lang === 'fr' ? 'En attente collègue' : 'Awaiting colleague'} ({echanges.filter((e: any) => e.statut === 'en_attente').length})
-                      </div>
-                      {echanges.filter((e: any) => e.statut === 'en_attente').map((e: any) => (
-                        <EchangeCard key={e.id} e={e} isManager />
-                      ))}
-                    </div>
-                  )}
+      </div>
 
-                  {echanges.length === 0 && historyEchanges.length === 0 && (
-                    <div style={{ textAlign: 'center', paddingTop: 40, color: 'var(--text-faint)' }}>
-                      <div style={{ fontSize: 32, marginBottom: 10 }}>🔄</div>
-                      <div style={{ fontSize: 13 }}>{lang === 'fr' ? 'Aucun échange en cours' : 'No active swaps'}</div>
-                    </div>
-                  )}
-
-                  {/* Historique 4 semaines */}
-                  {historyEchanges.length > 0 && (
-                    <div>
-                      <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 10 }}>
-                        {lang === 'fr' ? 'Historique (4 semaines)' : 'History (4 weeks)'}
-                      </div>
-                      {historyEchanges.map((e: any) => <EchangeCard key={e.id} e={e} isManager />)}
-                    </div>
-                  )}
-                </>
-              )}
-
-              {/* ── Employee exchange view ── */}
-              {!isManager && (
-                <>
-                  {/* Action requise */}
-                  {myPendingReceived.length > 0 && (
-                    <div style={{ marginBottom: 20 }}>
-                      <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--warning)', marginBottom: 10 }}>
-                        ⚡ {lang === 'fr' ? 'À répondre' : 'Action required'} ({myPendingReceived.length})
-                      </div>
-                      {myPendingReceived.map((e: any) => <EchangeCard key={e.id} e={e} />)}
-                    </div>
-                  )}
-
-                  {/* Envoyés en attente */}
-                  {myActiveSent.length > 0 && (
-                    <div style={{ marginBottom: 20 }}>
-                      <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--warning)', marginBottom: 10 }}>
-                        ⏳ {lang === 'fr' ? 'Demandes envoyées' : 'Sent requests'} ({myActiveSent.length})
-                      </div>
-                      {myActiveSent.map((e: any) => <EchangeCard key={e.id} e={e} />)}
-                    </div>
-                  )}
-
-                  {/* En cours (accepté, attente gérant) */}
-                  {myInProgress.length > 0 && (
-                    <div style={{ marginBottom: 20 }}>
-                      <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--info)', marginBottom: 10 }}>
-                        ✓ {lang === 'fr' ? 'En attente gérant' : 'Awaiting manager'} ({myInProgress.length})
-                      </div>
-                      {myInProgress.map((e: any) => <EchangeCard key={e.id} e={e} />)}
-                    </div>
-                  )}
-
-                  {/* Historique */}
-                  {myHistory.length > 0 && (
-                    <div>
-                      <div style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--text-secondary)', marginBottom: 10 }}>
-                        {lang === 'fr' ? 'Terminé' : 'Completed'}
-                      </div>
-                      {myHistory.map((e: any) => <EchangeCard key={e.id} e={e} />)}
-                    </div>
-                  )}
-
-                  {echanges.length === 0 && (
-                    <div style={{ textAlign: 'center', paddingTop: 40, color: 'var(--text-faint)' }}>
-                      <div style={{ fontSize: 32, marginBottom: 10 }}>🔄</div>
-                      <div style={{ fontSize: 13 }}>{lang === 'fr' ? 'Aucun échange en cours' : 'No swaps yet'}</div>
-                      <div style={{ fontSize: 11, marginTop: 6, color: 'var(--text-faint)' }}>
-                        {lang === 'fr' ? 'Proposez un échange depuis l\'onglet Horaire' : 'Propose a swap from the Schedule tab'}
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </>
-          )}
-        </div>
-      </main>
-
-      {/* ─── Cell modal (manager add/edit shift) ─── */}
+      {/* ─── Cell modal ─── */}
       {cellModal && (
         <div onClick={() => setCellModal(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 100, display: 'flex', alignItems: 'flex-end' }}>
           <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, margin: '0 auto', background: 'var(--surface1)', borderRadius: '20px 20px 0 0', padding: '20px 18px 32px', maxHeight: '80vh', overflowY: 'auto' }}>
@@ -1051,9 +1078,7 @@ export default function HorairePage() {
             })()}
             {shiftTypes.length === 0 && (
               <div style={{ background: 'var(--accent-subtle)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', marginBottom: 12, fontSize: 12, color: 'var(--text-secondary)' }}>
-                {lang === 'fr'
-                  ? 'Aucun type de shift configuré. Allez dans Réglages → Types de shifts.'
-                  : 'No shift types configured. Go to Settings → Shift types.'}
+                {lang === 'fr' ? 'Aucun type de shift configuré. Allez dans Réglages → Types de shifts.' : 'No shift types configured. Go to Settings → Shift types.'}
               </div>
             )}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 16 }}>
@@ -1115,13 +1140,10 @@ export default function HorairePage() {
           <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, margin: '0 auto', background: 'var(--surface1)', borderRadius: '20px 20px 0 0', padding: '20px 18px 32px', maxHeight: '80vh', overflowY: 'auto' }}>
             <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border)', margin: '0 auto 16px' }} />
             <h3 style={{ fontSize: 16, fontWeight: 300, margin: '0 0 6px', color: 'var(--text)' }}>🔄 {lang === 'fr' ? 'Proposer un échange' : 'Propose a swap'}</h3>
-            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16 }}>
-              {lang === 'fr' ? 'Mon shift :' : 'My shift:'} {proposeModal.shift.shift_types?.nom} · {fmtShiftDate(proposeModal.shift.date, lang, MOIS)}
-            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16 }}>{lang === 'fr' ? 'Mon shift :' : 'My shift:'} {proposeModal.shift.shift_types?.nom} · {fmtShiftDate(proposeModal.shift.date, lang, MOIS)}</div>
             <div style={{ marginBottom: 14 }}>
               <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6 }}>{lang === 'fr' ? 'Collègue (même rôle)' : 'Colleague (same role)'}</div>
-              <select value={proposeColleagueId} onChange={e => { setProposeColleagueId(e.target.value); setProposeColleagueShiftId('') }}
-                style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', padding: '10px', fontSize: 13, fontFamily: font, outline: 'none' }}>
+              <select value={proposeColleagueId} onChange={e => { setProposeColleagueId(e.target.value); setProposeColleagueShiftId('') }} style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', padding: '10px', fontSize: 13, fontFamily: font, outline: 'none' }}>
                 <option value="">{lang === 'fr' ? '— Sélectionner —' : '— Select —'}</option>
                 {getCompatibleColleagues().map((e: any) => <option key={e.id} value={e.id}>{e.nom}</option>)}
               </select>
@@ -1159,17 +1181,13 @@ export default function HorairePage() {
         </div>
       )}
 
-      {/* ─── Respond modal (employee/colleague) ─── */}
+      {/* ─── Respond modal ─── */}
       {respondModal && (
         <div onClick={() => { setRespondModal(null); setRespondAccept(null); setRespondComment('') }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 100, display: 'flex', alignItems: 'flex-end' }}>
           <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, margin: '0 auto', background: 'var(--surface1)', borderRadius: '20px 20px 0 0', padding: '20px 18px 32px', maxHeight: '85vh', overflowY: 'auto' }}>
             <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border)', margin: '0 auto 16px' }} />
-            <h3 style={{ fontSize: 16, fontWeight: 300, margin: '0 0 4px', color: 'var(--text)' }}>🔄 {lang === 'fr' ? 'Demande d\'échange' : 'Swap request'}</h3>
-            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16 }}>
-              {lang === 'fr' ? `${respondModal.echange.demandeur?.nom} propose un échange` : `${respondModal.echange.demandeur?.nom} is proposing a swap`}
-            </div>
-
-            {/* Shift comparison */}
+            <h3 style={{ fontSize: 16, fontWeight: 300, margin: '0 0 4px', color: 'var(--text)' }}>🔄 {lang === 'fr' ? "Demande d'échange" : 'Swap request'}</h3>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16 }}>{lang === 'fr' ? `${respondModal.echange.demandeur?.nom} propose un échange` : `${respondModal.echange.demandeur?.nom} is proposing a swap`}</div>
             {(() => {
               const e = respondModal.echange
               const sdSt = e.shift_demandeur?.shift_types
@@ -1177,18 +1195,14 @@ export default function HorairePage() {
               return (
                 <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
                   <div style={{ flex: 1, background: `${sdSt?.couleur || 'var(--accent)'}14`, borderRadius: 10, padding: '10px 12px' }}>
-                    <div style={{ fontSize: 9, color: 'var(--text-faint)', marginBottom: 4, letterSpacing: '0.06em' }}>
-                      {lang === 'fr' ? 'LEUR SHIFT' : 'THEIR SHIFT'}
-                    </div>
+                    <div style={{ fontSize: 9, color: 'var(--text-faint)', marginBottom: 4, letterSpacing: '0.06em' }}>{lang === 'fr' ? 'LEUR SHIFT' : 'THEIR SHIFT'}</div>
                     <div style={{ fontSize: 13, color: 'var(--text)', marginBottom: 2 }}>{sdSt?.nom || '—'}</div>
                     <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{fmtShiftDate(e.shift_demandeur?.date, lang, MOIS)}</div>
                     {sdSt && <div style={{ fontSize: 10, color: 'var(--text-faint)' }}>{sdSt.debut} – {sdSt.fin}</div>}
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', color: 'var(--text-faint)', fontSize: 18 }}>⇄</div>
                   <div style={{ flex: 1, background: `${srSt?.couleur || 'var(--accent)'}14`, borderRadius: 10, padding: '10px 12px' }}>
-                    <div style={{ fontSize: 9, color: 'var(--text-faint)', marginBottom: 4, letterSpacing: '0.06em' }}>
-                      {lang === 'fr' ? 'VOTRE SHIFT' : 'YOUR SHIFT'}
-                    </div>
+                    <div style={{ fontSize: 9, color: 'var(--text-faint)', marginBottom: 4, letterSpacing: '0.06em' }}>{lang === 'fr' ? 'VOTRE SHIFT' : 'YOUR SHIFT'}</div>
                     <div style={{ fontSize: 13, color: 'var(--text)', marginBottom: 2 }}>{srSt?.nom || '—'}</div>
                     <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{fmtShiftDate(e.shift_recepteur?.date, lang, MOIS)}</div>
                     {srSt && <div style={{ fontSize: 10, color: 'var(--text-faint)' }}>{srSt.debut} – {srSt.fin}</div>}
@@ -1196,55 +1210,33 @@ export default function HorairePage() {
                 </div>
               )
             })()}
-
-            {/* Choice */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-              <button onClick={() => setRespondAccept(true)} style={{ flex: 1, padding: '12px', borderRadius: 10, cursor: 'pointer', fontFamily: font, fontSize: 13, background: respondAccept === true ? 'var(--success-subtle)' : 'var(--surface2)', border: `1px solid ${respondAccept === true ? 'color-mix(in srgb, var(--success) 50%, transparent)' : 'var(--border)'}`, color: respondAccept === true ? 'var(--success)' : 'var(--text-secondary)' }}>
-                ✓ {lang === 'fr' ? 'Accepter' : 'Accept'}
-              </button>
-              <button onClick={() => setRespondAccept(false)} style={{ flex: 1, padding: '12px', borderRadius: 10, cursor: 'pointer', fontFamily: font, fontSize: 13, background: respondAccept === false ? 'var(--danger-subtle)' : 'var(--surface2)', border: `1px solid ${respondAccept === false ? 'color-mix(in srgb, var(--danger) 50%, transparent)' : 'var(--border)'}`, color: respondAccept === false ? 'var(--danger)' : 'var(--text-secondary)' }}>
-                ✗ {lang === 'fr' ? 'Refuser' : 'Decline'}
-              </button>
+              <button onClick={() => setRespondAccept(true)} style={{ flex: 1, padding: '12px', borderRadius: 10, cursor: 'pointer', fontFamily: font, fontSize: 13, background: respondAccept === true ? 'var(--success-subtle)' : 'var(--surface2)', border: `1px solid ${respondAccept === true ? 'color-mix(in srgb, var(--success) 50%, transparent)' : 'var(--border)'}`, color: respondAccept === true ? 'var(--success)' : 'var(--text-secondary)' }}>✓ {lang === 'fr' ? 'Accepter' : 'Accept'}</button>
+              <button onClick={() => setRespondAccept(false)} style={{ flex: 1, padding: '12px', borderRadius: 10, cursor: 'pointer', fontFamily: font, fontSize: 13, background: respondAccept === false ? 'var(--danger-subtle)' : 'var(--surface2)', border: `1px solid ${respondAccept === false ? 'color-mix(in srgb, var(--danger) 50%, transparent)' : 'var(--border)'}`, color: respondAccept === false ? 'var(--danger)' : 'var(--text-secondary)' }}>✗ {lang === 'fr' ? 'Refuser' : 'Decline'}</button>
             </div>
-
-            {/* Comment on refusal */}
             {respondAccept === false && (
               <div style={{ marginBottom: 14 }}>
                 <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6 }}>{lang === 'fr' ? 'Motif (optionnel)' : 'Reason (optional)'}</div>
-                <textarea
-                  value={respondComment}
-                  onChange={e => setRespondComment(e.target.value)}
-                  placeholder={lang === 'fr' ? 'Ex: Je ne peux pas ce jour-là…' : 'E.g. I have a conflict that day…'}
-                  rows={3}
-                  style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', padding: '10px', fontSize: 12, fontFamily: font, outline: 'none', resize: 'none', boxSizing: 'border-box' }}
-                />
+                <textarea value={respondComment} onChange={e => setRespondComment(e.target.value)} placeholder={lang === 'fr' ? 'Ex: Je ne peux pas ce jour-là…' : 'E.g. I have a conflict that day…'} rows={3} style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', padding: '10px', fontSize: 12, fontFamily: font, outline: 'none', resize: 'none', boxSizing: 'border-box' }} />
               </div>
             )}
-
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => { setRespondModal(null); setRespondAccept(null); setRespondComment('') }} style={{ flex: 1, padding: '12px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 13, fontFamily: font }}>{lang === 'fr' ? 'Annuler' : 'Cancel'}</button>
-              <button
-                onClick={() => respondAccept !== null && respondExchange(respondAccept)}
-                disabled={saving || respondAccept === null}
-                style={{ flex: 2, padding: '12px', background: respondAccept === false ? 'var(--danger)' : respondAccept === true ? 'var(--success)' : 'var(--accent)', border: 'none', borderRadius: 10, color: '#fff', cursor: respondAccept === null ? 'default' : 'pointer', fontSize: 13, fontFamily: font, fontWeight: 600, opacity: respondAccept === null ? 0.4 : 1 }}>
-                {saving ? '...' : respondAccept === false ? (lang === 'fr' ? 'Confirmer le refus' : 'Confirm decline') : respondAccept === true ? (lang === 'fr' ? 'Confirmer l\'acceptation' : 'Confirm acceptance') : (lang === 'fr' ? 'Choisir' : 'Choose')}
+              <button onClick={() => respondAccept !== null && respondExchange(respondAccept)} disabled={saving || respondAccept === null} style={{ flex: 2, padding: '12px', background: respondAccept === false ? 'var(--danger)' : respondAccept === true ? 'var(--success)' : 'var(--accent)', border: 'none', borderRadius: 10, color: '#fff', cursor: respondAccept === null ? 'default' : 'pointer', fontSize: 13, fontFamily: font, fontWeight: 600, opacity: respondAccept === null ? 0.4 : 1 }}>
+                {saving ? '...' : respondAccept === false ? (lang === 'fr' ? 'Confirmer le refus' : 'Confirm decline') : respondAccept === true ? (lang === 'fr' ? "Confirmer l'acceptation" : 'Confirm acceptance') : (lang === 'fr' ? 'Choisir' : 'Choose')}
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* ─── Approve modal (manager) ─── */}
+      {/* ─── Approve modal ─── */}
       {approveModal && (
         <div onClick={() => { setApproveModal(null); setApproveReject(null); setApproveComment('') }} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', zIndex: 100, display: 'flex', alignItems: 'flex-end' }}>
           <div onClick={e => e.stopPropagation()} style={{ width: '100%', maxWidth: 480, margin: '0 auto', background: 'var(--surface1)', borderRadius: '20px 20px 0 0', padding: '20px 18px 32px', maxHeight: '85vh', overflowY: 'auto' }}>
             <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--border)', margin: '0 auto 16px' }} />
-            <h3 style={{ fontSize: 16, fontWeight: 300, margin: '0 0 4px', color: 'var(--text)' }}>🔄 {lang === 'fr' ? 'Approuver l\'échange' : 'Approve swap'}</h3>
-            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16 }}>
-              {approveModal.echange.demandeur?.nom} ↔ {approveModal.echange.recepteur?.nom}
-            </div>
-
-            {/* Shift comparison */}
+            <h3 style={{ fontSize: 16, fontWeight: 300, margin: '0 0 4px', color: 'var(--text)' }}>🔄 {lang === 'fr' ? "Approuver l'échange" : 'Approve swap'}</h3>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16 }}>{approveModal.echange.demandeur?.nom} ↔ {approveModal.echange.recepteur?.nom}</div>
             {(() => {
               const e = approveModal.echange
               const sdSt = e.shift_demandeur?.shift_types
@@ -1267,50 +1259,28 @@ export default function HorairePage() {
                 </div>
               )
             })()}
-
-            {/* Coverage check */}
             {(() => {
               const check = checkExchangeCoverage(approveModal.echange)
               return (
                 <div style={{ background: check === 'ok' ? 'var(--success-subtle)' : 'var(--warning-subtle)', border: `1px solid ${check === 'ok' ? 'color-mix(in srgb, var(--success) 35%, transparent)' : 'color-mix(in srgb, var(--warning) 35%, transparent)'}`, borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 11, color: check === 'ok' ? 'var(--success)' : 'var(--warning)' }}>
-                  {check === 'ok'
-                    ? (lang === 'fr' ? '✓ Couverture des rôles compatible' : '✓ Role coverage compatible')
-                    : (lang === 'fr' ? '⚠ Rôles différents — vérifier la couverture' : '⚠ Different roles — verify coverage')}
+                  {check === 'ok' ? (lang === 'fr' ? '✓ Couverture des rôles compatible' : '✓ Role coverage compatible') : (lang === 'fr' ? '⚠ Rôles différents — vérifier la couverture' : '⚠ Different roles — verify coverage')}
                 </div>
               )
             })()}
-
-            {/* Choice */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 14 }}>
-              <button onClick={() => setApproveReject(false)} style={{ flex: 1, padding: '12px', borderRadius: 10, cursor: 'pointer', fontFamily: font, fontSize: 13, background: approveReject === false ? 'var(--success-subtle)' : 'var(--surface2)', border: `1px solid ${approveReject === false ? 'color-mix(in srgb, var(--success) 50%, transparent)' : 'var(--border)'}`, color: approveReject === false ? 'var(--success)' : 'var(--text-secondary)' }}>
-                ✓ {lang === 'fr' ? 'Approuver' : 'Approve'}
-              </button>
-              <button onClick={() => setApproveReject(true)} style={{ flex: 1, padding: '12px', borderRadius: 10, cursor: 'pointer', fontFamily: font, fontSize: 13, background: approveReject === true ? 'var(--danger-subtle)' : 'var(--surface2)', border: `1px solid ${approveReject === true ? 'color-mix(in srgb, var(--danger) 50%, transparent)' : 'var(--border)'}`, color: approveReject === true ? 'var(--danger)' : 'var(--text-secondary)' }}>
-                ✗ {lang === 'fr' ? 'Rejeter' : 'Reject'}
-              </button>
+              <button onClick={() => setApproveReject(false)} style={{ flex: 1, padding: '12px', borderRadius: 10, cursor: 'pointer', fontFamily: font, fontSize: 13, background: approveReject === false ? 'var(--success-subtle)' : 'var(--surface2)', border: `1px solid ${approveReject === false ? 'color-mix(in srgb, var(--success) 50%, transparent)' : 'var(--border)'}`, color: approveReject === false ? 'var(--success)' : 'var(--text-secondary)' }}>✓ {lang === 'fr' ? 'Approuver' : 'Approve'}</button>
+              <button onClick={() => setApproveReject(true)} style={{ flex: 1, padding: '12px', borderRadius: 10, cursor: 'pointer', fontFamily: font, fontSize: 13, background: approveReject === true ? 'var(--danger-subtle)' : 'var(--surface2)', border: `1px solid ${approveReject === true ? 'color-mix(in srgb, var(--danger) 50%, transparent)' : 'var(--border)'}`, color: approveReject === true ? 'var(--danger)' : 'var(--text-secondary)' }}>✗ {lang === 'fr' ? 'Rejeter' : 'Reject'}</button>
             </div>
-
-            {/* Comment on rejection */}
             {approveReject === true && (
               <div style={{ marginBottom: 14 }}>
                 <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 6 }}>{lang === 'fr' ? 'Motif du rejet (optionnel)' : 'Rejection reason (optional)'}</div>
-                <textarea
-                  value={approveComment}
-                  onChange={e => setApproveComment(e.target.value)}
-                  placeholder={lang === 'fr' ? 'Ex: Couverture insuffisante ce soir-là…' : 'E.g. Insufficient coverage that evening…'}
-                  rows={3}
-                  style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', padding: '10px', fontSize: 12, fontFamily: font, outline: 'none', resize: 'none', boxSizing: 'border-box' }}
-                />
+                <textarea value={approveComment} onChange={e => setApproveComment(e.target.value)} placeholder={lang === 'fr' ? 'Ex: Couverture insuffisante ce soir-là…' : 'E.g. Insufficient coverage that evening…'} rows={3} style={{ width: '100%', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)', padding: '10px', fontSize: 12, fontFamily: font, outline: 'none', resize: 'none', boxSizing: 'border-box' }} />
               </div>
             )}
-
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => { setApproveModal(null); setApproveReject(null); setApproveComment('') }} style={{ flex: 1, padding: '12px', background: 'var(--surface2)', border: '1px solid var(--border)', borderRadius: 10, color: 'var(--text-secondary)', cursor: 'pointer', fontSize: 13, fontFamily: font }}>{lang === 'fr' ? 'Annuler' : 'Cancel'}</button>
-              <button
-                onClick={() => approveReject !== null && approveExchange(!approveReject)}
-                disabled={saving || approveReject === null}
-                style={{ flex: 2, padding: '12px', background: approveReject === true ? 'var(--danger)' : approveReject === false ? 'var(--success)' : 'var(--accent)', border: 'none', borderRadius: 10, color: '#fff', cursor: approveReject === null ? 'default' : 'pointer', fontSize: 13, fontFamily: font, fontWeight: 600, opacity: approveReject === null ? 0.4 : 1 }}>
-                {saving ? '...' : approveReject === true ? (lang === 'fr' ? 'Confirmer le rejet' : 'Confirm rejection') : approveReject === false ? (lang === 'fr' ? 'Confirmer l\'approbation' : 'Confirm approval') : (lang === 'fr' ? 'Choisir' : 'Choose')}
+              <button onClick={() => approveReject !== null && approveExchange(!approveReject)} disabled={saving || approveReject === null} style={{ flex: 2, padding: '12px', background: approveReject === true ? 'var(--danger)' : approveReject === false ? 'var(--success)' : 'var(--accent)', border: 'none', borderRadius: 10, color: '#fff', cursor: approveReject === null ? 'default' : 'pointer', fontSize: 13, fontFamily: font, fontWeight: 600, opacity: approveReject === null ? 0.4 : 1 }}>
+                {saving ? '...' : approveReject === true ? (lang === 'fr' ? 'Confirmer le rejet' : 'Confirm rejection') : approveReject === false ? (lang === 'fr' ? "Confirmer l'approbation" : 'Confirm approval') : (lang === 'fr' ? 'Choisir' : 'Choose')}
               </button>
             </div>
           </div>
